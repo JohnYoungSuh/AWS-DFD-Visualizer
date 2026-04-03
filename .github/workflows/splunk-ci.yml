@@ -1,0 +1,43 @@
+name: Splunk App CI/CD
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  validate_and_package:
+    name: Splunk AppInspect & Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Package Splunk App
+        run: |
+          # Create a clean distribution folder
+          mkdir dist
+          # Package the app into a .spl file (tar.gz)
+          # Excludes hidden files like .git and .github to keep it clean
+          tar -czvf dist/AWS-DFD-Visualizer.spl \
+            --exclude='.git*' \
+            --exclude='.github*' \
+            --exclude='dist' \
+            .
+          echo "App packaged successfully: dist/AWS-DFD-Visualizer.spl"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: aws-dfd-visualizer-v1.9.8
+          path: dist/AWS-DFD-Visualizer.spl
+
+    # NOTE: To enable Full Cloud AppInspect (API), you can add these secrets later:
+    # SPLUNKBASE_USERNAME: ${{ secrets.SPLUNKBASE_USERNAME }}
+    # SPLUNKBASE_PASSWORD: ${{ secrets.SPLUNKBASE_PASSWORD }}

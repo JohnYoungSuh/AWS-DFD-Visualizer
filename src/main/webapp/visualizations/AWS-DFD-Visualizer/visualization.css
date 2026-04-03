@@ -1,0 +1,20 @@
+.aws-composer-viz svg {
+    cursor: grab;
+}
+.aws-composer-viz svg:active {
+    cursor: grabbing;
+}
+.aws-composer-viz .node-card {
+    cursor: pointer;
+}
+.aws-composer-viz .links path {
+    stroke-opacity: 0.6;
+}
+.aws-composer-viz .labels text {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    pointer-events: none;
+}
+.aws-composer-viz .zones text {
+    font-family: Monaco, Consolas, "Courier New", monospace;
+    opacity: 0.8;
+}
