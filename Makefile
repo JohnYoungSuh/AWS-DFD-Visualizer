@@ -1,5 +1,6 @@
 APP_NAME = AWS-DFD-Visualizer
-SPL_FILE = $(APP_NAME).spl
+VERSION  = 2.5.6
+SPL_FILE = $(APP_NAME)-$(VERSION).spl
 CONTAINER = splunk-emass
 
 .PHONY: all build inspect clean distclean deploy

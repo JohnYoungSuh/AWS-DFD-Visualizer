@@ -1,7 +1,7 @@
 {
   "name": "aws-dfd-visualizer",
-  "version": "1.0.0",
-  "description": "Professional D3.js visualization for Splunk AWS Security Data Flows",
+  "version": "2.5.6",
+  "description": "Professional D3.js visualization for Splunk AWS Security Data Flows (Hardened IL5 Baseline)",
   "main": "index.js",
   "engines": {
     "node": ">=22"

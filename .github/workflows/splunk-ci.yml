@@ -45,7 +45,7 @@ jobs:
         uses: splunk/appinspect-cli-action@v2
         with:
           app_path: .
-          report_file: appinspect-report.html
+          result_file: appinspect-report.html
 
       - name: Upload Security Reports
         uses: actions/upload-artifact@v4
@@ -76,6 +76,9 @@ jobs:
       - name: Package Splunk App
         run: |
           mkdir dist
+          # Clean out WSL-specific noise and hidden files before packaging
+          find . -name "*Zone.Identifier*" -type f -delete
+          find . -name ".DS_Store" -type f -delete
           tar -czvf dist/AWS-DFD-Visualizer.spl \
             --exclude='.git*' \
             --exclude='.github*' \
