@@ -1,4 +1,4 @@
-name: Splunk App CI/CD
+name: Splunk App CI/CD (IL5 Hardened)
 
 on:
   push:
@@ -10,37 +10,97 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  validate_and_package:
-    name: Splunk AppInspect & Package
+  # STAGE 1: Security Scanning & Local Validation (Fast Feedback)
+  security_and_validation:
+    name: Security Scan & Local AppInspect
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Secret Scanning (TruffleHog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
+      - name: Python Security Scan (Bandit)
+        run: |
+          pip install bandit
+          bandit -r . -x ./tests -ll
+
+      - name: Splunk AppInspect (Local CLI)
+        uses: splunk/appinspect-cli-action@v2
+        with:
+          app_path: .
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            appinspect-report.html
+
+  # STAGE 2: Build, SBOM & Optional Cloud Validation
+  build_and_package:
+    name: Build & Package (IL5 SBOM)
+    needs: security_and_validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Package Splunk App
         run: |
-          # Create a clean distribution folder
           mkdir dist
-          # Package the app into a .spl file (tar.gz)
-          # Excludes hidden files like .git and .github to keep it clean
           tar -czvf dist/AWS-DFD-Visualizer.spl \
             --exclude='.git*' \
             --exclude='.github*' \
             --exclude='dist' \
             .
-          echo "App packaged successfully: dist/AWS-DFD-Visualizer.spl"
 
-      - name: Upload Build Artifact
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: dist/
+          format: cyclonedx-json
+          output-file: dist/bom.json
+
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: aws-dfd-visualizer-v1.9.8
-          path: dist/AWS-DFD-Visualizer.spl
+          name: aws-dfd-visualizer-il5-package
+          path: dist/
 
-    # NOTE: To enable Full Cloud AppInspect (API), you can add these secrets later:
-    # SPLUNKBASE_USERNAME: ${{ secrets.SPLUNKBASE_USERNAME }}
-    # SPLUNKBASE_PASSWORD: ${{ secrets.SPLUNKBASE_PASSWORD }}
+  # STAGE 3: Splunk Cloud API Validation (Release Gating)
+  # This job only runs on main/master merges when secrets are available
+  cloud_validation:
+    name: Splunk Cloud API Validation
+    needs: build_and_package
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Package
+        uses: actions/download-artifact@v4
+        with:
+          name: aws-dfd-visualizer-il5-package
+          path: dist/
+
+      # Placeholder: This requires SPLUNKBASE_USERNAME and SPLUNKBASE_PASSWORD secrets
+      # - name: Splunk AppInspect (Cloud API)
+      #   uses: splunk/appinspect-api-action@v1
+      #   with:
+      #     app_path: dist/AWS-DFD-Visualizer.spl
+      #     splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
+      #     splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}

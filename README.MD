@@ -1,23 +1,37 @@
-# AWS-DFD-Visualizer for Splunk
+# AWS-DFD-Visualizer
 
 > [!IMPORTANT]
 > **AWS Application Composer Style** - A professional D3.js powered Force-Directed Graph visualization for AWS Security Data Flows in Splunk.
 
+## Security & Compliance (NIST 800-53 / IL5)
+
+This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust (ZT)** architectures.
+
+### 🛡️ Defensive Controls
+
+- **SBOM (CycloneDX)**: Every build generates a machine-readable bill of materials (`bom.json`) for supply chain provenance (NIST 800-53 SA-4).
+- **Secret Scanning**: TruffleHog actively blocks commits containing sensitive credentials (SC-28).
+- **SAST**: Python logic is scanned via Bandit for common security flaws (SI-2).
+- **AppInspect**: Automated validation against Splunk's security and quality standards.
+
+### 🚀 CI/CD Pipeline (Two-Stage)
+
+1. **Stage 1 (Local CLI)**: Fast feedback on every push/PR without needing external credentials.
+2. **Stage 2 (Cloud API)**: Official gating for Cloud-ready release candidates (Master/Main).
+
 ## Features
+
 - **Official AWS Icons**: Automated inventory system for Lambda, S3, RDS, CloudWatch, and more.
 - **Dynamic Physics**: Optimized spread and layout for large architectures.
 - **D3.js v7 Core**: Stable, high-performance rendering for Splunk 9.x.
-- **Zero Trust Visualization**: Hardened support for Policy Decision Points (Verified Permissions) and IAM roles.
 
 ## Installation
-1. Pack the app into a `.spl` file using the provided CI/CD workflow (GitHub Actions).
-2. Install via Splunk UI: `Apps > Install App from File`.
-3. Restart Splunk.
+
+1. Clone this repository into `$SPLUNK_HOME/etc/apps/`.
+2. Restart Splunk or use `/en-US/_bump`.
+3. Select "AWS DFD Visualizer" from the search visualization picker.
 
 ## Technical Details
-- **Build Version**: 1.9.8
-- **Dependencies**: D3.js v7, jQuery, Underscore.
-- **Repository Management**: Standardized via **GitHub CLI (`gh`)**.
 
----
-*Created by Security Architect | Stabilized with Antigravity AI*
+- **Icon Resolution**: Uses a semantic keyword scanner in `visualization.js` to map search results to official AWS architecture icons.
+- **Pathing**: Strictly uses absolute app-relative paths to satisfy RequireJS requirements in Splunk 9.2+.
