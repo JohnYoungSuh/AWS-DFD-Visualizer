@@ -27,8 +27,8 @@ display.visualizations.custom.AWS-DFD-Visualizer.missingImageURL = <string>
 display.visualizations.custom.AWS-DFD-Visualizer.drilldownClick = <string>
 * Valid values are 'single' or 'singleOrDouble'.
 
-display.visualizations.custom.AWS-DFD-Visualizer.enablePhysics = <boolean>
+display.visualizations.custom.AWS-DFD-Visualizer.enablePhysics = <bool>
 * Toggle the D3 force simulation layout calculations on or off.
 
-display.visualizations.custom.AWS-DFD-Visualizer.hideEdgesOnDrag = <boolean>
+display.visualizations.custom.AWS-DFD-Visualizer.hideEdgesOnDrag = <bool>
 * Temporarily hide edge paths while nodes are being dragged to improve performance.
