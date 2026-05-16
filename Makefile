@@ -1,30 +1,36 @@
 APP_NAME = AWS-DFD-Visualizer
-VERSION  = 2.5.6
+VERSION  = 2.6.0
 SPL_FILE = $(APP_NAME)-$(VERSION).spl
 CONTAINER = splunk-emass
 
-.PHONY: all build inspect clean distclean deploy
+.PHONY: all build inspect clean distclean deploy install-deps
 
 all: build inspect
 
 VIZ_ID = AWS-DFD-Visualizer
 
+install-deps:
+	@echo "Installing Splunk AppInspect in .venv..."
+	.venv/bin/pip install splunk-appinspect
+
+# Integrated with npm/webpack
 build:
 	@echo "Building Splunk App: $(APP_NAME)..."
 	# Sync all source assets to the staging location
 	mkdir -p appserver/static/visualizations/$(VIZ_ID)
-	cp src/main/webapp/visualizations/$(VIZ_ID)/index.js appserver/static/visualizations/$(VIZ_ID)/visualization.js
-	cp src/main/webapp/visualizations/$(VIZ_ID)/*.css appserver/static/visualizations/$(VIZ_ID)/ 2>/dev/null || true
-	cp src/main/webapp/visualizations/$(VIZ_ID)/*.html appserver/static/visualizations/$(VIZ_ID)/ 2>/dev/null || true
-	cp src/main/webapp/visualizations/$(VIZ_ID)/*.png appserver/static/visualizations/$(VIZ_ID)/ 2>/dev/null || true
-	cp src/main/webapp/visualizations/$(VIZ_ID)/*.js appserver/static/visualizations/$(VIZ_ID)/ 2>/dev/null || true
+	npm run build
 	rm -rf dist $(SPL_FILE)
 	mkdir -p dist/$(APP_NAME)
 	# Copy only standard Splunk app folders and files
 	cp -r appserver default metadata splunk-app-manifest.json dist/$(APP_NAME)/ 2>/dev/null || true
 	# Clean out WSL-specific noise and hidden files from the staging area
+	find dist/$(APP_NAME) -name ".*" -type f -delete
 	find dist/$(APP_NAME) -name "*Zone.Identifier*" -type f -delete
-	find dist/$(APP_NAME) -name ".DS_Store" -type f -delete
+	# Set recommended file permissions: 755 for directories, 644 for files
+	find dist/$(APP_NAME) -type d -exec chmod 755 {} +
+	find dist/$(APP_NAME) -type f -exec chmod 644 {} +
+	# Specific execution bit for bin scripts if they exist
+	chmod -R 755 dist/$(APP_NAME)/bin 2>/dev/null || true
 	# Package the staging directory into the .spl file
 	tar -czf $(SPL_FILE) -C dist $(APP_NAME)
 	@echo "Done: $(SPL_FILE)"
@@ -34,11 +40,13 @@ list: build
 	tar -tzf $(SPL_FILE)
 
 inspect: build
-	@echo "Running Splunk AppInspect..."
-	# Using custom_visualizations tag as requested for validation
-	# Attempt to run it directly, or via pip if it's not in PATH
-	splunk-appinspect inspect $(SPL_FILE) --included-tags custom_visualizations || \
-	python3 -m splunk_appinspect inspect $(SPL_FILE) --included-tags custom_visualizations
+	@echo "Running Splunk AppInspect (v2.5.6 Hardened) from .venv..."
+	# Check if the tool is available in .venv
+	@if [ ! -f .venv/bin/splunk-appinspect ]; then \
+		echo "Error: splunk-appinspect NOT FOUND in .venv. Please run 'make install-deps' first."; \
+		exit 1; \
+	fi
+	.venv/bin/splunk-appinspect inspect $(SPL_FILE) --included-tags custom_visualizations
 
 clean:
 	@echo "Cleaning up build artifacts..."
