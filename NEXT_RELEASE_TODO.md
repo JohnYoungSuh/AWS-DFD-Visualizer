@@ -54,8 +54,8 @@ This list is based on failure analysis against mock config and standard D3 force
 
 - [ ] **ZTA pillar grouping / cluster hulls**
     - *Action*: Group nodes into convex hulls by pillar (Network, Identity, Data, Visibility) using `d3.polygonHull()` to match architecture diagram visual zones.
-- [ ] **Directed arrow rendering & Edge Styling** (Merged from Network Diagram Viz)
-    - *Action*: Implement `arrowLocation` and offset calculations to prevent overlap. Toggle `smoothEdges` (curved links), `smoothEdgeType`, `linkTextSize`, and `defaultLinkLength`.
+- [x] **Directed arrow rendering & Edge Styling** (Merged from Network Diagram Viz)
+    - *Action*: Implemented `smoothEdges` (curved links) and `linkTextSize` formatting toggles to improve edge readability.
 - [ ] **Edge label on hover only**
     - *Context*: Rendering all `relationshipName` labels simultaneously creates visual clutter.
     - *Action*: Show label only on the hovered edge.

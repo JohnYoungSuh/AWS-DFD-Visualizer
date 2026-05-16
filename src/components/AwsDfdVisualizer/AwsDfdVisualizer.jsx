@@ -143,7 +143,7 @@ const parseSplunkData = (data) => {
     return { nodes: Array.from(nodesMap.values()), links };
 };
 
-const Link = ({ link }) => {
+const Link = ({ link, config }) => {
     const { source, target, label } = link;
     if (!source.x || !target.x) return null;
 
@@ -151,11 +151,22 @@ const Link = ({ link }) => {
     const dy = target.y - source.y;
     const dr = Math.sqrt(dx * dx + dy * dy);
     
-    // Use an arc path for the connection
-    const d = `M${source.x},${source.y}A${dr},${dr} 0 0,1 ${target.x},${target.y}`;
+    const smoothEdges = String(config?.smoothEdges ?? 'true') === 'true';
+    
+    // Use an arc path for the connection if smooth, otherwise straight line
+    const d = smoothEdges 
+        ? `M${source.x},${source.y}A${dr},${dr} 0 0,1 ${target.x},${target.y}`
+        : `M${source.x},${source.y} L${target.x},${target.y}`;
     
     const midX = (source.x + target.x) / 2;
     const midY = (source.y + target.y) / 2;
+
+    const sizeConf = config?.linkTextSize || 'medium';
+    let fontSize = 14;
+    let bgWidth = 150;
+    if (sizeConf === 'small') { fontSize = 10; bgWidth = 110; }
+    if (sizeConf === 'large') { fontSize = 18; bgWidth = 190; }
+    if (sizeConf === 'extraLarge') { fontSize = 22; bgWidth = 240; }
 
     return (
         <g className="link-group">
@@ -163,8 +174,8 @@ const Link = ({ link }) => {
             {label && (
                 <g transform={`translate(${midX},${midY})`}>
                     {/* Founder Tip: Background halo to prevent text collision (ENH-002) */}
-                    <rect width={150} height={30} rx={15} fill="white" stroke="#D5D7D8" x={-75} y={-15} />
-                    <text textAnchor="middle" dy={8} fontSize={14} fill="#232F3E">{label}</text>
+                    <rect width={bgWidth} height={fontSize + 16} rx={15} fill="white" stroke="#D5D7D8" x={-(bgWidth/2)} y={-((fontSize + 16)/2)} />
+                    <text textAnchor="middle" dy={fontSize/3} fontSize={fontSize} fill="#232F3E">{label}</text>
                 </g>
             )}
         </g>
@@ -402,7 +413,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     {/* Render Links */}
                     <g className="links" style={{ opacity: isDragging ? 0 : 1, transition: 'opacity 0.2s' }}>
                         {links.map((link, idx) => (
-                            <Link key={`link-${idx}`} link={link} />
+                            <Link key={`link-${idx}`} link={link} config={config} />
                         ))}
                     </g>
                     {/* Render Nodes */}

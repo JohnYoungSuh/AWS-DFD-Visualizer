@@ -32,3 +32,9 @@ display.visualizations.custom.AWS-DFD-Visualizer.enablePhysics = <bool>
 
 display.visualizations.custom.AWS-DFD-Visualizer.hideEdgesOnDrag = <bool>
 * Temporarily hide edge paths while nodes are being dragged to improve performance.
+
+display.visualizations.custom.AWS-DFD-Visualizer.smoothEdges = <bool>
+* Draw curved connections instead of straight lines. Default is true.
+
+display.visualizations.custom.AWS-DFD-Visualizer.linkTextSize = <string>
+* Size of the relationship text (small, medium, large, extraLarge). Default is medium.

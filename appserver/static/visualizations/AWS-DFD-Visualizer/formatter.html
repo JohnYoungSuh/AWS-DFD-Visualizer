@@ -87,3 +87,21 @@
 		</splunk-radio-input>
 	</splunk-control-group>
 </form>
+
+<form class="splunk-formatter-section" section-label="Links">
+	 <splunk-control-group label="Smooth Edges" help="Draw curved connections instead of straight lines.">
+		<splunk-radio-input name="{{VIZ_NAMESPACE}}.smoothEdges" value="true">
+			<option value="true">True</option>
+			<option value="false">False</option>
+		</splunk-radio-input>
+	</splunk-control-group>
+
+	 <splunk-control-group label="Link Text Size" help="Size of the relationship text.">
+		<splunk-select name="{{VIZ_NAMESPACE}}.linkTextSize" value="medium">
+			<option value="small">Small</option>
+			<option value="medium">Medium</option>
+			<option value="large">Large</option>
+			<option value="extraLarge">Extra Large</option>
+		</splunk-select>
+	</splunk-control-group>
+</form>
