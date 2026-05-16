@@ -1,4 +1,4 @@
-<form class="splunk-formatter-section" id="aws_dfd_formatter">
+<form class="splunk-formatter-section" section-label="General">
     <div class="control-group">
         <label class="control-label" for="aws_dfd_display_mode">Diagram Layout Mode</label>
         <div class="controls">
@@ -9,4 +9,81 @@
             <span class="help-block">Manual mode locks icons where you drop them.</span>
         </div>
     </div>
+
+    <splunk-control-group label="Draggable Nodes" help=" ">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.draggableNodes" value="true">
+            <option value="true">True</option>
+            <option value="false">False</option>
+        </splunk-radio-input>
+    </splunk-control-group>
+
+    <splunk-control-group label="Enable Zoom" help=" ">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.canZoom" value="true">
+            <option value="true">True</option>
+            <option value="false">False</option>
+        </splunk-radio-input>
+    </splunk-control-group>
+
+    <splunk-control-group label="Node Text Size" help=" ">
+        <splunk-select name="{{VIZ_NAMESPACE}}.nodeTextSize" value="medium">
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+            <option value="extraLarge">Extra Large</option>
+        </splunk-select>
+    </splunk-control-group>
+
+    <splunk-control-group label="Wrap Node Text" help=" ">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.wrapNodeText" value="true">
+            <option value="true">True</option>
+            <option value="false">False</option>
+        </splunk-radio-input>
+    </splunk-control-group>
+
+    <splunk-control-group label="Clustering" help=" ">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.clusterBy" value="none">
+            <option value="none">None</option>
+            <option value="color">Color</option>
+            <option value="group">Group</option>
+        </splunk-radio-input>
+    </splunk-control-group>
+
+    <splunk-control-group label="Default Node Type" help=" ">
+        <splunk-select name="{{VIZ_NAMESPACE}}.defaultNodeType" value="circle">
+            <option value="circle">circle</option>
+            <option value="square">square</option>
+            <option value="diamond">diamond</option>
+            <option value="triangle">triangle</option>
+            <option value="hexagon">hexagon</option>
+            <option value="star">star</option>
+        </splunk-select> 
+    </splunk-control-group>
+
+    <splunk-control-group label="Missing Image URL" help=" ">
+        <splunk-text-input name="{{VIZ_NAMESPACE}}.missingImageURL" value="/static/app/AWS-DFD-Visualizer/icons/generic.svg"></splunk-text-input>
+    </splunk-control-group>
+
+   	 <splunk-control-group label="Drilldown using" help=" ">
+		<splunk-radio-input name="{{VIZ_NAMESPACE}}.drilldownClick" value="singleOrDouble">
+			<option value="singleOrDouble">Double Click Only</option>
+			<option value="single">Single Click</option>
+		</splunk-radio-input>
+	</splunk-control-group>
+
+</form>
+
+<form class="splunk-formatter-section" section-label="Physics">
+	 <splunk-control-group label="Enable Physics" help="Toggle D3 force simulation.">
+		<splunk-radio-input name="{{VIZ_NAMESPACE}}.enablePhysics" value="true">
+			<option value="true">True</option>
+			<option value="false">False</option>
+		</splunk-radio-input>
+	</splunk-control-group>
+
+	 <splunk-control-group label="Hide Edges on Drag" help="Improves performance when dragging nodes.">
+		<splunk-radio-input name="{{VIZ_NAMESPACE}}.hideEdgesOnDrag" value="false">
+			<option value="true">True</option>
+			<option value="false">False</option>
+		</splunk-radio-input>
+	</splunk-control-group>
 </form>
