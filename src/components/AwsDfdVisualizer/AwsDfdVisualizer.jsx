@@ -59,7 +59,7 @@ const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/g
     }
 
     const type  = (node.type || '').toUpperCase();
-    const id    = (node.id || '').toUpperCase();
+    const id    = (node.arn || node.id || '').toUpperCase();
     const label = (node.label || '').toUpperCase();
     
     const parts   = type.split('::');
@@ -138,20 +138,25 @@ const parseSplunkData = (data) => {
 
         if (!from || from === 'null' || String(from).trim() === '') return;
 
-        if (!nodesMap.has(from)) {
+        const safeId = idStr => String(idStr).replace(/[/:]/g, '-').toLowerCase();
+        const safeFromId = safeId(from);
+
+        if (!nodesMap.has(safeFromId)) {
             // Bug #3: guard label — never render undefined/null as a text node
             const safeLabel = label || String(from).split(/[:/]/).pop() || from;
-            nodesMap.set(from, { id: from, label: safeLabel, type, group, icon, x: 0, y: 0 });
+            nodesMap.set(safeFromId, { id: safeFromId, arn: from, label: safeLabel, type, group, icon, x: 0, y: 0 });
         }
         if (to && to !== 'null' && String(to).trim() !== '') {
+            const safeToId = safeId(to);
             // Bug #2: build a canonical sorted key so A→B and B→A map to the same entry
-            const edgeKey = [from, to].sort().join('|');
+            const edgeKey = [safeFromId, safeToId].sort().join('|');
             if (!edgeSet.has(edgeKey)) {
                 edgeSet.add(edgeKey);
-                links.push({ source: from, target: to, label: edge });
+                links.push({ source: safeFromId, target: safeToId, label: edge });
             }
-            if (!nodesMap.has(to)) {
-                nodesMap.set(to, { id: to, label: to, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
+            if (!nodesMap.has(safeToId)) {
+                const toLabel = String(to).split(/[:/]/).pop() || to;
+                nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
             }
         }
     });
@@ -208,7 +213,7 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
     const shadowColor = isDarkTheme ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.22)';
     
     // Bug #3: final safety net — never pass undefined to SVG text
-    const displayLabel = node.label || String(node.id).split(/[:/]/).pop() || node.id || '';
+    const displayLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
     const typeLabel = (node.type || 'AWS::Resource').replace('AWS::', '');
     const fallbackUrl = config?.missingImageURL || '/static/app/AWS-DFD-Visualizer/icons/generic.svg';
     const iconPath = getIconPath(node, fallbackUrl);
@@ -285,7 +290,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         
         clickTimeoutRef.current = setTimeout(() => {
             if (onDrilldown) {
-                onDrilldown({ action: 'click', value: node.id, name: node.label });
+                onDrilldown({ action: 'click', value: node.arn || node.id, name: node.label });
             }
             clickTimeoutRef.current = null;
         }, 250);
@@ -297,7 +302,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             clickTimeoutRef.current = null;
         }
         if (onDrilldown) {
-            onDrilldown({ action: 'doubleclick', value: node.id, name: node.label });
+            onDrilldown({ action: 'doubleclick', value: node.arn || node.id, name: node.label });
         }
     };
 

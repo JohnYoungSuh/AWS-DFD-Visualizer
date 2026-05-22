@@ -10,13 +10,14 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Bug #2** — Bidirectional edge deduplication (`edgeSet` canonical key) — Fixed in `AwsDfdVisualizer.jsx`
 - Both fixes verified: `webpack 5.105.4 compiled successfully`
 
-### 🔴 Tomorrow: Pick up with **Bug #1 — ARN-safe node ID normalization** (top of Critical list)
+### ✅ Session: May 22, 2026
+- [x] **Bug #1** — ARN-safe node ID normalization — Fixed in `AwsDfdVisualizer.jsx`.
 
 ---
 
 ## 🔴 Critical (Will Break Rendering)
 
-- [ ] **ARN-safe node ID normalization**
+- [x] **ARN-safe node ID normalization** ✅ *Fixed May 22, 2026*
     - *Context*: AWS Config uses full ARNs as `resourceId` for Lambda, Firehose, Kinesis, S3, etc. These contain `:` and `/` which can crash D3 CSS selectors and forceLink ID joins.
     - *Action*: Normalize on ingest in `_formatData`.
     - *Snippet*: `const safeId = d => d.resourceId.replace(/[/:]/g, '-').toLowerCase();`
