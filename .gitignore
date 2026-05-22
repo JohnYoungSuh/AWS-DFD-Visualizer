@@ -14,15 +14,12 @@ __pycache__/
 /metadata/local.meta
 /lookups/*.csv.default
 /lookups/*.csv
-
 # OS/System
 .DS_Store
 Thumbs.db
 *.log
 *.tmp
-
 # AI Assistant Metadata (Antigravity)
-# =============================================================================
 tasks*
 media_*
 walkthrough*
@@ -37,3 +34,4 @@ click_feedback*
 *.metadata.json
 *.webp
 /tmp/
+node_modules

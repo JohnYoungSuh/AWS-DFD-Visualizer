@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 
+// SECTION: ICON_CONSTANTS — Base URL prefixes for icon paths (RequireJS absolute paths required)
 const ICON_BASE = '/en-US/static/app/AWS-DFD-Visualizer/icons/';
 const ARCH_SVC  = 'Architecture-Service-Icons_01302026/';
 
+// SECTION: ICON_MAP_RAW — AWS resource type → icon filename (NEVER remove entries — breaks existing deployments)
 const ICON_MAP_RAW = {
     'LAMBDA':           'lambda.svg',
     'WAFV2':            ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-WAF_64.svg',
@@ -49,6 +51,7 @@ const ICON_MAP_RAW = {
 
 const ICON_MAP = new Map(Object.entries(ICON_MAP_RAW));
 
+// SECTION: ICON_RESOLUTION — Priority: explicit icon/stencil → type → id → label → generic fallback
 const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/generic.svg') => {
     const explicitIcon = (node.icon || node.stencil || '').toUpperCase();
     if (explicitIcon && ICON_MAP.has(explicitIcon)) {
@@ -79,6 +82,8 @@ const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/g
     return fallbackUrl;
 };
 
+// SECTION: PARSE_SPLUNK_DATA — Handles both data.rows (Classic XML) and data.results (Dashboard Studio)
+// Also applies: edgeSet dedup (Bug #2), null label guard (Bug #3), named-column access (no positional indexing)
 const parseSplunkData = (data) => {
     if (!data) return { nodes: [], links: [] };
 
@@ -105,6 +110,9 @@ const parseSplunkData = (data) => {
 
     const nodesMap = new Map();
     const links = [];
+    // Bug #2: track canonical edge keys to deduplicate bidirectional AWS Config relationships
+    // e.g. A→B and B→A from Config both become key 'A|B' after sorting, so only one edge is created
+    const edgeSet = new Set();
 
     rows.forEach(row => {
         let from, to, type, label, edge, group, icon;
@@ -113,7 +121,7 @@ const parseSplunkData = (data) => {
             from  = row.from || row.source;
             to    = row.to || row.destination;
             type  = row.type || 'AWS::Resource';
-            label = row.node_label || row.label || from;
+            label = row.node_label || row.label || from || String(from).split(/[:/]/).pop() || '';
             edge  = row.edge_label || row.link_text || '';
             group = row.group || 'Default';
             icon  = row.icon || row.stencil || '';
@@ -121,7 +129,7 @@ const parseSplunkData = (data) => {
             from  = idxFrom > -1 ? row[idxFrom] : row[0];
             to    = idxTo > -1 ? row[idxTo] : row[1];
             type  = fields.indexOf('type') > -1 ? row[fields.indexOf('type')] : (row[2] || 'AWS::Resource');
-            label = fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : from;
+            label = (fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : null) || from || String(from).split(/[:/]/).pop() || '';
             edge  = fields.indexOf('edge_label') > -1 ? row[fields.indexOf('edge_label')] : '';
             group = fields.indexOf('group') > -1 ? row[fields.indexOf('group')] : 'Default';
             let iIcon = Math.max(fields.indexOf('icon'), fields.indexOf('stencil'));
@@ -130,19 +138,27 @@ const parseSplunkData = (data) => {
 
         if (!from || from === 'null' || String(from).trim() === '') return;
 
-        if (!nodesMap.has(from)) { 
-            nodesMap.set(from, { id: from, label, type, group, icon, x: 0, y: 0 }); 
+        if (!nodesMap.has(from)) {
+            // Bug #3: guard label — never render undefined/null as a text node
+            const safeLabel = label || String(from).split(/[:/]/).pop() || from;
+            nodesMap.set(from, { id: from, label: safeLabel, type, group, icon, x: 0, y: 0 });
         }
         if (to && to !== 'null' && String(to).trim() !== '') {
-            links.push({ source: from, target: to, label: edge });
-            if (!nodesMap.has(to)) { 
-                nodesMap.set(to, { id: to, label: to, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 }); 
+            // Bug #2: build a canonical sorted key so A→B and B→A map to the same entry
+            const edgeKey = [from, to].sort().join('|');
+            if (!edgeSet.has(edgeKey)) {
+                edgeSet.add(edgeKey);
+                links.push({ source: from, target: to, label: edge });
+            }
+            if (!nodesMap.has(to)) {
+                nodesMap.set(to, { id: to, label: to, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
             }
         }
     });
     return { nodes: Array.from(nodesMap.values()), links };
 };
 
+// SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line, edge label with halo)
 const Link = ({ link, config }) => {
     const { source, target, label } = link;
     if (!source.x || !target.x) return null;
@@ -182,6 +198,7 @@ const Link = ({ link, config }) => {
     );
 };
 
+// SECTION: NODE_CARD — SVG node card (AWS icon, label, type badge). React renders DOM, D3 handles math.
 const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config }) => {
     if (!node.x) return null;
 
@@ -190,7 +207,8 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
     const subTextColor = isDarkTheme ? '#a9b1ba' : '#545b64';
     const shadowColor = isDarkTheme ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.22)';
     
-    const displayLabel = node.label;
+    // Bug #3: final safety net — never pass undefined to SVG text
+    const displayLabel = node.label || String(node.id).split(/[:/]/).pop() || node.id || '';
     const typeLabel = (node.type || 'AWS::Resource').replace('AWS::', '');
     const fallbackUrl = config?.missingImageURL || '/static/app/AWS-DFD-Visualizer/icons/generic.svg';
     const iconPath = getIconPath(node, fallbackUrl);
@@ -223,6 +241,7 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
     );
 };
 
+// SECTION: ZONE — VPC/subnet enclosure rectangle (groupBy clustering placeholder)
 const Zone = ({ groupName, nodes }) => {
     if (nodes.length === 0 || !nodes[0].x) return null;
     
@@ -241,6 +260,8 @@ const Zone = ({ groupName, nodes }) => {
     );
 };
 
+// SECTION: MAIN_COMPONENT — D3 forceSimulation, zoom/pan, drag, tick→React state bridge
+// Key rules: jitter on init, scaleExtent on zoom, viewBox 0 0 1200 1000 (do not change)
 const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldown }) => {
     const svgRef = useRef(null);
     const gRef = useRef(null);
@@ -435,6 +456,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     );
 };
 
+// SECTION: ERROR_BOUNDARY — Catches React render crashes, displays user-facing error panel
 class ErrorBoundary extends React.Component {
     constructor(props) { super(props); this.state = { hasError: false, error: null }; }
     static getDerivedStateFromError(error) { return { hasError: true, error }; }
