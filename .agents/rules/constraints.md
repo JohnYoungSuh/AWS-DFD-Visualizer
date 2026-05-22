@@ -22,6 +22,7 @@ trigger: always_on
 - **NEVER use PowerShell or Windows CMD** — all commands run in WSL2/bash with UNIX paths
 - **NEVER use Windows drive-letter paths** (e.g., `C:\Users\...`) — use `/home/suhlabs/...`
 - **NEVER use relative paths in `visualization.js`** — always use absolute app-relative paths for RequireJS
+- **NEVER attempt to install or configure Docker inside WSL** — Docker runs on Windows via Docker Desktop. If `docker` commands fail (e.g., during `make deploy`), stop and ask the user to start Docker Desktop on the Windows host.
 
 ## Dependencies
 - **NEVER add a new npm dependency without running `npm audit`** first
