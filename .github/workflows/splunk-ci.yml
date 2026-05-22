@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js 22 LTS
         uses: actions/setup-node@v5
@@ -26,13 +28,11 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      # TruffleHog filesystem scan — avoids git commit-resolution errors
-      # that occur when base/head SHAs are not resolvable (e.g. initial push)
       - name: Secret Scanning (TruffleHog)
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          extra_args: --only-verified --no-git
+          extra_args: --only-verified
         continue-on-error: false
 
       - name: Set up Python

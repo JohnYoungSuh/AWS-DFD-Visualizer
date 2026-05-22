@@ -2,18 +2,30 @@
 
 This list is based on failure analysis against mock config and standard D3 force-graph patterns for AWS Config data. These items are prioritized for the next release to improve stability, usability, and visual accuracy.
 
+---
+## 📍 Session Log
+
+### ✅ Session: May 21, 2026
+- [x] **Bug #3** — Null/undefined label guard (`parseSplunkData` + `NodeCard`) — Fixed in `AwsDfdVisualizer.jsx`
+- [x] **Bug #2** — Bidirectional edge deduplication (`edgeSet` canonical key) — Fixed in `AwsDfdVisualizer.jsx`
+- Both fixes verified: `webpack 5.105.4 compiled successfully`
+
+### 🔴 Tomorrow: Pick up with **Bug #1 — ARN-safe node ID normalization** (top of Critical list)
+
+---
+
 ## 🔴 Critical (Will Break Rendering)
 
 - [ ] **ARN-safe node ID normalization**
     - *Context*: AWS Config uses full ARNs as `resourceId` for Lambda, Firehose, Kinesis, S3, etc. These contain `:` and `/` which can crash D3 CSS selectors and forceLink ID joins.
     - *Action*: Normalize on ingest in `_formatData`.
     - *Snippet*: `const safeId = d => d.resourceId.replace(/[/:]/g, '-').toLowerCase();`
-- [ ] **Bidirectional edge deduplication**
+- [x] **Bidirectional edge deduplication** ✅ *Fixed May 21, 2026*
     - *Context*: AWS Config declares relationships on both ends. Without dedup, D3 draws stacked invisible lines and the force simulation double-pulls nodes, collapsing the graph.
-    - *Action*: Implement a check in `_formatData` to ensure only one edge is created between two nodes for the same relationship.
-- [ ] **Null/undefined label guard**
+    - *Fix*: Added `edgeSet = new Set()` with canonical sorted key `[from, to].sort().join('|')` in `parseSplunkData`.
+- [x] **Null/undefined label guard** ✅ *Fixed May 21, 2026*
     - *Context*: If `resourceName` is missing, D3 renders `undefined` as a text node.
-    - *Action*: Add fallback logic: `name: d.resourceName ?? d.resourceId.split(/[:/]/).pop()`
+    - *Fix*: Added `.split(/[:/]/).pop()` fallback at all 4 label assignment points in `parseSplunkData` + `NodeCard.displayLabel`.
 
 ## 🏛️ Epic: Zero-Trust Static Deterministic Layout Engine (IL5 RMF Audit Mode)
 
