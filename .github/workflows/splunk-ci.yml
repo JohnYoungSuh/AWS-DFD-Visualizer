@@ -8,9 +8,11 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  APP_NAME: AWS-DFD-Visualizer
+  VERSION: "2.6.0"
 
 jobs:
-  # STAGE 1: Security Scanning & Local Validation (Fast Feedback)
+  # STAGE 1: Build, Security Scanning & AppInspect Validation
   security_and_validation:
     name: Security Scan & Local AppInspect
     runs-on: ubuntu-latest
@@ -22,13 +24,16 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: 'npm'
 
+      # TruffleHog filesystem scan — avoids git commit-resolution errors
+      # that occur when base/head SHAs are not resolvable (e.g. initial push)
       - name: Secret Scanning (TruffleHog)
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          # Removed base/head for initial push to enable full-repo scan
-          extra_args: --only-verified
+          extra_args: --only-verified --no-git
+        continue-on-error: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,10 +46,37 @@ jobs:
           # Ignore exit code for initial pass to allow report upload
           bandit -r . -x ./tests -ll || true
 
+      # Build the webpack bundle and package the .spl BEFORE AppInspect.
+      # AppInspect requires a valid gzip-compressed Splunk app archive (.spl).
+      # Passing app_path: . (repo root) causes it to inspect the Makefile and fail.
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build webpack bundle
+        run: npm run build
+
+      - name: Package Splunk App (.spl)
+        run: |
+          SPL_FILE="${APP_NAME}-${VERSION}.spl"
+          mkdir -p dist/${APP_NAME}
+          # Copy only standard Splunk app folders — no node_modules, src, or dev tooling
+          cp -r appserver default metadata splunk-app-manifest.json dist/${APP_NAME}/ 2>/dev/null || true
+          # Remove WSL artifacts and hidden files from staging area
+          find dist/${APP_NAME} -name ".*" -type f -delete
+          find dist/${APP_NAME} -name "*Zone.Identifier*" -type f -delete
+          # Set AppInspect-required permissions: 755 dirs, 644 files
+          find dist/${APP_NAME} -type d -exec chmod 755 {} +
+          find dist/${APP_NAME} -type f -exec chmod 644 {} +
+          chmod -R 755 dist/${APP_NAME}/bin 2>/dev/null || true
+          # Create the tarball
+          tar -czf ${SPL_FILE} -C dist ${APP_NAME}
+          echo "SPL_FILE=${SPL_FILE}" >> $GITHUB_ENV
+          echo "Packaged: ${SPL_FILE}"
+
       - name: Splunk AppInspect (Local CLI)
         uses: splunk/appinspect-cli-action@v2
         with:
-          app_path: .
+          app_path: ${{ env.SPL_FILE }}
           result_file: appinspect-report.html
 
       - name: Upload Security Reports
@@ -55,7 +87,14 @@ jobs:
           path: |
             appinspect-report.html
 
-  # STAGE 2: Build, SBOM & Optional Cloud Validation
+      # Upload the validated .spl for Stage 2 to reuse (avoids double-build)
+      - name: Upload Validated .spl
+        uses: actions/upload-artifact@v5
+        with:
+          name: validated-spl
+          path: ${{ env.SPL_FILE }}
+
+  # STAGE 2: SBOM Generation (reuses the .spl validated in Stage 1)
   build_and_package:
     name: Build & Package (IL5 SBOM)
     needs: security_and_validation
@@ -64,26 +103,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      - name: Setup Node.js 22 LTS
-        uses: actions/setup-node@v5
+      - name: Download Validated .spl
+        uses: actions/download-artifact@v5
         with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Package Splunk App
-        run: |
-          mkdir dist
-          # Clean out WSL-specific noise and hidden files before packaging
-          find . -name "*Zone.Identifier*" -type f -delete
-          find . -name ".DS_Store" -type f -delete
-          tar -czvf dist/AWS-DFD-Visualizer.spl \
-            --exclude='.git*' \
-            --exclude='.github*' \
-            --exclude='dist' \
-            .
+          name: validated-spl
+          path: dist/
 
       - name: Generate SBOM (CycloneDX)
         uses: anchore/sbom-action@v0
