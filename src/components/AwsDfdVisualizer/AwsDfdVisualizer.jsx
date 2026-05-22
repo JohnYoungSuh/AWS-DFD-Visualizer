@@ -121,7 +121,7 @@ const parseSplunkData = (data) => {
             from  = row.from || row.source;
             to    = row.to || row.destination;
             type  = row.type || 'AWS::Resource';
-            label = row.node_label || row.label || from || String(from).split(/[:/]/).pop() || '';
+            label = row.node_label || row.label || String(from).split(/[:/]/).pop() || from || '';
             edge  = row.edge_label || row.link_text || '';
             group = row.group || 'Default';
             icon  = row.icon || row.stencil || '';
@@ -129,7 +129,7 @@ const parseSplunkData = (data) => {
             from  = idxFrom > -1 ? row[idxFrom] : row[0];
             to    = idxTo > -1 ? row[idxTo] : row[1];
             type  = fields.indexOf('type') > -1 ? row[fields.indexOf('type')] : (row[2] || 'AWS::Resource');
-            label = (fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : null) || from || String(from).split(/[:/]/).pop() || '';
+            label = (fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : null) || String(from).split(/[:/]/).pop() || from || '';
             edge  = fields.indexOf('edge_label') > -1 ? row[fields.indexOf('edge_label')] : '';
             group = fields.indexOf('group') > -1 ? row[fields.indexOf('group')] : 'Default';
             let iIcon = Math.max(fields.indexOf('icon'), fields.indexOf('stencil'));
