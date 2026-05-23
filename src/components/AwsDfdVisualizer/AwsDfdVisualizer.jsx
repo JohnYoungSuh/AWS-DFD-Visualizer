@@ -268,7 +268,13 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
     const cardDash = isDeleted ? "6,6" : "none";
 
     return (
-        <g className="node-card" transform={`translate(${node.x},${node.y})`} onClick={(e) => onNodeClick(e, node)} onDoubleClick={(e) => onNodeDoubleClick(e, node)} style={{ cursor: 'pointer', opacity: cardOpacity }}>
+        <g className="node-card" transform={`translate(${node.x},${node.y})`} 
+           onClickCapture={(e) => {
+               console.log("AWS-DFD-Visualizer: onClickCapture fired!", node.id);
+               onNodeClick(e, node, 'click');
+           }}
+           onDoubleClick={(e) => onNodeDoubleClick(e, node)} 
+           style={{ cursor: 'pointer', opacity: cardOpacity }}>
             <title>{node.arn || node.id} ({typeLabel}){isDeleted ? ` [${node.status}]` : ''}</title>
             <rect width={280} height={100} x={-140} y={-50} fill={fillColor} stroke={cardStroke} strokeDasharray={cardDash} strokeWidth={isDeleted ? 2 : 1} rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
             <rect width={66} height={66} x={-128} y={-33} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
@@ -376,10 +382,18 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     // High 6: Advanced Token Integration
     const handleNodeClick = (e, node, actionType = 'click') => {
-        if (drilldownClick !== 'singleOrDouble' && actionType === 'click') return;
-        if (actionType === 'click' && clickTimeoutRef.current) return;
+        console.log(`AWS-DFD-Visualizer: handleNodeClick ENTERED! actionType=${actionType}, nodeId=${node.id || node.arn}`);
         
-        console.log("AWS-DFD-Visualizer: Click received on node!", { actionType, nodeId: node.id || node.arn });
+        if (drilldownClick !== 'singleOrDouble' && actionType === 'click') {
+            console.log("AWS-DFD-Visualizer: Click ignored because drilldownClick is NOT singleOrDouble. It is:", drilldownClick);
+            return;
+        }
+        if (actionType === 'click' && clickTimeoutRef.current) {
+            console.log("AWS-DFD-Visualizer: Click ignored because of double-click timeout guard!");
+            return;
+        }
+        
+        console.log("AWS-DFD-Visualizer: Click validated! Executing drilldown...", { actionType, nodeId: node.id || node.arn });
         
         const executeDrilldown = () => {
             if (onDrilldown) {
@@ -578,6 +592,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
             // Force D3 to capture clicks since d3.drag/d3.zoom swallows native React synthetic events
             nodesSelection.on('click', (event, d) => {
+                console.log("AWS-DFD-Visualizer: Native D3 click triggered! defaultPrevented:", event.defaultPrevented);
                 if (event.defaultPrevented) return; // Prevent triggering if we were dragging
                 event.stopPropagation();
                 handleNodeClick(event, d, 'click');
