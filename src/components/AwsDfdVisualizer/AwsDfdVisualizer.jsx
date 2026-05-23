@@ -226,7 +226,7 @@ const Link = ({ link, config, onLinkClick }) => {
         <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
             <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
             <path d={d} stroke="#879196" fill="none" strokeWidth={3} />
-            {label && isHovered && (
+            {label && (
                 <g transform={`translate(${midX},${midY})`}>
                     {/* Founder Tip: Background halo to prevent text collision (ENH-002) */}
                     <rect width={bgWidth} height={fontSize + 16} rx={15} fill="white" stroke="#D5D7D8" x={-(bgWidth/2)} y={-((fontSize + 16)/2)} />
