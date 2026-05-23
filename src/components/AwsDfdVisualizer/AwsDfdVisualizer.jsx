@@ -387,7 +387,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     [config.tokenValue || 'tokenValue']: node.arn || node.id,
                     [config.tokenNode || 'tokenNode']: node.label,
                     [config.tokenToolTip || 'tokenToolTip']: node.type
-                });
+                }, e);
             }
         };
 
@@ -403,6 +403,18 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     const handleNodeDoubleClick = (e, node) => {
         handleNodeClick(e, node, 'doubleclick');
+    };
+
+    const handleLinkClick = (e, link) => {
+        if (onDrilldown) {
+            onDrilldown({
+                action: 'click',
+                [config.tokenValue || 'tokenValue']: link.source.arn || link.source.id,
+                [config.tokenNode || 'tokenNode']: link.source.label,
+                [config.tokenToNode || 'tokenToNode']: link.target.label,
+                [config.tokenToolTip || 'tokenToolTip']: link.label
+            }, e);
+        }
     };
 
     const { nodes, links, groupNames } = useMemo(() => {
@@ -592,7 +604,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     {/* Render Links */}
                     <g className="links" style={{ opacity: isDragging ? 0 : 1, transition: 'opacity 0.2s' }}>
                         {links.map((link, idx) => (
-                            <Link key={`link-${idx}`} link={link} config={config} />
+                            <Link key={`link-${idx}`} link={link} config={config} onLinkClick={handleLinkClick} />
                         ))}
                     </g>
                     {/* Render Nodes */}
