@@ -573,6 +573,25 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             } else {
                 nodesSelection.on('.drag', null);
             }
+
+            // Force D3 to capture clicks since d3.drag/d3.zoom swallows native React synthetic events
+            nodesSelection.on('click', (event, d) => {
+                if (event.defaultPrevented) return; // Prevent triggering if we were dragging
+                event.stopPropagation();
+                handleNodeClick(event, d, 'click');
+            });
+
+            nodesSelection.on('dblclick', (event, d) => {
+                event.stopPropagation();
+                handleNodeDoubleClick(event, d);
+            });
+
+            // Do the same for links just in case zoom swallows them too
+            const linksSelection = d3.select(gRef.current).selectAll('.link-group').data(links);
+            linksSelection.on('click', (event, d) => {
+                event.stopPropagation();
+                handleLinkClick(event, d);
+            });
         }, 100);
 
         return () => {
