@@ -611,8 +611,6 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         );
     }
 
-    console.log("AWS-DFD-Visualizer rendering...", { nodesCount: nodes.length, width, height });
-
     const nanNodes = nodes.filter(n => isNaN(n.x)).length;
 
     return (
