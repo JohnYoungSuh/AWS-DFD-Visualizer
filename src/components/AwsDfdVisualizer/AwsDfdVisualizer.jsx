@@ -291,17 +291,67 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
 const Zone = ({ groupName, nodes }) => {
     if (nodes.length === 0 || !nodes[0].x) return null;
     
-    const xs = nodes.map(n => n.x);
-    const ys = nodes.map(n => n.y);
-    const minX = Math.min(...xs) - 280;
-    const maxX = Math.max(...xs) + 280;
-    const minY = Math.min(...ys) - 200;
-    const maxY = Math.max(...ys) + 200;
+    // Medium 3: Control Plane visual boundary
+    const isControlPlane = groupName.toLowerCase() === 'control plane' || 
+                           nodes.some(n => (n.type || '').includes('IAM') || (n.type || '').includes('CloudTrail') || (n.type || '').includes('WAF'));
+
+    const fillColor = isControlPlane ? '#879196' : 'white';
+    const fillOpacity = isControlPlane ? 0.15 : 0.05;
+    const strokeDash = isControlPlane ? "4,4" : "12,6";
+    const strokeColor = isControlPlane ? "#545b64" : "#B1B1B1";
+
+    let pathD = '';
+    let textX = 0;
+    let textY = 0;
+
+    // Medium 1: ZTA pillar grouping / cluster hulls
+    if (nodes.length >= 1) {
+        // We need padding around the nodes so the hull doesn't cut through the node cards.
+        // Node cards are ~280x100, centered at x, y. Padding added.
+        const points = [];
+        nodes.forEach(n => {
+            points.push([n.x - 180, n.y - 90]);
+            points.push([n.x + 180, n.y - 90]);
+            points.push([n.x + 180, n.y + 90]);
+            points.push([n.x - 180, n.y + 90]);
+        });
+        const hull = d3.polygonHull(points);
+        if (hull) {
+            // Create a curved path through the hull points
+            const line = d3.line().curve(d3.curveCatmullRomClosed.alpha(0.5));
+            pathD = line(hull);
+            
+            // Text position: highest point of the hull
+            const topPoint = hull.reduce((a, b) => a[1] < b[1] ? a : b);
+            textX = topPoint[0];
+            textY = topPoint[1] - 20;
+        }
+    }
+    
+    // Fallback if hull fails
+    if (!pathD) {
+        const xs = nodes.map(n => n.x);
+        const ys = nodes.map(n => n.y);
+        const minX = Math.min(...xs) - 180;
+        const maxX = Math.max(...xs) + 180;
+        const minY = Math.min(...ys) - 90;
+        const maxY = Math.max(...ys) + 90;
+        
+        pathD = `M ${minX+25} ${minY} 
+                 H ${maxX-25} A 25 25 0 0 1 ${maxX} ${minY+25} 
+                 V ${maxY-25} A 25 25 0 0 1 ${maxX-25} ${maxY} 
+                 H ${minX+25} A 25 25 0 0 1 ${minX} ${maxY-25} 
+                 V ${minY+25} A 25 25 0 0 1 ${minX+25} ${minY} Z`;
+        textX = minX + 30;
+        textY = minY - 20;
+    }
 
     return (
         <g className="zone">
-            <rect x={minX} y={minY} width={maxX - minX} height={maxY - minY} fill="white" fillOpacity={0.05} stroke="#B1B1B1" strokeDasharray="12,6" rx={25} />
-            <text x={minX + 30} y={minY + 35} fill="#838e9c" fontSize={18} fontWeight="bold">{groupName.toUpperCase()}</text>
+            <path d={pathD} fill={fillColor} fillOpacity={fillOpacity} stroke={strokeColor} strokeDasharray={strokeDash} strokeWidth={2} />
+            <text x={textX} y={textY} fill={isControlPlane ? "#545b64" : "#838e9c"} fontSize={isControlPlane ? 20 : 18} fontWeight="bold">
+                {isControlPlane ? "⚙️ CONTROL PLANE" : groupName.toUpperCase()}
+            </text>
         </g>
     );
 };
@@ -387,10 +437,12 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
 
         if (clusterBy === 'group') {
-            simulation.force('x', d3.forceX().x(d => {
+            // Medium 4: Region/VPC subnet swim lanes
+            // Use forceY to pull groups into horizontal bands
+            simulation.force('y', d3.forceY().y(d => {
                 const idx = groupNames.indexOf(d.group);
-                return (W / (groupNames.length + 1)) * (idx + 1);
-            }).strength(0.3));
+                return (H / (groupNames.length + 1)) * (idx + 1);
+            }).strength(0.6));
         }
 
         if (!enablePhysics) {

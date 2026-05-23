@@ -65,17 +65,20 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🟢 Medium (UX/Accuracy Improvements)
 
-- [ ] **ZTA pillar grouping / cluster hulls**
+- [x] **ZTA pillar grouping / cluster hulls** (Merged from Network Diagram Viz)
+    - *Context*: Visualizing zones (e.g. Edge vs Core) helps identify missing zero-trust boundaries.
     - *Action*: Group nodes into convex hulls by pillar (Network, Identity, Data, Visibility) using `d3.polygonHull()` to match architecture diagram visual zones.
 - [x] **Directed arrow rendering & Edge Styling** (Merged from Network Diagram Viz)
     - *Action*: Implemented `smoothEdges` (curved links) and `linkTextSize` formatting toggles to improve edge readability.
 - [x] **Edge label on hover only**
     - *Context*: Rendering all `relationshipName` labels simultaneously creates visual clutter.
     - *Action*: Show label only on the hovered edge.
-- [ ] **Control plane visual boundary**
-    - *Action*: Nodes tagged `ControlPlane: true` (IAM, CloudTrail, CloudWatch, WAF) should render inside a distinct background region (gray "Control Plane" box).
-- [ ] **Region/VPC subnet swim lanes**
-    - *Action*: Enforce positioning with `forceX`/`forceY` based on `awsRegion` + `vpcId` tags rather than pure free-form simulation.
+- [x] **Control plane visual boundary**
+    - *Context*: Architecture diagrams often separate Control Plane from Data Plane.
+    - *Action*: Render a visually distinct boundary (e.g. grey background) for nodes tagged as `ControlPlane: true`.
+- [x] **Region/VPC subnet swim lanes**
+    - *Context*: Nodes currently float freely.
+    - *Action*: Enforce positioning with `forceX` / `forceY` based on `awsRegion` + `vpcId` tags if provided.
 - [x] **Physics Engine Overrides** (Merged from Network Diagram Viz)
     - *Action*: Add `enablePhysics` to freeze the graph, and `hideEdgesOnDrag` to improve rendering performance during layout adjustments.
 
