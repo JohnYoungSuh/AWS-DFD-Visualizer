@@ -14,7 +14,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Bug #1** — ARN-safe node ID normalization — Fixed in `AwsDfdVisualizer.jsx`.
 
 ### ✅ Session: May 23, 2026
-- [x] **App Launcher Icon Missing** — Verified `appIcon.png` and `appIcon_2x.png` exist in `appserver/static/`.
+- [x] **App Launcher Icon Missing** — Generated standard `appIcon.png` (36x36) and `appIcon_2x.png` (72x72) directly from the existing `logo_2x.png` to fix the generic Splunk icon issue.
 - [x] **`configurationItemCaptureTime` drift animation** — Added `configurationItemCaptureTime` parsing and implemented `stale-node-drift` CSS keyframes for old config entries. Both fixes verified via `make inspect` (0 errors, 0 failures).
 
 ---
