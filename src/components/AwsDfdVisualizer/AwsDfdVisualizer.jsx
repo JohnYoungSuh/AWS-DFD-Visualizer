@@ -115,7 +115,7 @@ const parseSplunkData = (data) => {
     const edgeSet = new Set();
 
     rows.forEach(row => {
-        let from, to, type, label, edge, group, icon, status, suppConfig;
+        let from, to, type, label, edge, group, icon, status, suppConfig, captureTime;
         
         if (isObjectMode) {
             from  = row.from || row.source;
@@ -127,6 +127,7 @@ const parseSplunkData = (data) => {
             icon  = row.icon || row.stencil || '';
             status = row.configurationItemStatus || row.status || '';
             suppConfig = row.supplementaryConfiguration;
+            captureTime = row.configurationItemCaptureTime || row.captureTime || null;
         } else {
             from  = idxFrom > -1 ? row[idxFrom] : row[0];
             to    = idxTo > -1 ? row[idxTo] : row[1];
@@ -140,7 +141,12 @@ const parseSplunkData = (data) => {
             status = iStatus > -1 ? row[iStatus] : '';
             let iSupp = fields.indexOf('supplementaryconfiguration');
             suppConfig = iSupp > -1 ? row[iSupp] : null;
+            let iCapTime = Math.max(fields.indexOf('configurationitemcapturetime'), fields.indexOf('capturetime'));
+            captureTime = iCapTime > -1 ? row[iCapTime] : null;
         }
+
+        let parsedTime = captureTime ? new Date(captureTime).getTime() : null;
+        if (isNaN(parsedTime)) parsedTime = null;
 
         if (!from || from === 'null' || String(from).trim() === '') return;
 
@@ -150,7 +156,9 @@ const parseSplunkData = (data) => {
         if (!nodesMap.has(safeFromId)) {
             // Bug #3: guard label — never render undefined/null as a text node
             const safeLabel = label || String(from).split(/[:/]/).pop() || from;
-            nodesMap.set(safeFromId, { id: safeFromId, arn: from, label: safeLabel, type, group, icon, status, x: 0, y: 0 });
+            nodesMap.set(safeFromId, { id: safeFromId, arn: from, label: safeLabel, type, group, icon, status, captureTime: parsedTime, x: 0, y: 0 });
+        } else if (parsedTime && !nodesMap.get(safeFromId).captureTime) {
+            nodesMap.get(safeFromId).captureTime = parsedTime;
         }
         if (to && to !== 'null' && String(to).trim() !== '') {
             const safeToId = safeId(to);
@@ -162,7 +170,7 @@ const parseSplunkData = (data) => {
             }
             if (!nodesMap.has(safeToId)) {
                 const toLabel = String(to).split(/[:/]/).pop() || to;
-                nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
+                nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
             }
         }
         
@@ -182,7 +190,7 @@ const parseSplunkData = (data) => {
                         }
                         if (!nodesMap.has(safeArnId)) {
                             const arnLabel = arn.split(/[:/]/).pop() || arn;
-                            nodesMap.set(safeArnId, { id: safeArnId, arn: arn, label: arnLabel, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
+                            nodesMap.set(safeArnId, { id: safeArnId, arn: arn, label: arnLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
                         }
                     }
                 });
@@ -263,18 +271,20 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
     
     // High 4: configurationItemStatus visual indicator
     const isDeleted = node.status === 'ResourceDeleted' || node.status === 'ResourceNotRecorded';
-    const cardOpacity = isDeleted ? 0.6 : 1;
+    const cardOpacity = isDeleted ? 0.6 : (node.staleOpacity || 1);
     const cardStroke = isDeleted ? "#879196" : "#D5D7D8";
     const cardDash = isDeleted ? "6,6" : "none";
 
+    const driftClass = node.isStale && !isDeleted ? 'stale-node-drift' : '';
+
     return (
-        <g className="node-card" transform={`translate(${node.x},${node.y})`} 
+        <g className={`node-card ${driftClass}`} transform={`translate(${node.x},${node.y})`} 
            onClickCapture={(e) => {
                console.log("AWS-DFD-Visualizer: onClickCapture fired!", node.id);
                onNodeClick(e, node, 'click');
            }}
            onDoubleClick={(e) => onNodeDoubleClick(e, node)} 
-           style={{ cursor: 'pointer', opacity: cardOpacity }}>
+           style={{ cursor: 'pointer', opacity: cardOpacity, '--base-opacity': cardOpacity }}>
             <title>{node.arn || node.id} ({typeLabel}){isDeleted ? ` [${node.status}]` : ''}</title>
             <rect width={280} height={100} x={-140} y={-50} fill={fillColor} stroke={cardStroke} strokeDasharray={cardDash} strokeWidth={isDeleted ? 2 : 1} rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
             <rect width={66} height={66} x={-128} y={-33} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
@@ -429,6 +439,32 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const { nodes, links, groupNames } = useMemo(() => {
         const parsed = parseSplunkData(data);
         const gNames = Array.from(new Set(parsed.nodes.map(n => n.group)));
+        
+        let maxTime = 0;
+        parsed.nodes.forEach(n => {
+            if (n.captureTime && n.captureTime > maxTime) maxTime = n.captureTime;
+        });
+        
+        const DAY_MS = 86400000;
+        const MAX_AGE_MS = DAY_MS * 30; // 30 days
+        
+        parsed.nodes.forEach(n => {
+            if (n.captureTime && maxTime > 0) {
+                const ageMs = maxTime - n.captureTime;
+                if (ageMs > DAY_MS) {
+                    const staleness = Math.min((ageMs - DAY_MS) / MAX_AGE_MS, 1);
+                    n.staleOpacity = 1 - (staleness * 0.6); // 1.0 down to 0.4
+                    n.isStale = ageMs > DAY_MS;
+                } else {
+                    n.staleOpacity = 1;
+                    n.isStale = false;
+                }
+            } else {
+                n.staleOpacity = 1;
+                n.isStale = false;
+            }
+        });
+        
         return { ...parsed, groupNames: gNames };
     }, [data]);
 
@@ -630,6 +666,18 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     return (
         <div style={{ width: '100%', height: '100%', minHeight: '400px', overflow: 'hidden', background: 'transparent', position: 'relative' }}>
+            <style>
+                {`
+                @keyframes drift-fade {
+                    0% { opacity: var(--base-opacity, 1); }
+                    50% { opacity: calc(var(--base-opacity, 1) * 0.4); }
+                    100% { opacity: var(--base-opacity, 1); }
+                }
+                .stale-node-drift {
+                    animation: drift-fade 4s infinite ease-in-out;
+                }
+                `}
+            </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
                 v2.6.1 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>

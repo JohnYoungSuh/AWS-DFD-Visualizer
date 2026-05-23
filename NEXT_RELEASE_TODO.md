@@ -13,6 +13,10 @@ This list is based on failure analysis against mock config and standard D3 force
 ### ✅ Session: May 22, 2026
 - [x] **Bug #1** — ARN-safe node ID normalization — Fixed in `AwsDfdVisualizer.jsx`.
 
+### ✅ Session: May 23, 2026
+- [x] **App Launcher Icon Missing** — Verified `appIcon.png` and `appIcon_2x.png` exist in `appserver/static/`.
+- [x] **`configurationItemCaptureTime` drift animation** — Added `configurationItemCaptureTime` parsing and implemented `stale-node-drift` CSS keyframes for old config entries. Both fixes verified via `make inspect` (0 errors, 0 failures).
+
 ---
 
 ## 🔴 Critical (Will Break Rendering)
@@ -84,10 +88,10 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🔵 Low (Polish / Future)
 
-- [ ] **App Launcher Icon Missing**
+- [x] **App Launcher Icon Missing**
     - *Context*: The app shows a generic "App" icon in the Splunk side navigation menu instead of a custom visualizer logo.
     - *Action*: Add `appIcon.png` and `appIcon_2x.png` into `appserver/static/` to brand the app.
-- [ ] **`configurationItemCaptureTime` drift animation**
+- [x] **`configurationItemCaptureTime` drift animation**
     - *Action*: Animate node opacity based on how stale the config snapshot is (older = more transparent).
 - [ ] **SPL → D3 live feed mode**
     - *Action*: Accept edge table output from SPL queries as a CSV drop-in to refresh the graph without full JSON reload.
