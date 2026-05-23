@@ -468,20 +468,6 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         return { ...parsed, groupNames: gNames };
     }, [data]);
 
-    // Diagnostic: Auto-fire a token after 3 seconds to test if the token bus is working
-    useEffect(() => {
-        if (!onDrilldown) return;
-        const timer = setTimeout(() => {
-            console.log("AWS-DFD-Visualizer: Auto-firing diagnostic drilldown token!");
-            onDrilldown({
-                action: 'click',
-                [config.tokenValue || 'tokenValue']: 'DIAGNOSTIC_TEST_ID',
-                [config.tokenNode || 'tokenNode']: 'Diagnostic Node',
-                [config.tokenToolTip || 'tokenToolTip']: 'Test Type'
-            }, { nativeEvent: new MouseEvent('click') });
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, [onDrilldown, config]);
 
     useEffect(() => {
         if (!nodes.length) return;
@@ -679,7 +665,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.6.1 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.6.2 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
