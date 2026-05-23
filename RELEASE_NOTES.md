@@ -1,3 +1,29 @@
+# Release Notes: AWS-DFD-Visualizer v2.6.1
+
+**Release Date:** May 22, 2026
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML
+
+## Overview
+Version 2.6.1 delivers all Critical, High, and Medium enhancements prioritized in the May 2026 backlog. This release introduces advanced data formatting for edge-case AWS Config environments, robust zero-trust grouping visualizers, and interactive token integration for complex Splunk dashboard workflows.
+
+## Major Features & Enhancements
+
+### 1. Robust Data Normalization & Edge Guarding
+* **ARN-Safe Node Normalization:** ARNs passed as `resourceId` (e.g., Lambda, S3, Firehose) containing colons and slashes no longer crash D3 physics math. They are slugged internally while preserving the original ARN for display.
+* **Bidirectional Edge Deduplication:** Complex AWS Config data mapping relationships on both ends (A→B and B→A) are now deduplicated via a canonical sorting algorithm `[from,to].sort().join('|')` to prevent D3 force stacking and graph collapse.
+* **Null Label Fallbacks:** Automatically falls back to parsing short, human-readable labels from full ARNs if `resourceName` is missing in the telemetry.
+
+### 2. Zero-Trust & Architecture Layouts
+* **ZTA Pillar Cluster Hulls:** Nodes can now be logically grouped into convex polygons representing distinct Zero Trust boundaries (Identity, Network, Data, Visibility).
+* **Region/VPC Swim Lanes:** Floating resources can now be constrained using `forceX/forceY` logic to pull them into distinct Region or VPC horizontal bands.
+* **Hierarchical Tree Mode:** Added `layoutMode="hierarchy"` toggle for use cases better represented as top-down trees rather than standard force graphs.
+* **Control Plane Boundaries:** Nodes flagged as Control Plane now render with distinct visual boundaries to isolate them from Data Plane workloads.
+
+### 3. Interactive Dashboard Token Drilldowns
+* **Advanced Token Integration:** Implemented an aggressive, capture-phase React listener (`onClickCapture`) to safely bypass D3 drag intercepts. Clicking a node now instantly pushes `tokenValue`, `tokenNode`, and `tokenToolTip` variables up to the Splunk dashboard framework so secondary panels can load dynamic SPL queries.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.5.19 (Cumulative Update)
 
 **Release Date:** May 10, 2026
