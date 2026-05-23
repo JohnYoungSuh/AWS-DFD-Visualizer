@@ -1,6 +1,6 @@
 {
   "name": "aws-dfd-visualizer",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "React-based DFD Visualizer for Splunk, AWS Security Data Flows (Hardened IL5 Baseline)",
   "main": "src/visualization_source.js",
   "engines": {
