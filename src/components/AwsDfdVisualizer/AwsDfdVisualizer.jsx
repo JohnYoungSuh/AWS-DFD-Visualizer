@@ -377,8 +377,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     // High 6: Advanced Token Integration
     const handleNodeClick = (e, node, actionType = 'click') => {
         if (drilldownClick !== 'singleOrDouble' && actionType === 'click') return;
-        
         if (actionType === 'click' && clickTimeoutRef.current) return;
+        
+        console.log("AWS-DFD-Visualizer: Click received on node!", { actionType, nodeId: node.id || node.arn });
         
         const executeDrilldown = () => {
             if (onDrilldown) {
@@ -399,6 +400,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     };
 
     const handleLinkClick = (e, link) => {
+        console.log("AWS-DFD-Visualizer: Click received on link!", { source: link.source.id, target: link.target.id });
         if (onDrilldown) {
             onDrilldown({
                 action: 'click',

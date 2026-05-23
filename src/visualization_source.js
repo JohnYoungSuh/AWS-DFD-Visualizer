@@ -45,6 +45,8 @@ export default SplunkVisualizationBase.extend({
         const handleDrilldown = (actionProps, e) => {
             const { action, ...dataPayload } = actionProps;
             
+            console.log("AWS-DFD-Visualizer: handleDrilldown called from React!", { action, dataPayload });
+
             // 1. Fire native Splunk drilldown first
             this.drilldown({
                 action: action === 'click' || action === 'doubleclick' ? SplunkVisualizationBase.FIELD_VALUE_DRILLDOWN : action,
@@ -68,6 +70,7 @@ export default SplunkVisualizationBase.extend({
                             defaultTokens.set(tokenKey, dataPayload[key]);
                             submittedTokens.set(tokenKey, dataPayload[key]);
                         });
+                        console.log("AWS-DFD-Visualizer: Tokens successfully injected into window.mvc!", dataPayload);
                     }
                 } catch (err) {
                     console.warn("AWS-DFD-Visualizer: Could not set mvc tokens directly", err);
