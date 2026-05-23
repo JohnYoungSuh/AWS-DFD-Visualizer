@@ -45,32 +45,34 @@ export default SplunkVisualizationBase.extend({
         const handleDrilldown = (actionProps, e) => {
             const { action, ...dataPayload } = actionProps;
             
-            // Fallback: forcefully inject tokens globally to bypass XML limitations
-            try {
-                const a_mvc = window.mvc || require('splunkjs/mvc');
-                const defaultTokens = a_mvc.Components.get("default");
-                const submittedTokens = a_mvc.Components.get("submitted");
-                if (defaultTokens && submittedTokens) {
-                    Object.keys(dataPayload).forEach(key => {
-                        // We map "tokenValue" to "clicked_node_id" manually here as a safe fallback
-                        let tokenKey = key;
-                        if (key === 'tokenValue') tokenKey = 'clicked_node_id';
-                        if (key === 'tokenNode') tokenKey = 'clicked_node_name';
-                        if (key === 'tokenToolTip') tokenKey = 'clicked_node_type';
-                        if (key === 'tokenToNode') tokenKey = 'clicked_target_node';
-                        
-                        defaultTokens.set(tokenKey, dataPayload[key]);
-                        submittedTokens.set(tokenKey, dataPayload[key]);
-                    });
-                }
-            } catch (err) {
-                console.warn("AWS-DFD-Visualizer: Could not set mvc tokens directly", err);
-            }
-
+            // 1. Fire native Splunk drilldown first
             this.drilldown({
                 action: action === 'click' || action === 'doubleclick' ? SplunkVisualizationBase.FIELD_VALUE_DRILLDOWN : action,
                 data: dataPayload
             }, e ? e.nativeEvent || e : undefined); 
+            
+            // 2. Forcefully inject tokens globally AFTER a slight delay to override XML mapping wipes
+            setTimeout(() => {
+                try {
+                    const a_mvc = window.mvc || require('splunkjs/mvc');
+                    const defaultTokens = a_mvc.Components.get("default");
+                    const submittedTokens = a_mvc.Components.get("submitted");
+                    if (defaultTokens && submittedTokens) {
+                        Object.keys(dataPayload).forEach(key => {
+                            let tokenKey = key;
+                            if (key === 'tokenValue') tokenKey = 'clicked_node_id';
+                            if (key === 'tokenNode') tokenKey = 'clicked_node_name';
+                            if (key === 'tokenToolTip') tokenKey = 'clicked_node_type';
+                            if (key === 'tokenToNode') tokenKey = 'clicked_target_node';
+                            
+                            defaultTokens.set(tokenKey, dataPayload[key]);
+                            submittedTokens.set(tokenKey, dataPayload[key]);
+                        });
+                    }
+                } catch (err) {
+                    console.warn("AWS-DFD-Visualizer: Could not set mvc tokens directly", err);
+                }
+            }, 100);
         };
 
         this.reactRoot.render(
