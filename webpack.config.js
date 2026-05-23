@@ -21,6 +21,7 @@ module.exports = {
     resolve: { extensions: ['.js', '.jsx'] },
     externals: {
         'api/SplunkVisualizationBase': 'api/SplunkVisualizationBase',
-        'api/SplunkVisualizationEnv': 'api/SplunkVisualizationEnv'
+        'api/SplunkVisualizationEnv': 'api/SplunkVisualizationEnv',
+        'splunkjs/mvc': 'splunkjs/mvc'
     }
 };
