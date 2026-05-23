@@ -100,3 +100,6 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 *Note: This list is tracked in `NEXT_RELEASE_TODO.md` as of May 2026. Prioritized and merged with legacy Network Diagram Viz parity ideas.*
+
+## 📍 Session Log
+- **May 2026**: Fixed critical bug in Advanced Token Integration where D3 drag physics engine aggressively intercepted and destroyed React synthetic click events. Resolved by migrating click event interception to the top-level React root via `onClickCapture`.
