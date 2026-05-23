@@ -18,7 +18,8 @@ module.exports = defineConfig({
               ...webpackConfig.resolve,
               exportsFields: [],
               alias: {
-                  'api/SplunkVisualizationBase': require('path').resolve(__dirname, 'src/__mocks__/SplunkVisualizationBase.js')
+                  'api/SplunkVisualizationBase': require('path').resolve(__dirname, 'src/__mocks__/SplunkVisualizationBase.js'),
+                  'splunkjs/mvc': require('path').resolve(__dirname, 'src/__mocks__/splunkjs_mvc.js')
               }
           }
       }

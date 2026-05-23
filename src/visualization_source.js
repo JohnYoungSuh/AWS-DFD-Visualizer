@@ -2,6 +2,7 @@ console.log("AWS-DFD-Visualizer: Script file executing.");
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import SplunkVisualizationBase from 'api/SplunkVisualizationBase';
+import mvc from 'splunkjs/mvc';
 import AwsDfdVisualizer from './components/AwsDfdVisualizer/AwsDfdVisualizer';
 export default SplunkVisualizationBase.extend({
 
@@ -47,7 +48,6 @@ export default SplunkVisualizationBase.extend({
             
             // Fallback: forcefully inject tokens globally to bypass XML limitations
             try {
-                const mvc = require('splunkjs/mvc');
                 const defaultTokens = mvc.Components.get("default");
                 const submittedTokens = mvc.Components.get("submitted");
                 if (defaultTokens && submittedTokens) {
