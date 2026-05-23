@@ -1,6 +1,6 @@
 <form class="splunk-formatter-section" section-label="General">
     <div class="control-group">
-        <label class="control-label" for="aws_dfd_display_mode">Diagram Layout Mode</label>
+        <label class="control-label" for="aws_dfd_display_mode">Node Placement Mode</label>
         <div class="controls">
             <div class="btn-group shared-controls-controlgroup-control" id="aws_dfd_display_mode" data-name="display_mode">
                 <button class="btn" data-value="auto">Auto (Physics)</button>
@@ -9,6 +9,20 @@
             <span class="help-block">Manual mode locks icons where you drop them.</span>
         </div>
     </div>
+
+    <splunk-control-group label="Layout Engine" help="Choose between force-directed or strict hierarchical trees.">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.layoutMode" value="force">
+            <option value="force">Force Directed</option>
+            <option value="hierarchy">Hierarchy (Tree)</option>
+        </splunk-radio-input>
+    </splunk-control-group>
+
+    <splunk-control-group label="Tree Direction" help="Only applies when Layout Engine is set to Hierarchy.">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.hierarchyDirection" value="Top to Bottom">
+            <option value="Top to Bottom">Top to Bottom</option>
+            <option value="Left to Right">Left to Right</option>
+        </splunk-radio-input>
+    </splunk-control-group>
 
     <splunk-control-group label="Draggable Nodes" help=" ">
         <splunk-radio-input name="{{VIZ_NAMESPACE}}.draggableNodes" value="true">

@@ -38,3 +38,21 @@ display.visualizations.custom.AWS-DFD-Visualizer.smoothEdges = <bool>
 
 display.visualizations.custom.AWS-DFD-Visualizer.linkTextSize = <string>
 * Size of the relationship text (small, medium, large, extraLarge). Default is medium.
+
+display.visualizations.custom.AWS-DFD-Visualizer.layoutMode = <string>
+* Determines the layout engine used (force or hierarchy). Default is force.
+
+display.visualizations.custom.AWS-DFD-Visualizer.hierarchyDirection = <string>
+* The direction of the tree if layoutMode is hierarchy (Top to Bottom, Left to Right).
+
+display.visualizations.custom.AWS-DFD-Visualizer.tokenValue = <string>
+* Override the default token name for the clicked node ID/ARN.
+
+display.visualizations.custom.AWS-DFD-Visualizer.tokenNode = <string>
+* Override the default token name for the clicked node label.
+
+display.visualizations.custom.AWS-DFD-Visualizer.tokenToNode = <string>
+* Override the default token name for the target node label (when clicking links).
+
+display.visualizations.custom.AWS-DFD-Visualizer.tokenToolTip = <string>
+* Override the default token name for the node type.
