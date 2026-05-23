@@ -416,6 +416,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         return { ...parsed, groupNames: gNames };
     }, [data]);
 
+    // Diagnostic: Auto-fire a token after 3 seconds to test if the token bus is working
+    useEffect(() => {
+        if (!onDrilldown) return;
+        const timer = setTimeout(() => {
+            console.log("AWS-DFD-Visualizer: Auto-firing diagnostic drilldown token!");
+            onDrilldown({
+                action: 'click',
+                [config.tokenValue || 'tokenValue']: 'DIAGNOSTIC_TEST_ID',
+                [config.tokenNode || 'tokenNode']: 'Diagnostic Node',
+                [config.tokenToolTip || 'tokenToolTip']: 'Test Type'
+            }, { nativeEvent: new MouseEvent('click') });
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [onDrilldown, config]);
+
     useEffect(() => {
         if (!nodes.length) return;
 
