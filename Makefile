@@ -22,7 +22,7 @@ build:
 	rm -rf dist $(SPL_FILE)
 	mkdir -p dist/$(APP_NAME)
 	# Copy only standard Splunk app folders and files
-	cp -r appserver default metadata splunk-app-manifest.json dist/$(APP_NAME)/ 2>/dev/null || true
+	cp -r appserver static default metadata splunk-app-manifest.json dist/$(APP_NAME)/ 2>/dev/null || true
 	# Clean out WSL-specific noise and hidden files from the staging area
 	find dist/$(APP_NAME) -name ".*" -type f -delete
 	find dist/$(APP_NAME) -name "*Zone.Identifier*" -type f -delete
