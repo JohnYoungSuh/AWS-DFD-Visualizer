@@ -42,7 +42,13 @@ export default SplunkVisualizationBase.extend({
         const isDarkBg = bgColor === '#000000' || bgColor === '#141414' || (bgColor.match(/^#(0[0-9a-f]|1[0-9a-f])/i));
         const themeFamily   = cleanConfig['themeFamily'] || 'enterprise';
         const colorScheme   = cleanConfig['colorScheme'] || cleanConfig['theme'] || (isDark || isDarkBg ? 'dark' : 'light');
-        const handleDrilldown = (actionProps) => { this.drilldown(actionProps); };
+        const handleDrilldown = (actionProps) => {
+            const { action, ...dataPayload } = actionProps;
+            this.drilldown({
+                action: action === 'click' || action === 'doubleclick' ? SplunkVisualizationBase.FIELD_VALUE_DRILLDOWN : action,
+                data: dataPayload
+            }); 
+        };
 
         this.reactRoot.render(
             <AwsDfdVisualizer
