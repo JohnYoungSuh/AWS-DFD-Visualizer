@@ -16,6 +16,7 @@ This list is based on failure analysis against mock config and standard D3 force
 ### ✅ Session: May 23, 2026
 - [x] **App Launcher Icon Missing** — Generated standard `appIcon.png` (36x36) and `appIcon_2x.png` (72x72) directly from the existing `logo_2x.png` to fix the generic Splunk icon issue.
 - [x] **`configurationItemCaptureTime` drift animation** — Added `configurationItemCaptureTime` parsing and implemented `stale-node-drift` CSS keyframes for old config entries. Both fixes verified via `make inspect` (0 errors, 0 failures).
+- [x] **App Visibility and Navigation (Option A)** — Created a dedicated Splunk navigation config `default/data/ui/nav/default.xml` and a comprehensive `default/data/ui/views/user_guide.xml` SimpleXML dashboard featuring a live interactive D3 mock-SPL diagram, fully styling the app launcher landing page. Both files verified clean via local `make inspect` (0 errors, 0 failures) and deployed.
 
 ---
 

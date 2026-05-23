@@ -1,0 +1,151 @@
+<dashboard version="1.1" theme="dark">
+  <label>AWS DFD Visualizer User Guide</label>
+  <description>Comprehensive interactive reference and live demonstration of the React &amp; D3.js custom AWS Data Flow Diagram visualizer.</description>
+  
+  <row>
+    <panel>
+      <html>
+        <div class="user-guide-welcome" style="padding: 15px; background-color: #1e2832; border-radius: 6px; border: 1px solid #2d3e50; margin-bottom: 20px;">
+          <h1 style="color: #FF9900; margin-top: 0; font-weight: 500; font-size: 28px;">AWS Security Data Flow Diagram (DFD) Visualizer</h1>
+          <p style="font-size: 15px; line-height: 1.6; color: #dcdcdc;">
+            Welcome to the <strong>AWS-DFD-Visualizer</strong>, a React-based custom visualization for Splunk built to render complex AWS Config relationships as dynamic, interactive AWS Application Composer-style Data Flow Diagrams. This app is architected with DoD Impact Level 5 (IL5) environments, Risk Management Framework (RMF) audits, and Zero-Trust architecture (ZTA) in mind.
+          </p>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel title="Interactive Live Demonstration">
+      <viz type="AWS-DFD-Visualizer.AWS-DFD-Visualizer">
+        <search>
+          <query><![CDATA[| makeresults count=5
+| streamstats count as id
+| eval from=case(id=1, "Internet", id=2, "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/app-alb/987654321", id=3, "arn:aws:lambda:us-east-1:123456789012:function:order-processor-fn", id=4, "arn:aws:rds:us-east-1:123456789012:db:production-db", id=5, "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/edge-waf/11223344")
+| eval to=case(id=1, "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/edge-waf/11223344", id=2, "arn:aws:lambda:us-east-1:123456789012:function:order-processor-fn", id=3, "arn:aws:rds:us-east-1:123456789012:db:production-db", id=5, "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/app-alb/987654321")
+| eval type=case(id=1, "Network", id=2, "AWS::ElasticLoadBalancingV2::LoadBalancer", id=3, "AWS::Lambda::Function", id=4, "AWS::RDS::DBInstance", id=5, "AWS::WAFV2::WebACL")
+| eval node_label=case(id=1, "Internet", id=2, "App Load Balancer", id=3, "Order Processor Function", id=4, "Production RDS Database", id=5, "App Edge WAF")
+| eval edge_label=case(id=1, "HTTPS/443", id=2, "HTTPS/8443", id=3, "MySQL/3306", id=5, "Forward")
+| eval group=case(id=1, "External Zone", id=2, "Security Boundary", id=3, "Compute Boundary", id=4, "Database Boundary", id=5, "Security Boundary")
+| eval status=case(id=4, "OK", id=3, "OK", id=2, "OK", id=5, "OK", id=1, "OK")
+| table from to type node_label edge_label group status]]></query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="height">600</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.display_mode">auto</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.layoutMode">force</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.clusterBy">group</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.draggableNodes">true</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.smoothEdges">true</option>
+      </viz>
+    </panel>
+  </row>
+
+  <row>
+    <panel title="1. Query Schema &amp; Data Specification">
+      <html>
+        <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
+          <p>The visualizer reads standard tabular results from your SPL query. You should format your query using <code>| table</code> or <code>| project</code> to yield the following columns:</p>
+          <table class="table table-bordered table-striped" style="color: #dcdcdc; width: 100%; border-collapse: collapse; border: 1px solid #444; margin-top: 10px; margin-bottom: 20px;">
+            <thead>
+              <tr style="background-color: #2c3e50; border-bottom: 2px solid #FF9900;">
+                <th style="padding: 10px; border: 1px solid #444;">Column</th>
+                <th style="padding: 10px; border: 1px solid #444;">Type</th>
+                <th style="padding: 10px; border: 1px solid #444;">Description</th>
+                <th style="padding: 10px; border: 1px solid #444;">Example Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">from / source</td>
+                <td style="padding: 10px; border: 1px solid #444; font-weight: bold; color: #FF9900;">Required</td>
+                <td style="padding: 10px; border: 1px solid #444;">The source node resourceId or full AWS ARN. ARNs are normalized internally for safe D3 selections.</td>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">arn:aws:lambda:us-east-1:123:function:my-func</td>
+              </tr>
+              <tr style="background-color: #252a30;">
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">to / destination</td>
+                <td style="padding: 10px; border: 1px solid #444; font-weight: bold; color: #879196;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">The destination node resourceId or ARN. If left empty, an isolated node is drawn without connections.</td>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">arn:aws:rds:us-east-1:123:db:my-db</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">type</td>
+                <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">AWS resource type, used to resolve service-specific architectural icons automatically.</td>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">AWS::Lambda::Function</td>
+              </tr>
+              <tr style="background-color: #252a30;">
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">node_label / label</td>
+                <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">Human-readable label shown inside the node card. Falls back to extracting the short name from the ARN.</td>
+                <td style="padding: 10px; border: 1px solid #444;">Order Processor API</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">edge_label / link_text</td>
+                <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">Relationship descriptor text overlaying the link curve, enclosed in a clean background halo.</td>
+                <td style="padding: 10px; border: 1px solid #444;">HTTPS / 443</td>
+              </tr>
+              <tr style="background-color: #252a30;">
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">group</td>
+                <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">Pillar/security zone name. Nodes of the same group are drawn inside curved, shaded convex hulls.</td>
+                <td style="padding: 10px; border: 1px solid #444;">Private Subnet A</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">status</td>
+                <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">Configuration status. Statuses like <code>ResourceDeleted</code> render cards with reduced opacity and dashed borders.</td>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">ResourceDeleted</td>
+              </tr>
+              <tr style="background-color: #252a30;">
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">captureTime</td>
+                <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
+                <td style="padding: 10px; border: 1px solid #444;">Configuration capture timestamp. Older snapshots trigger stale-node fade-out animations.</td>
+                <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">2026-05-20T12:00:00Z</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel title="2. Architectural and Security Design Highlights">
+      <html>
+        <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
+          <h3 style="color: #FF9900; margin-top: 0;">React-D3 Separation of Concerns</h3>
+          <p>
+            Traditional force-graphs frequently suffer from DOM-sync crashes because D3 directly mutates elements managed by React. This visualizer utilizes D3 strictly as a math and physics co-processor to calculate 2D spatial coordinates (handling <code>d3.forceSimulation</code>, collision detection, and zoom matrices), while React retains complete ownership of the DOM (rendering high-fidelity SVG <code>&lt;rect&gt;</code> card elements, images, text, and binding secure events).
+          </p>
+          
+          <h3 style="color: #FF9900;">Zero-Trust Architecture (ZTA) Zones</h3>
+          <p>
+            When grouping by VPC subnets or security domains (using the <code>group</code> column), the visualizer uses <code>d3.polygonHull</code> combined with a Catmull-Rom closed interpolator to draw shaded convex hulls enclosing the nodes. This allows for immediate visual identification of missing firewalls, insecure trust boundaries, and network segregation breaches in Impact Level 5 (IL5) environments.
+          </p>
+          
+          <h3 style="color: #FF9900;">Strict Bidirectional Edge Deduplication</h3>
+          <p>
+            In AWS Config relationships, associations are often declared on both ends (e.g. from EC2 pointing to Subnet and vice-versa). The visualizer uses a sorted canonical edge set key (<code>[from, to].sort().join('|')</code>) to automatically prune duplicate connections, preventing D3 forces from double-pulling nodes and collapsing the diagram into visual anomalies.
+          </p>
+        </div>
+      </html>
+    </panel>
+    <panel title="3. Full Configuration Properties Reference">
+      <html>
+        <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
+          <p>Customize the presentation of your diagram using the visualizer Format menu in the Edit view:</p>
+          <ul style="padding-left: 20px;">
+            <li><strong>Node Placement Mode</strong> (<code>display_mode</code>): Switch between <em>Auto (Physics)</em> to allow forces to self-arrange, or <em>Manual (Sticky)</em> to lock nodes where you drop them.</li>
+            <li><strong>Layout Engine</strong> (<code>layoutMode</code>): Choose <em>Force Directed</em> for organic physics layouts or <em>Hierarchy (Tree)</em> to organize nodes as Top-to-Bottom or Left-to-Right BFS trees.</li>
+            <li><strong>Clustering</strong> (<code>clusterBy</code>): Render security envelopes by group by selecting <em>Group</em>.</li>
+            <li><strong>Draggability and Zoom</strong> (<code>draggableNodes</code> / <code>canZoom</code>): Toggles interactivity for static audit exports.</li>
+            <li><strong>Edge Styling</strong> (<code>smoothEdges</code>): Toggle curved SVG paths versus straight vector lines to maximize link legibility.</li>
+          </ul>
+        </div>
+      </html>
+    </panel>
+  </row>
+</dashboard>
