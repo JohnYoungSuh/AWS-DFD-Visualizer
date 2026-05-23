@@ -391,14 +391,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             }
         };
 
-        if (actionType === 'click') {
-            clickTimeoutRef.current = setTimeout(() => {
-                executeDrilldown();
-                clickTimeoutRef.current = null;
-            }, 250);
-        } else {
-            executeDrilldown();
-        }
+        executeDrilldown();
     };
 
     const handleNodeDoubleClick = (e, node) => {
