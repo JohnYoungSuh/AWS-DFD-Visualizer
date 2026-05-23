@@ -81,6 +81,9 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🔵 Low (Polish / Future)
 
+- [ ] **App Launcher Icon Missing**
+    - *Context*: The app shows a generic "App" icon in the Splunk side navigation menu instead of a custom visualizer logo.
+    - *Action*: Add `appIcon.png` and `appIcon_2x.png` into `appserver/static/` to brand the app.
 - [ ] **`configurationItemCaptureTime` drift animation**
     - *Action*: Animate node opacity based on how stale the config snapshot is (older = more transparent).
 - [ ] **SPL → D3 live feed mode**
