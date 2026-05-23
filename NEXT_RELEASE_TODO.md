@@ -56,11 +56,11 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **`configurationItemStatus` visual indicator**
     - *Context*: Real Config returns `OK`, `ResourceDeleted`, `ResourceNotRecorded`.
     - *Action*: Render deleted resources differently (dashed border, reduced opacity).
-- [ ] **Hierarchical Tree Layouts** (Merged from Network Diagram Viz)
-    - *Context*: Some architectures are better represented as trees rather than force-directed graphs.
-    - *Action*: Implement `hierarchy` toggle and support properties like `hierarchyDirection`, `hierarchySortMethod`, `levelSeparation`, and `nodeSpacing`.
-- [ ] **Advanced Token Integration** (Merged from Network Diagram Viz)
-    - *Context*: Splunk dashboards rely heavily on interactive tokens.
+- [x] **Hierarchical Tree Layouts** (Merged from Network Diagram Viz)
+    - *Context*: Some use cases (like IAM boundaries or transitive trusts) are better represented as top-down trees.
+    - *Action*: Implement a strict hierarchical tree layout toggle (`layoutMode="hierarchy"` vs `layoutMode="force"`).
+- [x] **Advanced Token Integration** (Merged from Network Diagram Viz)
+    - *Context*: Splunk dashboards require setting multiple tokens upon clicking nodes/edges to drive other panels.
     - *Action*: Implement `tokenValue`, `tokenNode`, `tokenToNode`, and `tokenToolTip` to allow fine-grained token setting on specific node/link interactions.
 
 ## 🟢 Medium (UX/Accuracy Improvements)

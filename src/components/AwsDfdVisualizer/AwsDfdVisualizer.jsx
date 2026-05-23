@@ -195,7 +195,7 @@ const parseSplunkData = (data) => {
 };
 
 // SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line, edge label with halo)
-const Link = ({ link, config }) => {
+const Link = ({ link, config, onLinkClick }) => {
     const { useState } = React;
     const [isHovered, setIsHovered] = useState(false);
     const { source, target, label } = link;
@@ -223,7 +223,7 @@ const Link = ({ link, config }) => {
     if (sizeConf === 'extraLarge') { fontSize = 22; bgWidth = 240; }
 
     return (
-        <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{ cursor: 'pointer' }}>
+        <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
             <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
             <path d={d} stroke="#879196" fill="none" strokeWidth={3} />
             {label && isHovered && (
@@ -368,33 +368,41 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     const drilldownClick = config?.drilldownClick || 'singleOrDouble';
     const clusterBy = config?.clusterBy || 'none';
+    const layoutMode = config?.layoutMode || 'force';
     const canZoom = String(config?.canZoom || 'true') === 'true';
     const draggableNodes = String(config?.draggableNodes || 'true') === 'true';
     const enablePhysics = String(config?.enablePhysics ?? 'true') === 'true';
     const hideEdgesOnDrag = String(config?.hideEdgesOnDrag || 'false') === 'true';
 
-    const handleNodeClick = (e, node) => {
-        if (drilldownClick !== 'singleOrDouble') return; // only double click allowed
+    // High 6: Advanced Token Integration
+    const handleNodeClick = (e, node, actionType = 'click') => {
+        if (drilldownClick !== 'singleOrDouble' && actionType === 'click') return;
         
-        // Prevent rapid single clicks from firing twice during a double click
-        if (clickTimeoutRef.current) return;
+        if (actionType === 'click' && clickTimeoutRef.current) return;
         
-        clickTimeoutRef.current = setTimeout(() => {
+        const executeDrilldown = () => {
             if (onDrilldown) {
-                onDrilldown({ action: 'click', value: node.arn || node.id, name: node.label });
+                onDrilldown({
+                    action: actionType,
+                    [config.tokenValue || 'tokenValue']: node.arn || node.id,
+                    [config.tokenNode || 'tokenNode']: node.label,
+                    [config.tokenToolTip || 'tokenToolTip']: node.type
+                });
             }
-            clickTimeoutRef.current = null;
-        }, 250);
+        };
+
+        if (actionType === 'click') {
+            clickTimeoutRef.current = setTimeout(() => {
+                executeDrilldown();
+                clickTimeoutRef.current = null;
+            }, 250);
+        } else {
+            executeDrilldown();
+        }
     };
 
     const handleNodeDoubleClick = (e, node) => {
-        if (clickTimeoutRef.current) {
-            clearTimeout(clickTimeoutRef.current);
-            clickTimeoutRef.current = null;
-        }
-        if (onDrilldown) {
-            onDrilldown({ action: 'doubleclick', value: node.arn || node.id, name: node.label });
-        }
+        handleNodeClick(e, node, 'doubleclick');
     };
 
     const { nodes, links, groupNames } = useMemo(() => {
@@ -436,7 +444,47 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             .force('x-isolated', d3.forceX(W / 2).strength(d => d.degree === 0 ? 0.05 : 0))
             .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
 
-        if (clusterBy === 'group') {
+        if (layoutMode === 'hierarchy') {
+            // High 5: Hierarchical Tree Layouts (BFS depth assignment)
+            const inDegree = new Map();
+            nodes.forEach(n => inDegree.set(n.id, 0));
+            links.forEach(l => {
+                const tId = typeof l.target === 'object' ? l.target.id : l.target;
+                inDegree.set(tId, (inDegree.get(tId) || 0) + 1);
+            });
+            
+            const depths = new Map();
+            let queue = nodes.filter(n => inDegree.get(n.id) === 0);
+            if (queue.length === 0 && nodes.length > 0) queue = [nodes[0]]; // fallback for cycles
+            queue.forEach(n => depths.set(n.id, 0));
+            
+            let depth = 0;
+            while(queue.length > 0 && depth < 20) {
+                const nextQueue = [];
+                queue.forEach(n => {
+                    const children = links.filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === n.id).map(l => typeof l.target === 'object' ? l.target : nodes.find(x => x.id === l.target));
+                    children.forEach(c => {
+                        if (c && !depths.has(c.id)) {
+                            depths.set(c.id, depth + 1);
+                            nextQueue.push(c);
+                        }
+                    });
+                });
+                queue = nextQueue;
+                depth++;
+            }
+            nodes.forEach(n => { if(!depths.has(n.id)) depths.set(n.id, 0); });
+            const maxDepth = Math.max(...depths.values()) || 1;
+
+            const hierarchyDir = config.hierarchyDirection || 'Top to Bottom';
+            if (hierarchyDir === 'Left to Right') {
+                simulation.force('x', d3.forceX(d => (W / (maxDepth + 1)) * (depths.get(d.id) + 0.5)).strength(1));
+                simulation.force('y', d3.forceY(H / 2).strength(0.1));
+            } else {
+                simulation.force('y', d3.forceY(d => (H / (maxDepth + 1)) * (depths.get(d.id) + 0.5)).strength(1));
+                simulation.force('x', d3.forceX(W / 2).strength(0.1));
+            }
+        } else if (clusterBy === 'group') {
             // Medium 4: Region/VPC subnet swim lanes
             // Use forceY to pull groups into horizontal bands
             simulation.force('y', d3.forceY().y(d => {
