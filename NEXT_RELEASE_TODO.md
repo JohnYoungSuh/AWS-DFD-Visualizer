@@ -45,15 +45,15 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🟡 High (Degrades Usability & Core Splunk Features)
 
-- [ ] **ARN-format resourceId in tooltip/inspector**
+- [x] **ARN-format resourceId in tooltip/inspector**
     - *Action*: Display the original ARN in the inspector panel but use the slugged ID internally for D3. Store both: `{ id: safeId, arn: d.resourceId }`.
-- [ ] **Isolated node handling**
+- [x] **Isolated node handling**
     - *Context*: Nodes with zero edges float to the simulation boundary.
     - *Action*: Add `d3.forceX` / `d3.forceY` gravity or a cluster hull so they stay grouped with their resource type.
-- [ ] **Missing supplementaryConfiguration parsing**
+- [x] **Missing supplementaryConfiguration parsing**
     - *Context*: ALB listeners, S3 lifecycle rules, and IAM instance profiles live here in real Config snapshots.
     - *Action*: Update parsing logic to include these relationships (ALB→HTTPS, S3→Glacier).
-- [ ] **`configurationItemStatus` visual indicator**
+- [x] **`configurationItemStatus` visual indicator**
     - *Context*: Real Config returns `OK`, `ResourceDeleted`, `ResourceNotRecorded`.
     - *Action*: Render deleted resources differently (dashed border, reduced opacity).
 - [ ] **Hierarchical Tree Layouts** (Merged from Network Diagram Viz)
@@ -69,7 +69,7 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Action*: Group nodes into convex hulls by pillar (Network, Identity, Data, Visibility) using `d3.polygonHull()` to match architecture diagram visual zones.
 - [x] **Directed arrow rendering & Edge Styling** (Merged from Network Diagram Viz)
     - *Action*: Implemented `smoothEdges` (curved links) and `linkTextSize` formatting toggles to improve edge readability.
-- [ ] **Edge label on hover only**
+- [x] **Edge label on hover only**
     - *Context*: Rendering all `relationshipName` labels simultaneously creates visual clutter.
     - *Action*: Show label only on the hovered edge.
 - [ ] **Control plane visual boundary**

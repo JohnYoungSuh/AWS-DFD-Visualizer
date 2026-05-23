@@ -115,7 +115,7 @@ const parseSplunkData = (data) => {
     const edgeSet = new Set();
 
     rows.forEach(row => {
-        let from, to, type, label, edge, group, icon;
+        let from, to, type, label, edge, group, icon, status, suppConfig;
         
         if (isObjectMode) {
             from  = row.from || row.source;
@@ -125,6 +125,8 @@ const parseSplunkData = (data) => {
             edge  = row.edge_label || row.link_text || '';
             group = row.group || 'Default';
             icon  = row.icon || row.stencil || '';
+            status = row.configurationItemStatus || row.status || '';
+            suppConfig = row.supplementaryConfiguration;
         } else {
             from  = idxFrom > -1 ? row[idxFrom] : row[0];
             to    = idxTo > -1 ? row[idxTo] : row[1];
@@ -134,6 +136,10 @@ const parseSplunkData = (data) => {
             group = fields.indexOf('group') > -1 ? row[fields.indexOf('group')] : 'Default';
             let iIcon = Math.max(fields.indexOf('icon'), fields.indexOf('stencil'));
             icon  = iIcon > -1 ? row[iIcon] : '';
+            let iStatus = Math.max(fields.indexOf('configurationitemstatus'), fields.indexOf('status'));
+            status = iStatus > -1 ? row[iStatus] : '';
+            let iSupp = fields.indexOf('supplementaryconfiguration');
+            suppConfig = iSupp > -1 ? row[iSupp] : null;
         }
 
         if (!from || from === 'null' || String(from).trim() === '') return;
@@ -144,7 +150,7 @@ const parseSplunkData = (data) => {
         if (!nodesMap.has(safeFromId)) {
             // Bug #3: guard label — never render undefined/null as a text node
             const safeLabel = label || String(from).split(/[:/]/).pop() || from;
-            nodesMap.set(safeFromId, { id: safeFromId, arn: from, label: safeLabel, type, group, icon, x: 0, y: 0 });
+            nodesMap.set(safeFromId, { id: safeFromId, arn: from, label: safeLabel, type, group, icon, status, x: 0, y: 0 });
         }
         if (to && to !== 'null' && String(to).trim() !== '') {
             const safeToId = safeId(to);
@@ -159,12 +165,39 @@ const parseSplunkData = (data) => {
                 nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
             }
         }
+        
+        // High 3: Generic supplementaryConfiguration ARN extractor
+        if (suppConfig) {
+            try {
+                let parsedSupp = typeof suppConfig === 'string' ? JSON.parse(suppConfig) : suppConfig;
+                const strSupp = JSON.stringify(parsedSupp);
+                const arnMatches = strSupp.match(/arn:aws:[a-zA-Z0-9-:]+/g) || [];
+                arnMatches.forEach(arn => {
+                    if (arn !== from) {
+                        const safeArnId = safeId(arn);
+                        const edgeKey = [safeFromId, safeArnId].sort().join('|');
+                        if (!edgeSet.has(edgeKey)) {
+                            edgeSet.add(edgeKey);
+                            links.push({ source: safeFromId, target: safeArnId, label: 'supplementary' });
+                        }
+                        if (!nodesMap.has(safeArnId)) {
+                            const arnLabel = arn.split(/[:/]/).pop() || arn;
+                            nodesMap.set(safeArnId, { id: safeArnId, arn: arn, label: arnLabel, type: 'AWS::Resource', group, icon: '', x: 0, y: 0 });
+                        }
+                    }
+                });
+            } catch (e) {
+                // ignore invalid json
+            }
+        }
     });
     return { nodes: Array.from(nodesMap.values()), links };
 };
 
 // SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line, edge label with halo)
 const Link = ({ link, config }) => {
+    const { useState } = React;
+    const [isHovered, setIsHovered] = useState(false);
     const { source, target, label } = link;
     if (!source.x || !target.x) return null;
 
@@ -190,9 +223,10 @@ const Link = ({ link, config }) => {
     if (sizeConf === 'extraLarge') { fontSize = 22; bgWidth = 240; }
 
     return (
-        <g className="link-group">
+        <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{ cursor: 'pointer' }}>
+            <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
             <path d={d} stroke="#879196" fill="none" strokeWidth={3} />
-            {label && (
+            {label && isHovered && (
                 <g transform={`translate(${midX},${midY})`}>
                     {/* Founder Tip: Background halo to prevent text collision (ENH-002) */}
                     <rect width={bgWidth} height={fontSize + 16} rx={15} fill="white" stroke="#D5D7D8" x={-(bgWidth/2)} y={-((fontSize + 16)/2)} />
@@ -226,11 +260,18 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config })
     if (sizeConf === 'extraLarge') fontSize = 32;
 
     const truncatedLabel = displayLabel.length > 25 ? displayLabel.substring(0, 22) + '...' : displayLabel;
+    
+    // High 4: configurationItemStatus visual indicator
+    const isDeleted = node.status === 'ResourceDeleted' || node.status === 'ResourceNotRecorded';
+    const cardOpacity = isDeleted ? 0.6 : 1;
+    const cardStroke = isDeleted ? "#879196" : "#D5D7D8";
+    const cardDash = isDeleted ? "6,6" : "none";
 
     return (
-        <g className="node-card" transform={`translate(${node.x},${node.y})`} onClick={(e) => onNodeClick(e, node)} onDoubleClick={(e) => onNodeDoubleClick(e, node)} style={{ cursor: 'pointer' }}>
-            <rect width={280} height={100} x={-140} y={-50} fill={fillColor} stroke="#D5D7D8" rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
-            <rect width={66} height={66} x={-128} y={-33} fill="#232F3E" rx={10} />
+        <g className="node-card" transform={`translate(${node.x},${node.y})`} onClick={(e) => onNodeClick(e, node)} onDoubleClick={(e) => onNodeDoubleClick(e, node)} style={{ cursor: 'pointer', opacity: cardOpacity }}>
+            <title>{node.arn || node.id} ({typeLabel}){isDeleted ? ` [${node.status}]` : ''}</title>
+            <rect width={280} height={100} x={-140} y={-50} fill={fillColor} stroke={cardStroke} strokeDasharray={cardDash} strokeWidth={isDeleted ? 2 : 1} rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
+            <rect width={66} height={66} x={-128} y={-33} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
             <image href={iconPath} x={-124} y={-29} width={58} height={58} preserveAspectRatio="xMidYMid meet" />
             <text x={-45} y={-14} fontSize={14} fill={subTextColor}>{typeLabel}</text>
             {wrapText ? (
@@ -327,11 +368,23 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         });
 
         // Use D3 purely for the math of the layout
+        // High 2: Isolated node gravity
+        const degreeMap = new Map();
+        links.forEach(l => {
+            const sId = typeof l.source === 'object' ? l.source.id : l.source;
+            const tId = typeof l.target === 'object' ? l.target.id : l.target;
+            degreeMap.set(sId, (degreeMap.get(sId) || 0) + 1);
+            degreeMap.set(tId, (degreeMap.get(tId) || 0) + 1);
+        });
+        nodes.forEach(n => n.degree = degreeMap.get(n.id) || 0);
+
         const simulation = d3.forceSimulation(nodes)
             .force('link', d3.forceLink(links).id(d => d.id).distance(450))
             .force('charge', d3.forceManyBody().strength(-5500))
             .force('center', d3.forceCenter(W / 2, H / 2))
-            .force('collision', d3.forceCollide().radius(240));
+            .force('collision', d3.forceCollide().radius(240))
+            .force('x-isolated', d3.forceX(W / 2).strength(d => d.degree === 0 ? 0.05 : 0))
+            .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
 
         if (clusterBy === 'group') {
             simulation.force('x', d3.forceX().x(d => {
