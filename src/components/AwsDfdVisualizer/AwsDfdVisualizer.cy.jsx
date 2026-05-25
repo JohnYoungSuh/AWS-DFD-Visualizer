@@ -88,8 +88,8 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').contains('Suspicious_IP').should('exist');
         cy.get('g.node-card').contains('RDS_Primary').should('exist');
 
-        // 4. Verify D3 color math (the default theme should inject standard stroke colors)
-        cy.get('g.link-group path').first().should('have.attr', 'stroke');
+        // 4. Verify D3 color math and arrowhead markers
+        cy.get('g.link-group path[stroke="#879196"]').first().should('have.attr', 'marker-end', 'url(#arrow)');
         
         // 5. Ensure the viewBox is properly initialized for auto-scaling
         cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1000');

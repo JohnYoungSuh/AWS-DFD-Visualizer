@@ -157,8 +157,28 @@ const parseSplunkData = (data) => {
             // Bug #3: guard label — never render undefined/null as a text node
             const safeLabel = label || String(from).split(/[:/]/).pop() || from;
             nodesMap.set(safeFromId, { id: safeFromId, arn: from, label: safeLabel, type, group, icon, status, captureTime: parsedTime, x: 0, y: 0 });
-        } else if (parsedTime && !nodesMap.get(safeFromId).captureTime) {
-            nodesMap.get(safeFromId).captureTime = parsedTime;
+        } else {
+            const existingNode = nodesMap.get(safeFromId);
+            // Proactively merge rich explicit attributes if the node already exists (e.g. was created as a link target)
+            const fallbackLabel = String(from).split(/[:/]/).pop() || from;
+            if (label && label !== fallbackLabel && existingNode.label === fallbackLabel) {
+                existingNode.label = label;
+            }
+            if (type && type !== 'AWS::Resource' && existingNode.type === 'AWS::Resource') {
+                existingNode.type = type;
+            }
+            if (group && group !== 'Default' && (existingNode.group === 'Default' || existingNode.group !== group)) {
+                existingNode.group = group;
+            }
+            if (icon && !existingNode.icon) {
+                existingNode.icon = icon;
+            }
+            if (status && !existingNode.status) {
+                existingNode.status = status;
+            }
+            if (parsedTime && !existingNode.captureTime) {
+                existingNode.captureTime = parsedTime;
+            }
         }
         if (to && to !== 'null' && String(to).trim() !== '') {
             const safeToId = safeId(to);
@@ -211,15 +231,51 @@ const Link = ({ link, config, onLinkClick }) => {
 
     const dx = target.x - source.x;
     const dy = target.y - source.y;
-    const dr = Math.sqrt(dx * dx + dy * dy);
-    
+    const dr = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    // Bounding box dimensions of NodeCard: 280x100 (centered at x, y)
+    const cardHalfWidth = 140;
+    const cardHalfHeight = 50;
+    const padding = 12; // Gap so the arrowhead doesn't clip the card border
+
+    let targetOffsetX = 0;
+    let targetOffsetY = 0;
+
+    if (Math.abs(dx) > 0.01) {
+        const slope = dy / dx;
+        const cardSlope = cardHalfHeight / cardHalfWidth; // 50/140 = 0.357
+
+        if (Math.abs(slope) < cardSlope) {
+            // Intersects left or right edge of the card
+            const sign = dx > 0 ? 1 : -1;
+            targetOffsetX = sign * (cardHalfWidth + padding);
+            targetOffsetY = sign * (cardHalfWidth + padding) * slope;
+        } else {
+            // Intersects top or bottom edge of the card
+            const sign = dy > 0 ? 1 : -1;
+            targetOffsetX = sign * (cardHalfHeight + padding) / slope;
+            targetOffsetY = sign * (cardHalfHeight + padding);
+        }
+    } else {
+        // Vertical line fallback
+        const sign = dy > 0 ? 1 : -1;
+        targetOffsetY = sign * (cardHalfHeight + padding);
+    }
+
+    const tX = target.x - targetOffsetX;
+    const tY = target.y - targetOffsetY;
+
+    // Recompute path to end exactly at the card border intersection point
+    const dxNew = tX - source.x;
+    const dyNew = tY - source.y;
+    const drNew = Math.sqrt(dxNew * dxNew + dyNew * dyNew) || 1;
+
     const smoothEdges = String(config?.smoothEdges ?? 'true') === 'true';
-    
-    // Use an arc path for the connection if smooth, otherwise straight line
     const d = smoothEdges 
-        ? `M${source.x},${source.y}A${dr},${dr} 0 0,1 ${target.x},${target.y}`
-        : `M${source.x},${source.y} L${target.x},${target.y}`;
+        ? `M${source.x},${source.y}A${drNew},${drNew} 0 0,1 ${tX},${tY}`
+        : `M${source.x},${source.y} L${tX},${tY}`;
     
+    // Label remains centered on the true midpoint of the line
     const midX = (source.x + target.x) / 2;
     const midY = (source.y + target.y) / 2;
 
@@ -233,10 +289,10 @@ const Link = ({ link, config, onLinkClick }) => {
     return (
         <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
             <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
-            <path d={d} stroke="#879196" fill="none" strokeWidth={3} />
+            <path d={d} stroke="#879196" fill="none" strokeWidth={3} markerEnd="url(#arrow)" />
             {label && (
                 <g transform={`translate(${midX},${midY})`}>
-                    {/* Founder Tip: Background halo to prevent text collision (ENH-002) */}
+                    {/* Background halo to prevent text collision */}
                     <rect width={bgWidth} height={fontSize + 16} rx={15} fill="white" stroke="#D5D7D8" x={-(bgWidth/2)} y={-((fontSize + 16)/2)} />
                     <text textAnchor="middle" dy={fontSize/3} fontSize={fontSize} fill="#232F3E">{label}</text>
                 </g>
@@ -678,6 +734,11 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
             <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 1200 1000" style={{ backgroundColor: 'transparent' }}>
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#879196" />
+                    </marker>
+                </defs>
                 <g ref={gRef}>
                     {/* Render Zones */}
                     <g className="zones">
