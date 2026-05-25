@@ -528,8 +528,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     useEffect(() => {
         if (!nodes.length) return;
 
-        const W = width || 1200;
-        const H = height || 1000;
+        // Anchor force simulation coordinates to a fixed baseline viewBox (1200x1000) rather than physical container dimensions.
+        // This ensures visual distances and group grouping remain 100% constant and proportional when the chart window is resized.
+        const W = 1200;
+        const H = 1000;
 
         // Initialize nodes with jitter to prevent NaN division-by-zero
         nodes.forEach(n => {
