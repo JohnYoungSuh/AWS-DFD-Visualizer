@@ -544,11 +544,19 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             }
         } else if (clusterBy === 'group') {
             // Medium 4: Region/VPC subnet swim lanes
-            // Use forceY to pull groups into horizontal bands
-            simulation.force('y', d3.forceY().y(d => {
+            // Pull groups into visually compact, separated 2D cluster bubbles (circular distribution)
+            const numGroups = groupNames.length || 1;
+            simulation.force('x-group', d3.forceX().x(d => {
                 const idx = groupNames.indexOf(d.group);
-                return (H / (groupNames.length + 1)) * (idx + 1);
-            }).strength(0.6));
+                const angle = (idx / numGroups) * 2 * Math.PI - Math.PI / 2;
+                return (W / 2) + Math.cos(angle) * (W / 3.5);
+            }).strength(0.7));
+            
+            simulation.force('y-group', d3.forceY().y(d => {
+                const idx = groupNames.indexOf(d.group);
+                const angle = (idx / numGroups) * 2 * Math.PI - Math.PI / 2;
+                return (H / 2) + Math.sin(angle) * (H / 3.5);
+            }).strength(0.7));
         }
 
         if (!enablePhysics) {
