@@ -140,9 +140,9 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.zone').contains('DATA PLANE').should('exist');
         cy.get('g.zone').contains('SUPPORT PLANE').should('exist');
 
-        // Verify PEP node cards resolve to WAF icons and PE resolves to POLICYENGINE brain icon
+        // Verify PEP node cards resolve to WAF icons and PE resolves to Amazon Verified Permissions icon
         cy.get('g.node-card').contains('Policy Engine (PE)').parents('g.node-card').find('image')
-            .should('have.attr', 'href').and('contain', 'brain.png');
+            .should('have.attr', 'href').and('contain', 'Arch_Amazon-Verified-Permissions_64.svg');
         cy.get('g.node-card').contains('Policy Enforcement Point (PEP)').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('contain', 'Arch_AWS-WAF_64.svg');
     });

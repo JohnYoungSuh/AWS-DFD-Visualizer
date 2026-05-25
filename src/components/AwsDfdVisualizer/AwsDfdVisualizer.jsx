@@ -43,9 +43,9 @@ const ICON_MAP_RAW = {
     'PDP':              ARCH_SVC + 'Arch_Security-Identity/64/Arch_Amazon-Verified-Permissions_64@5x.png',
     'ENGINE':           ARCH_SVC + 'Arch_Security-Identity/64/Arch_Amazon-Verified-Permissions_64@5x.png',
     'F5 BIG-IP':        'f5-big-ip.svg',
-    'DEVICE':           'device.png',
-    'FORESCOUT':        'forescout.png',
-    'POLICYENGINE':     'brain.png',
+    'DEVICE':           'user.svg',
+    'FORESCOUT':        'generic.svg',
+    'POLICYENGINE':     ARCH_SVC + 'Arch_Security-Identity/64/Arch_Amazon-Verified-Permissions_64.svg',
     'RESOURCE':         'generic.svg',
 };
 
@@ -495,10 +495,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         nodes.forEach(n => n.degree = degreeMap.get(n.id) || 0);
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(450))
-            .force('charge', d3.forceManyBody().strength(-5500))
+            .force('link', d3.forceLink(links).id(d => d.id).distance(220))
+            .force('charge', d3.forceManyBody().strength(-1800))
             .force('center', d3.forceCenter(W / 2, H / 2))
-            .force('collision', d3.forceCollide().radius(240))
+            .force('collision', d3.forceCollide().radius(150))
             .force('x-isolated', d3.forceX(W / 2).strength(d => d.degree === 0 ? 0.05 : 0))
             .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
 
