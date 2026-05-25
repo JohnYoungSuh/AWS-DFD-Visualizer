@@ -23,12 +23,13 @@
 | streamstats count as id
 | eval from=case(id=1, "Internet", id=2, "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/app-alb/987654321", id=3, "arn:aws:lambda:us-east-1:123456789012:function:order-processor-fn", id=4, "arn:aws:rds:us-east-1:123456789012:db:production-db", id=5, "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/edge-waf/11223344")
 | eval to=case(id=1, "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/edge-waf/11223344", id=2, "arn:aws:lambda:us-east-1:123456789012:function:order-processor-fn", id=3, "arn:aws:rds:us-east-1:123456789012:db:production-db", id=5, "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/app-alb/987654321")
-| eval type=case(id=1, "Network", id=2, "AWS::ElasticLoadBalancingV2::LoadBalancer", id=3, "AWS::Lambda::Function", id=4, "AWS::RDS::DBInstance", id=5, "AWS::WAFV2::WebACL")
+| eval type=case(id=1, "AWS::Resource", id=2, "AWS::Resource", id=3, "AWS::Resource", id=4, "AWS::Resource", id=5, "AWS::Resource")
 | eval node_label=case(id=1, "Internet", id=2, "App Load Balancer", id=3, "Order Processor Function", id=4, "Production RDS Database", id=5, "App Edge WAF")
 | eval edge_label=case(id=1, "HTTPS/443", id=2, "HTTPS/8443", id=3, "MySQL/3306", id=5, "Forward")
 | eval group=case(id=1, "External Zone", id=2, "Security Boundary", id=3, "Compute Boundary", id=4, "Database Boundary", id=5, "Security Boundary")
 | eval status=case(id=4, "OK", id=3, "OK", id=2, "OK", id=5, "OK", id=1, "OK")
-| table from to type node_label edge_label group status]]></query>
+| eval icon=case(id=1, "RESOURCE", id=2, "ALB", id=3, "LAMBDA", id=4, "RDS", id=5, "WAF")
+| table from to type node_label edge_label group status icon]]></query>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
         </search>
@@ -113,7 +114,65 @@
   </row>
 
   <row>
-    <panel title="2. Architectural and Security Design Highlights">
+    <panel title="2. NIST 800-207 Zero-Trust Architecture (ZTA) Copy-Paste SPL Scenarios">
+      <html>
+        <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
+          <p>You can visualize NIST 800-207 Zero-Trust logical diagrams directly inside Splunk. Copy and paste either of the following standard self-contained SPL searches into a search panel or dashboard to see ZTA rendering in action:</p>
+          
+          <h3 style="color: #FF9900; margin-top: 15px;">Scenario A: Core PDP/PEP Data Access Path</h3>
+          <p style="margin-bottom: 5px;">This scenario models the logical path of a User Subject requesting access to an Enterprise Resource, intercepted by a Policy Enforcement Point (PEP), which verifies identity and posture policies with the Policy Decision Point (PE / PA):</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| makeresults count=1
+| eval data="
+SubjectDevice,null,AWS::Resource,Subject / User Device,null,Data Plane,DEVICE,OK;
+PEP_Gateway,null,AWS::Resource,Policy Enforcement Point (PEP),null,Data Plane,WAF,OK;
+EnterpriseResource,null,AWS::Resource,Enterprise Resource,null,Data Plane,RDS,OK;
+PA_Administrator,null,AWS::Resource,Policy Administrator (PA),null,Control Plane,IAM,OK;
+PE_Engine,null,AWS::Resource,Policy Engine (PE),null,Control Plane,POLICYENGINE,OK;
+SubjectDevice,PEP_Gateway,AWS::Resource,Subject / User Device,Access Request (HTTPS),Data Plane,DEVICE,OK;
+PEP_Gateway,EnterpriseResource,AWS::Resource,Policy Enforcement Point (PEP),Authorized Tunnel,Data Plane,WAF,OK;
+PEP_Gateway,PA_Administrator,AWS::Resource,Policy Enforcement Point (PEP),Decision Request,Data Plane,WAF,OK;
+PA_Administrator,PE_Engine,AWS::Resource,Policy Administrator (PA),Evaluate Policy,Control Plane,IAM,OK;
+PE_Engine,PA_Administrator,AWS::Resource,Policy Engine (PE),Grant/Deny Action,Control Plane,POLICYENGINE,OK
+"
+| nomv data
+| eval row=split(data, ";")
+| mvexpand row
+| eval parts=split(row, ",")
+| eval from=mvindex(parts, 0), to=mvindex(parts, 1), type=mvindex(parts, 2), node_label=mvindex(parts, 3), edge_label=mvindex(parts, 4), group=mvindex(parts, 5), icon=mvindex(parts, 6), status=mvindex(parts, 7)
+| eval to=if(to="null", null(), to)
+| eval edge_label=if(edge_label="null", null(), edge_label)
+| table from to type node_label edge_label group icon status]]></pre>
+
+          <h3 style="color: #FF9900; margin-top: 25px;">Scenario B: Multi-Source PIP Query Engine</h3>
+          <p style="margin-bottom: 5px;">This scenario models the Policy Engine (PE) querying multiple distinct Policy Information Points (PIPs)—such as the User Attribute Registry (IAM), MDM Posture Manager (DEVICE), and Activity Logs audit database (CLOUDTRAIL)—to feed the trust algorithm during an evaluation:</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| makeresults count=1
+| eval data="
+PE_Engine,null,AWS::Resource,Policy Engine (PE),null,Control Plane,POLICYENGINE,OK;
+PA_Administrator,null,AWS::Resource,Policy Administrator (PA),null,Control Plane,IAM,OK;
+PIP_UserRegistry,null,AWS::Resource,PIP - Identity Directory,null,Support Plane,IAM,OK;
+PIP_DevicePosture,null,AWS::Resource,PIP - MDM Posture,null,Support Plane,DEVICE,OK;
+PIP_BehaviorAudit,null,AWS::Resource,PIP - Behavior Logs,null,Support Plane,CLOUDTRAIL,OK;
+PA_Administrator,PE_Engine,AWS::Resource,Policy Administrator (PA),Evaluate Policy,Control Plane,IAM,OK;
+PE_Engine,PA_Administrator,AWS::Resource,Policy Engine (PE),Grant/Deny Action,Control Plane,POLICYENGINE,OK;
+PE_Engine,PIP_UserRegistry,AWS::Resource,Policy Engine (PE),Fetch User Attributes,Control Plane,POLICYENGINE,OK;
+PE_Engine,PIP_DevicePosture,AWS::Resource,Policy Engine (PE),Check Device Health,Control Plane,POLICYENGINE,OK;
+PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs,Control Plane,POLICYENGINE,OK
+"
+| nomv data
+| eval row=split(data, ";")
+| mvexpand row
+| eval parts=split(row, ",")
+| eval from=mvindex(parts, 0), to=mvindex(parts, 1), type=mvindex(parts, 2), node_label=mvindex(parts, 3), edge_label=mvindex(parts, 4), group=mvindex(parts, 5), icon=mvindex(parts, 6), status=mvindex(parts, 7)
+| eval to=if(to="null", null(), to)
+| eval edge_label=if(edge_label="null", null(), edge_label)
+| table from to type node_label edge_label group icon status]]></pre>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel title="3. Architectural and Security Design Highlights">
       <html>
         <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
           <h3 style="color: #FF9900; margin-top: 0;">React-D3 Separation of Concerns</h3>
@@ -133,7 +192,7 @@
         </div>
       </html>
     </panel>
-    <panel title="3. Full Configuration Properties Reference">
+    <panel title="4. Full Configuration Properties Reference">
       <html>
         <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
           <p>Customize the presentation of your diagram using the visualizer Format menu in the Edit view:</p>
