@@ -153,3 +153,30 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 *Note: This list is tracked in `NEXT_RELEASE_TODO.md` as of May 2026. Prioritized and merged with legacy Network Diagram Viz parity ideas.*
+
+## 📐 Zero-Trust Grouped Layout ("Blueprint Mode") Reference Prompt
+
+When generating SPL, XML, or D3.js visualization code for the AWS-DFD-Visualizer inside DoD IL5 environments, adhere to the following standards:
+
+### 1. Context & Architectural Mandate
+- **Target Audience**: Executive Leadership (ISSOs, Admirals, C-Suite).
+- **Goal**: Render static, highly-structured, non-floating security boundaries (swimlanes/zones) instead of physics-based, chaotic floating graphs.
+
+### 2. Critical Bug Defect Guardrails
+- **The Bug**: In Splunk Dashboard XML renders, the `visualization.js` engine ignores the `clusterBy="group"` setting when `layoutMode="Hierarchy"` is active. This strips away all group boxes/hulls.
+- **Workaround Rule**: To bypass this dashboard engine defect:
+  - Force the layout to lock by combining: `layoutMode="Hierarchy"`, `clusterBy="group"`, and `draggableNodes="false"`.
+  - Use a nightly scheduled lookup `my_asset_inventory.csv` to pre-aggregate asset counts.
+  - Bypass live D3 grouping calculations by using a hardcoded node-by-node construction inside the dashboard via `makeresults | append`.
+
+### 3. Rendering Engine Mathematics (D3.js)
+To achieve the "Blueprint Mode" look, enforce these three structural layout rules:
+- **Contiguous Sorting**: Call `root.sort()` on the hierarchy to group siblings by security zone before calculating positions. This ensures `d3.polygonHull` never overlaps.
+- **Padded Convex Hulls**: When rendering `d3.polygonHull` paths around zones, apply a dynamic padding offset (minimum 30–45px) to prevent lines clipping node text and icons.
+- **Orthogonal Edge Routing**:
+  - For Top-to-Bottom layouts, use vertical-first routing via `d3.curveStepBefore`.
+  - For Left-to-Right layouts, use horizontal-first routing via `d3.curveStepAfter`.
+
+### 4. SPL & Data Modeling Standards
+- **The Root Constraint**: D3 trees mathematically require a single parentless root node. The input SPL data must inject an artificial root node (e.g., `from=""`, `to="ROOT_NODE"`) for security zones to branch from.
+- **Aggregation Pattern**: Never output raw 1:1 resource nodes. Always use `stats | xyseries` or `stats count by role` to output unified summaries (e.g., "Web Servers (336 Active)").
