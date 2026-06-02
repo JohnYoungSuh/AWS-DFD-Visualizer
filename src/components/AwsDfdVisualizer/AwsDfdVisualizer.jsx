@@ -834,6 +834,16 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const enablePhysics = String(config?.enablePhysics ?? 'true') === 'true';
     const hideEdgesOnDrag = String(config?.hideEdgesOnDrag || 'false') === 'true';
 
+    console.log("AWS-DFD-Visualizer: Config values read from props:", {
+        config,
+        drilldownClick,
+        clusterBy,
+        layoutMode,
+        canZoom,
+        draggableNodes,
+        enablePhysics
+    });
+
     // High 6: Advanced Token Integration
     const handleNodeClick = (e, node, actionType = 'click') => {
         console.log(`AWS-DFD-Visualizer: handleNodeClick ENTERED! actionType=${actionType}, nodeId=${node.id || node.arn}`);
@@ -986,6 +996,11 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             isZeroTrust: false 
         };
     }, [data, isZeroTrustLayout]);
+
+    console.log("AWS-DFD-Visualizer: layout determination result:", {
+        isZeroTrustLayout,
+        isZeroTrust
+    });
 
 
     useEffect(() => {
