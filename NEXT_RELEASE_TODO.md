@@ -154,29 +154,39 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 *Note: This list is tracked in `NEXT_RELEASE_TODO.md` as of May 2026. Prioritized and merged with legacy Network Diagram Viz parity ideas.*
 
-## 📐 Zero-Trust Grouped Layout ("Blueprint Mode") Reference Prompt
+## 📐 Zero-Trust Layout Engine & "Blueprint Mode" Reference Prompt
 
-When generating SPL, XML, or D3.js visualization code for the AWS-DFD-Visualizer inside DoD IL5 environments, adhere to the following standards:
+When generating SPL, SimpleXML, React, or D3.js engine code for the AWS-DFD-Visualizer inside DoD IL5 environments, adhere to the following standards:
 
-### 1. Context & Architectural Mandate
-- **Target Audience**: Executive Leadership (ISSOs, Admirals, C-Suite).
-- **Goal**: Render static, highly-structured, non-floating security boundaries (swimlanes/zones) instead of physics-based, chaotic floating graphs.
+### 1. Core Architectural Mandate
+- **Enforce the Zero-Trust Static Deterministic Layout Engine**: Standard chaotic force-directed physics graphs are restricted unless explicitly toggled.
 
-### 2. Critical Bug Defect Guardrails
-- **The Bug**: In Splunk Dashboard XML renders, the `visualization.js` engine ignores the `clusterBy="group"` setting when `layoutMode="Hierarchy"` is active. This strips away all group boxes/hulls.
-- **Workaround Rule**: To bypass this dashboard engine defect:
-  - Force the layout to lock by combining: `layoutMode="Hierarchy"`, `clusterBy="group"`, and `draggableNodes="false"`.
-  - Use a nightly scheduled lookup `my_asset_inventory.csv` to pre-aggregate asset counts.
-  - Bypass live D3 grouping calculations by using a hardcoded node-by-node construction inside the dashboard via `makeresults | append`.
+### 2. Strict Layout Engine Rules (IL5 RMF Audit Mode)
+- **Two-Pass Deterministic Calculations**: Use a custom two-pass recursive layout (Bottom-Up dimensions, Top-Down coordinates). Never use `d3.forceSimulation` by default.
+- **Nested Structural Enclosures**: Render physical boundaries for VPC and Subnet using nested `<g>` elements. Canvas coordinates must be set to a compact $1200 \times 1400$ to prevent vertical layout clipping.
+- **Security Group (SG) Isolation**:
+  - **DO NOT** render Security Groups as physical layout containment boxes.
+  - **DO** render SGs as concentric metadata envelope rings (Vibrant Green `#00FF00` or Vibrant Red `#FF0000` on violation) expanding outward from the core compute node cards.
+- **Canvas Sector Lockdowns**:
+  - Lock global edge assets (AWS WAF, CloudFront) strictly to the Policy & Control plane sector ($Y \in [200, 400]$), completely outside VPC enclosures.
+  - Unassociated IAM nodes must align horizontally on the Identity Plane toolbar.
 
-### 3. Rendering Engine Mathematics (D3.js)
-To achieve the "Blueprint Mode" look, enforce these three structural layout rules:
-- **Contiguous Sorting**: Call `root.sort()` on the hierarchy to group siblings by security zone before calculating positions. This ensures `d3.polygonHull` never overlaps.
-- **Padded Convex Hulls**: When rendering `d3.polygonHull` paths around zones, apply a dynamic padding offset (minimum 30–45px) to prevent lines clipping node text and icons.
-- **Orthogonal Edge Routing**:
-  - For Top-to-Bottom layouts, use vertical-first routing via `d3.curveStepBefore`.
-  - For Left-to-Right layouts, use horizontal-first routing via `d3.curveStepAfter`.
+### 3. Link Routing & Mid-Flight Policy Interception
+- **Orthogonal Routing**: Use Manhattan (90-degree) step-curve routing instead of curves.
+  - **Top-to-Bottom layouts**: `d3.curveStepBefore` (vertical-first).
+  - **Left-to-Right layouts**: `d3.curveStepAfter` (horizontal-first).
+- **Interception Violation Styling**: Interrogate paths mid-flight. If a Port 22/SSH or RMF AC-4 compliance gap is detected, split and render the path as a Vibrant Red (`#FF0000`) dashed line (`stroke-dasharray="4, 4"`) with a clamped corner radius.
 
-### 4. SPL & Data Modeling Standards
-- **The Root Constraint**: D3 trees mathematically require a single parentless root node. The input SPL data must inject an artificial root node (e.g., `from=""`, `to="ROOT_NODE"`) for security zones to branch from.
-- **Aggregation Pattern**: Never output raw 1:1 resource nodes. Always use `stats | xyseries` or `stats count by role` to output unified summaries (e.g., "Web Servers (336 Active)").
+### 4. Advanced v2.7.0 System Features
+- **CSV Console Overlay**: Support a live feed mode accepting direct CSV output streams (`SPL -> D3 Live Feed`).
+- **draw.io XML Exporter**: Maintain the uncompressed draw.io-compliant XML diagram exporter for federal compliance documentation.
+- **Capture Time & Status Parsing**:
+  - Parse `configurationItemCaptureTime` and animate node opacity/drift (`stale-node-drift` keyframes) for old snapshots.
+  - Parse `configurationItemStatus` (render `ResourceDeleted` using dashed node borders and reduced opacity).
+
+### 5. Splunk Dashboard Workaround (Bypassing Dashboard Engine Bugs)
+- **The Bug**: Standard Splunk dashboards silently ignore `clusterBy="group"` when `layoutMode="Hierarchy"` is active, dropping all visual hulls.
+- **The Bypass (Executive Blueprint Framework)**:
+  - **Nightly Scheduled Search**: Classify EC2 assets into ZTA roles and output to `my_asset_inventory.csv` lookup.
+  - **`makeresults | append` Chain**: Hardcode node-by-node static architectures in the dashboard SimpleXML to bypass live D3 coordinate conflicts.
+  - **Mandatory XML Settings**: Explicitly lock the visualization options: `layoutMode=Hierarchy`, `clusterBy=group`, and `draggableNodes=false`.
