@@ -23,6 +23,12 @@ build:
 	mkdir -p dist/$(APP_NAME)
 	# Copy only standard Splunk app folders and files
 	cp -r appserver static default metadata splunk-app-manifest.json dist/$(APP_NAME)/ 2>/dev/null || true
+	# Generate lookup directory and default inventory placeholder dynamically
+	mkdir -p dist/$(APP_NAME)/lookups
+	echo "resourceId,role,asset_count" > dist/$(APP_NAME)/lookups/my_asset_inventory.csv
+	echo "i-0123456789abcdef0,Policy Plane,1" >> dist/$(APP_NAME)/lookups/my_asset_inventory.csv
+	echo "i-9876543210fedcba0,Data Plane,3" >> dist/$(APP_NAME)/lookups/my_asset_inventory.csv
+	echo "i-11112222333344445,Identity Plane,2" >> dist/$(APP_NAME)/lookups/my_asset_inventory.csv
 	# Clean out WSL-specific noise and hidden files from the staging area
 	find dist/$(APP_NAME) -name ".*" -type f -delete
 	find dist/$(APP_NAME) -name "*Zone.Identifier*" -type f -delete

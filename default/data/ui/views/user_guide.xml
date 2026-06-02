@@ -16,7 +16,7 @@
   </row>
 
   <row>
-    <panel title="Interactive Live Demonstration">
+    <panel title="Interactive Live Demonstration (Force Layout)">
       <viz type="AWS-DFD-Visualizer.AWS-DFD-Visualizer">
         <search>
           <query><![CDATA[| makeresults count=5
@@ -39,6 +39,58 @@
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.clusterBy">group</option>
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.draggableNodes">true</option>
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.smoothEdges">true</option>
+      </viz>
+    </panel>
+    <panel title="Interactive Static Blueprint Demonstration (Hierarchy Layout)">
+      <viz type="AWS-DFD-Visualizer.AWS-DFD-Visualizer">
+        <search>
+          <query><![CDATA[| makeresults 
+| eval from="ROOT_NODE", to="policy-plane-root", type="AWS::IAM::Role", node_label="Zero-Trust Boundary", edge_label=""
+| append [
+    | makeresults
+    | eval from="ROOT_NODE", to="data-plane-root", type="AWS::IAM::Role", node_label="Zero-Trust Boundary", edge_label=""
+  ]
+| append [
+    | makeresults
+    | eval from="ROOT_NODE", to="identity-plane-root", type="AWS::IAM::Role", node_label="Zero-Trust Boundary", edge_label=""
+  ]
+| append [
+    | makeresults
+    | eval from="policy-plane-root", to="pe-engine", type="AWS::Resource", node_label="Policy Engine (PE)", edge_label="", group="Policy Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="pe-engine", to="pa-admin", type="AWS::Resource", node_label="Policy Administrator (PA)", edge_label="Decision Channel", group="Policy Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="identity-plane-root", to="developer-user", type="AWS::IAM::User", node_label="Developer User", edge_label="", group="Identity Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="developer-user", to="bastion-host", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="Assume Role", group="Identity Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="data-plane-root", to="bastion-host", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="", group="Data Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="bastion-host", to="web-server", type="AWS::EC2::Instance", node_label="Web Server", edge_label="SSH/22", group="Data Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="web-server", to="db-server", type="AWS::RDS::DBInstance", node_label="DB Server", edge_label="SQL/3306", group="Data Plane"
+  ]
+| fields from to type node_label edge_label group status]]></query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="height">600</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.layoutMode">Hierarchy</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.clusterBy">group</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.draggableNodes">false</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.smoothEdges">false</option>
       </viz>
     </panel>
   </row>
@@ -196,6 +248,38 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
     | eval from="db-server", to="", type="AWS::RDS::DBInstance", node_label="DB Server", edge_label="", subnetId="subnet-1", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-2\",\"name\":\"db-sg\",\"is_compliant\":false}]"
   ]
 | fields from to type node_label edge_label subnetId vpcId securityGroups]]></pre>
+
+          <h3 style="color: #FF9900; margin-top: 25px;">Scenario D: Live AWS Config Ingestion</h3>
+          <p style="margin-bottom: 5px;">This query handles standard live-data ingestion from `sourcetype="aws:config:json"`. It extracts core resource attributes, formats them to the diagram schema, and uses `mvzip` and `mvexpand` to safely map parent-child relationships and association names without positional shifts:</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[index=aws sourcetype="aws:config:json"
+| eval from='configurationItem.resourceId'
+| eval type='configurationItem.resourceType'
+| eval node_label=coalesce('configurationItem.resourceName', 'configurationItem.resourceId')
+| eval group=coalesce('configurationItem.awsRegion', "Global")
+| eval status='configurationItem.configurationItemStatus'
+| eval captureTime='configurationItem.configurationItemCaptureTime'
+| rename configurationItem.relationships{}.resourceId as related_id, configurationItem.relationships{}.relationshipName as relation_name
+| eval zipped_relations=mvzip(related_id, relation_name, "::")
+| mvexpand zipped_relations
+| eval parts=split(zipped_relations, "::")
+| eval to=mvindex(parts, 0)
+| eval edge_label=mvindex(parts, 1)
+| table from to type node_label edge_label group status captureTime]]></pre>
+
+          <h3 style="color: #FF9900; margin-top: 30px;">The "Executive Blueprint" Reference Recipe</h3>
+          <p>To establish a stable, aggregated, and compliant static dashboard layout that represents Zero-Trust architecture boundaries, combine the following three mandatory architectural rules:</p>
+          
+          <ul style="color: #dcdcdc; line-height: 1.6; margin-left: 20px;">
+            <li><strong>Rule 1: The ROOT_NODE Mathematical Constraint:</strong> Hierarchical layouts (non-physics trees) require a single parentless root node to stabilize. The input dataset must inject a virtual parentless node (e.g. <code>ROOT_NODE</code>) for all plane/zone roots to branch from.</li>
+            <li><strong>Rule 2: The Aggregation &amp; Live-Data Pattern:</strong> Instead of listing static templates, use an <code>| inputlookup</code> combined with a <code>| stats count by role | xyseries</code> pattern to dynamically aggregate asset counts into the node labels (e.g., "Policy Engine (4 Active Devices)").</li>
+            <li><strong>Rule 3: Mandatory Dashboard XML Options:</strong> Bypassing Splunk dashboard rendering defects requires explicitly setting and locking the following XML attributes in the dashboard panel configuration:
+              <ul style="list-style-type: circle; margin-left: 20px;">
+                <li><code>layoutMode="Hierarchy"</code> - Locks nodes onto static grid positions.</li>
+                <li><code>clusterBy="group"</code> - Tells D3 to construct clean, padded rectangular swimlanes wrapping each group.</li>
+                <li><code>draggableNodes="false"</code> - Freezes coordinates and disables visual dragging for static briefings.</li>
+              </ul>
+            </li>
+          </ul>
         </div>
       </html>
     </panel>

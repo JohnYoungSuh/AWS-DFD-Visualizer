@@ -287,7 +287,37 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
         cardHalfHeight = 60;
     }
 
-    if (isZeroTrust) {
+    const isStaticBlueprint = (config?.layoutMode || '').toLowerCase() === 'hierarchy' && config?.clusterBy === 'group';
+
+    if (isStaticBlueprint) {
+        const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
+        if (hierarchyDir === 'Left to Right') {
+            const xStart = source.x + cardHalfWidth;
+            const yStart = source.y;
+            const xEnd = target.x - cardHalfWidth;
+            const yEnd = target.y;
+            const Mx = (xStart + xEnd) / 2;
+            d = `M ${xStart} ${yStart} L ${Mx} ${yStart} L ${Mx} ${yEnd} L ${xEnd} ${yEnd}`;
+        } else {
+            const xStart = source.x;
+            const yStart = source.y + cardHalfHeight;
+            const xEnd = target.x;
+            const yEnd = target.y - cardHalfHeight;
+            const My = (yStart + yEnd) / 2;
+            d = `M ${xStart} ${yStart} L ${xStart} ${My} L ${xEnd} ${My} L ${xEnd} ${yEnd}`;
+        }
+
+        if (targetNode && targetNode.security_groups && Array.isArray(targetNode.security_groups)) {
+            const hasNonCompliantSG = targetNode.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
+            if (hasNonCompliantSG) {
+                const edgeLabel = String(label || '').toLowerCase();
+                const portMatch = edgeLabel.match(/\b(22)\b/) || (link.port === 22);
+                if (portMatch || edgeLabel.includes('ssh') || edgeLabel.includes('port 22')) {
+                    isViolated = true;
+                }
+            }
+        }
+    } else if (isZeroTrust) {
         const xA = source.x;
         const yA = source.y;
         const xB = target.x;
@@ -387,9 +417,10 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
     if (sizeConf === 'large') { fontSize = 18; bgWidth = 190; }
     if (sizeConf === 'extraLarge') { fontSize = 22; bgWidth = 240; }
 
-    const strokeColor = isZeroTrust ? (isViolated ? '#FF0000' : '#00FF00') : '#879196';
-    const strokeDash = isZeroTrust && isViolated ? '4,4' : 'none';
-    const markerEnd = isZeroTrust ? (isViolated ? 'url(#arrow-red)' : 'url(#arrow-green)') : 'url(#arrow)';
+    const isZeroTrustColors = isZeroTrust || isStaticBlueprint;
+    const strokeColor = isZeroTrustColors ? (isViolated ? '#FF0000' : '#00FF00') : '#879196';
+    const strokeDash = isZeroTrustColors && isViolated ? '4,4' : 'none';
+    const markerEnd = isZeroTrustColors ? (isViolated ? 'url(#arrow-red)' : 'url(#arrow-green)') : 'url(#arrow)';
 
     return (
         <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
@@ -1022,6 +1053,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const canZoom = String(config?.canZoom || 'true') === 'true';
     const draggableNodes = String(config?.draggableNodes || 'true') === 'true';
     const enablePhysics = String(config?.enablePhysics ?? 'true') === 'true';
+    const isStaticBlueprint = (layoutMode || '').toLowerCase() === 'hierarchy' && clusterBy === 'group';
     const hideEdgesOnDrag = String(config?.hideEdgesOnDrag || 'false') === 'true';
 
     const designLayout = config?.designLayoutDashboard || 'default';
@@ -1176,7 +1208,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         subnetContainers, 
         unassociatedNodes, 
         globalEdgeAssets, 
-        isZeroTrust 
+        isZeroTrust,
+        groupBounds
     } = useMemo(() => {
         const activeData = localData || data;
         const parsed = parseSplunkData(activeData);
@@ -1206,6 +1239,187 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 n.isStale = false;
             }
         });
+
+        if (isStaticBlueprint && parsed.nodes.length > 0) {
+            const parentsMap = new Map();
+            parsed.links.forEach(l => {
+                const srcId = typeof l.source === 'object' ? l.source.id : l.source;
+                const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
+                if (srcId && tgtId && srcId !== tgtId) {
+                    if (!parentsMap.has(tgtId)) {
+                        let curr = srcId;
+                        let cycle = false;
+                        while (curr) {
+                            if (curr === tgtId) {
+                                cycle = true;
+                                break;
+                            }
+                            curr = parentsMap.get(curr);
+                        }
+                        if (!cycle) {
+                            parentsMap.set(tgtId, srcId);
+                        }
+                    }
+                }
+            });
+
+            let rootId = 'root-node';
+            if (!parsed.nodes.some(n => n.id === rootId)) {
+                const candidates = parsed.nodes.filter(n => !parentsMap.has(n.id));
+                if (candidates.length > 0) {
+                    rootId = candidates[0].id;
+                } else if (parsed.nodes.length > 0) {
+                    rootId = parsed.nodes[0].id;
+                }
+            }
+
+            const stratNodes = [];
+            const rootNode = parsed.nodes.find(n => n.id === rootId) || { id: rootId, label: 'Root', type: 'AWS::Resource', group: 'System' };
+            stratNodes.push({
+                id: rootNode.id,
+                parentId: null,
+                label: rootNode.label,
+                type: rootNode.type,
+                group: rootNode.group,
+                data: rootNode
+            });
+
+            const groups = Array.from(new Set(parsed.nodes.filter(n => n.id !== rootId).map(n => n.group)));
+            groups.forEach(grp => {
+                const vgId = `virtual-group-${grp.replace(/\s+/g, '-').toLowerCase()}`;
+                stratNodes.push({
+                    id: vgId,
+                    parentId: rootId,
+                    label: grp,
+                    type: 'VIRTUAL_GROUP',
+                    group: grp,
+                    isVirtualGroup: true
+                });
+            });
+
+            parsed.nodes.forEach(node => {
+                if (node.id === rootId) return;
+                
+                let parentId = parentsMap.get(node.id);
+                const parentNode = parentId ? parsed.nodes.find(n => n.id === parentId) : null;
+                
+                if (parentNode && parentNode.group === node.group && parentId !== rootId) {
+                    // Keep parent
+                } else {
+                    parentId = `virtual-group-${node.group.replace(/\s+/g, '-').toLowerCase()}`;
+                }
+
+                stratNodes.push({
+                    id: node.id,
+                    parentId: parentId,
+                    label: node.label,
+                    type: node.type,
+                    group: node.group,
+                    data: node
+                });
+            });
+
+            const stratify = d3.stratify()
+                .id(d => d.id)
+                .parentId(d => d.parentId);
+
+            const hierarchy = stratify(stratNodes);
+            
+            hierarchy.sort((a, b) => {
+                if (a.data.group < b.data.group) return -1;
+                if (a.data.group > b.data.group) return 1;
+                return d3.ascending(a.data.label, b.data.label);
+            });
+
+            const W = 1200;
+            const H = 1400;
+            const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
+
+            const treeLayout = d3.tree();
+            if (hierarchyDir === 'Left to Right') {
+                treeLayout.size([H - 200, W - 200]);
+            } else {
+                treeLayout.size([W - 200, H - 200]);
+            }
+
+            treeLayout(hierarchy);
+
+            hierarchy.descendants().forEach(d => {
+                let finalX, finalY;
+                if (hierarchyDir === 'Left to Right') {
+                    finalX = d.y + 100;
+                    finalY = d.x + 100;
+                } else {
+                    finalX = d.x + 100;
+                    finalY = d.y + 100;
+                }
+                
+                if (d.data.data) {
+                    d.data.data.x = finalX;
+                    d.data.data.y = finalY;
+                }
+                d.x = finalX;
+                d.y = finalY;
+            });
+
+            const resolvedNodes = parsed.nodes.map(n => {
+                const hNode = hierarchy.descendants().find(d => d.id === n.id);
+                if (hNode) {
+                    n.x = hNode.x;
+                    n.y = hNode.y;
+                }
+                return n;
+            });
+
+            const nodeMap = new Map(resolvedNodes.map(n => [n.id, n]));
+            const resolvedLinks = parsed.links.map(l => {
+                const srcId = typeof l.source === 'object' ? l.source.id : l.source;
+                const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
+                return {
+                    ...l,
+                    source: nodeMap.get(srcId) || { id: srcId, x: 0, y: 0 },
+                    target: nodeMap.get(tgtId) || { id: tgtId, x: 0, y: 0 }
+                };
+            });
+
+            const calculatedBounds = [];
+            groups.forEach(grp => {
+                const groupNodes = resolvedNodes.filter(n => n.group === grp && n.id !== rootId);
+                if (groupNodes.length === 0) return;
+                
+                const xs = groupNodes.map(n => n.x);
+                const ys = groupNodes.map(n => n.y);
+                
+                const padX = 180;
+                const padY = 90;
+                
+                const minX = Math.min(...xs) - padX;
+                const maxX = Math.max(...xs) + padX;
+                const minY = Math.min(...ys) - padY;
+                const maxY = Math.max(...ys) + padY;
+                
+                calculatedBounds.push({
+                    groupName: grp,
+                    x: minX,
+                    y: minY,
+                    width: maxX - minX,
+                    height: maxY - minY,
+                    nodeCount: groupNodes.length
+                });
+            });
+
+            return {
+                nodes: resolvedNodes,
+                links: resolvedLinks,
+                groupNames: groups,
+                vpcContainers: [],
+                subnetContainers: [],
+                unassociatedNodes: [],
+                globalEdgeAssets: [],
+                isZeroTrust: false,
+                groupBounds: calculatedBounds
+            };
+        }
 
         if (isZeroTrustLayout && parsed.nodes.length > 0) {
             const { stratifiedNodes, unassociatedNodes, globalEdgeAssets, vpcs, subnets, computes } = resolveHierarchy(parsed.nodes);
@@ -1257,7 +1471,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 subnetContainers,
                 unassociatedNodes,
                 globalEdgeAssets,
-                isZeroTrust: true
+                isZeroTrust: true,
+                groupBounds: []
             };
         }
         
@@ -1269,13 +1484,15 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             subnetContainers: [],
             unassociatedNodes: [],
             globalEdgeAssets: [],
-            isZeroTrust: false 
+            isZeroTrust: false,
+            groupBounds: []
         };
-    }, [data, localData, isZeroTrustLayout, layoutParams]);
+    }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
     console.log("AWS-DFD-Visualizer: layout determination result:", {
         isZeroTrustLayout,
-        isZeroTrust
+        isZeroTrust,
+        isStaticBlueprint
     });
 
 
@@ -1295,7 +1512,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             svg.on('.zoom', null);
         }
 
-        if (isZeroTrust) {
+        if (isZeroTrust || isStaticBlueprint) {
             setTickUpdate(Date.now());
             
             const attachEvents = setTimeout(() => {
@@ -1675,7 +1892,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     )}
                 </div>
             </div>
-            <svg ref={svgRef} width="100%" height="100%" viewBox={isZeroTrust ? "0 0 1200 1400" : "0 0 1200 1000"} style={{ backgroundColor: 'transparent' }}>
+            <svg ref={svgRef} width="100%" height="100%" viewBox={isZeroTrust || isStaticBlueprint ? "0 0 1200 1400" : "0 0 1200 1000"} style={{ backgroundColor: 'transparent' }}>
                 <defs>
                     <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#879196" />
@@ -1760,6 +1977,34 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                         fontWeight="bold"
                                     >
                                         {c.data.label}
+                                    </text>
+                                </g>
+                            ))}
+                        </g>
+                    ) : isStaticBlueprint ? (
+                        <g className="blueprint-boundaries">
+                            {(groupBounds || []).map((b, idx) => (
+                                <g key={`blueprint-bound-${idx}`} className="blueprint-boundary">
+                                    <rect 
+                                        x={b.x} 
+                                        y={b.y} 
+                                        width={b.width} 
+                                        height={b.height} 
+                                        fill={isDarkTheme ? '#1e2832' : '#f8fafc'} 
+                                        fillOpacity={isDarkTheme ? 0.05 : 0.03} 
+                                        stroke={isDarkTheme ? '#4b5563' : '#cbd5e1'} 
+                                        strokeWidth={2} 
+                                        strokeDasharray="6,4" 
+                                        rx={12} 
+                                    />
+                                    <text 
+                                        x={b.x + 20} 
+                                        y={b.y + 30} 
+                                        fill={isDarkTheme ? '#9ca3af' : '#475569'} 
+                                        fontSize={14} 
+                                        fontWeight="bold"
+                                    >
+                                        {b.groupName.toUpperCase()} ({b.nodeCount} Active)
                                     </text>
                                 </g>
                             ))}

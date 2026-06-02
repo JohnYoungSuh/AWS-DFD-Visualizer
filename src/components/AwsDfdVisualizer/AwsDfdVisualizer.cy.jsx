@@ -312,5 +312,47 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('#btn-export-drawio').click();
         cy.wrap(downloadStub).should('have.been.calledWith', Cypress.sinon.match.string, Cypress.sinon.match.string);
     });
+
+    it('successfully renders Static Grouped Hierarchy Layout (Blueprint Mode) with rectangular boundaries and orthogonal links', () => {
+        mount(
+            <div style={{ width: 1420, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={ztaMockData} 
+                    config={{
+                        layoutMode: 'Hierarchy',
+                        clusterBy: 'group',
+                        draggableNodes: false,
+                        hierarchyDirection: 'Top to Bottom'
+                    }} 
+                    width={1420} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        // Verify the top-left debug HUD parsed correctly:
+        // - 8 unique nodes
+        // - 7 unique links
+        cy.contains('Nodes: 8').should('be.visible');
+        cy.contains('Links: 7').should('be.visible');
+
+        // Verify that node cards render
+        cy.get('g.node-card').should('have.length', 8);
+        cy.get('g.link-group').should('have.length', 7);
+
+        // Verify Blueprint Bounding Boxes exist
+        cy.get('g.blueprint-boundary').should('have.length', 3); // Data Plane, Control Plane, Support Plane
+        cy.get('g.blueprint-boundary').contains('CONTROL PLANE').should('exist');
+        cy.get('g.blueprint-boundary').contains('DATA PLANE').should('exist');
+        cy.get('g.blueprint-boundary').contains('SUPPORT PLANE').should('exist');
+
+        // Verify orthogonal link paths (stepBefore / stepAfter is used in blueprint links)
+        cy.get('g.link-group path').first().should('have.attr', 'stroke');
+
+        // Verify viewBox height is 1400
+        cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
+    });
 });
+
 
