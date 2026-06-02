@@ -219,7 +219,7 @@ $$X(r) = 600\text{ px}, \quad Y(r) = Y_i^{\text{mid}}$$
 #### 2. Policy & Control Plane Alignment (Global Edge Assets)
 All global edge assets (marked with `isGlobalEdge: true`) are placed horizontally side-by-side centered inside the Policy & Control plane vertical midpoint $Y = 300\text{ px}$.
 For the $i$-th global edge asset $g_i \in G$ (where $|G| = M$):
-$$X(g_i) = 600 - \frac{(M - 1) \cdot 350}{2} + i \cdot 350$$
+$$X(g_i) = 600 - \frac{(M - 1) \cdot 480}{2} + i \cdot 480$$
 $$Y(g_i) = 300\text{ px}$$
 
 #### 3. Identity Toolbar Alignment (Unassociated Nodes)

@@ -806,7 +806,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutPara
 
     const M = globalEdgeAssets.length;
     globalEdgeAssets.forEach((node, idx) => {
-        node.x = 600 - ((M - 1) * (nodeWidth + 70)) / 2 + idx * (nodeWidth + 70);
+        node.x = 600 - ((M - 1) * (nodeWidth + 200)) / 2 + idx * (nodeWidth + 200);
         node.y = 300;
         
         const hNode = root.descendants().find(d => d.id === node.id);
