@@ -28,7 +28,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **v2.7.0 Advanced Features** — Implemented remaining backlog items including client-side CSV console overlay (SPL → D3 Live Feed Mode), uncompressed draw.io XML diagram exporter, dashboard layout optimization (compact density scaling), alternate physics models (classic/cluster/horizontal-stack), and shakeTowards directional pull. Validated via Cypress component tests (8/8 passing) and local AppInspect validation (0 errors, 0 failures, 0 warnings).
 
 ### 📝 Session: June 2, 2026 (Feedback Ingestion)
-- [ ] **Ingest Production Feedback** — Registered critical bug where `clusterBy` is ignored in Hierarchy layout mode. Added static grouped "Blueprint" engine updates to critical backlog, and User Guide, dashboard navigation, and lookup configuration tasks to high backlog. Recorded the lookup and XML append production workaround details.
+- [ ] **Ingest Production Feedback** — Registered critical bug where `clusterBy` is ignored in Hierarchy layout mode. Added static grouped "Blueprint" engine updates to critical backlog. Added User Guide updates (including ZTA recipes and live `aws:config:json` SPL ingestion patterns), dashboard navigation, and lookup configuration tasks to high backlog. Recorded the lookup and XML append production workaround details.
 
 ---
 
@@ -78,6 +78,7 @@ This list is based on failure analysis against mock config and standard D3 force
         1. **ROOT_NODE Constraint**: Document that D3 hierarchical trees mathematically require a single parentless root node to stabilize (inject via SPL: `from=""`, `to="ROOT_NODE"`).
         2. **Aggregation & Live-Data Pattern**: Provide an official "Best Practice" SPL recipe using `| inputlookup` combined with `| stats count by role | xyseries` to dynamically generate aggregated node labels with live asset counts (e.g. "Mission Compute (336 Active)").
         3. **Mandatory XML Overrides**: Clearly document the combination of XML options to bypass rendering quirks and lock the layout: `layoutMode=Hierarchy`, `clusterBy=group`, `draggableNodes=false`.
+        4. **Live AWS Config Ingestion**: Document the standard `aws:config:json` SPL query recipe using `mvzip` and `mvexpand` to safely extract relationship structures, tags, and capture times for D3 visualizer ingestion.
 - [ ] **Enable "Executive Blueprint" Dashboard Navigation View**
     - *Context*: The new `zero_trust_executive_blueprint.xml` dashboard provides a production workaround to bypass dashboard rendering bugs. It must be officially added to the application navigation.
     - *Action*:
