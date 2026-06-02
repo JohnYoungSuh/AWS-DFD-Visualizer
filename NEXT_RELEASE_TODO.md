@@ -28,7 +28,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **v2.7.0 Advanced Features** — Implemented remaining backlog items including client-side CSV console overlay (SPL → D3 Live Feed Mode), uncompressed draw.io XML diagram exporter, dashboard layout optimization (compact density scaling), alternate physics models (classic/cluster/horizontal-stack), and shakeTowards directional pull. Validated via Cypress component tests (8/8 passing) and local AppInspect validation (0 errors, 0 failures, 0 warnings).
 
 ### 📝 Session: June 2, 2026 (Feedback Ingestion)
-- [ ] **Ingest Production Feedback** — Registered critical bug where `clusterBy` is ignored in Hierarchy layout mode. Added static grouped "Blueprint" engine updates to critical backlog, and User Guide and dashboard view enablement tasks to high backlog. Recorded the lookup and XML append production workaround details.
+- [ ] **Ingest Production Feedback** — Registered critical bug where `clusterBy` is ignored in Hierarchy layout mode. Added static grouped "Blueprint" engine updates to critical backlog, and User Guide, dashboard navigation, and lookup configuration tasks to high backlog. Recorded the lookup and XML append production workaround details.
 
 ---
 
@@ -83,6 +83,11 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Action*:
         1. Create `default/data/ui/views/zero_trust_executive_blueprint.xml` incorporating the `makeresults | append` dynamic structure and live asset lookup.
         2. Update the default navigation configuration (`default/data/ui/nav/default.xml`) to show the new dashboard view alongside the user guide and search views.
+- [ ] **Establish "my_asset_inventory" Lookup & Nightly Scheduled Search**
+    - *Context*: Part 1 of the delivery framework workaround. The dashboard relies on a daily generated lookup (`my_asset_inventory.csv`) that classifies EC2 assets into Zero-Trust roles. We need to ship the schema and generating SPL configuration.
+    - *Action*:
+        1. Define the `my_asset_inventory` lookup in `default/transforms.conf` and create a placeholder/initial `lookups/my_asset_inventory.csv` file with standard columns (`resourceId`, `role`, `asset_count`, etc.).
+        2. Create a nightly scheduled search in `default/savedsearches.conf` to build the classification and populate the lookup table automatically.
 - [x] **ARN-format resourceId in tooltip/inspector**
     - *Action*: Display the original ARN in the inspector panel but use the slugged ID internally for D3. Store both: `{ id: safeId, arn: d.resourceId }`.
 - [x] **Isolated node handling**
