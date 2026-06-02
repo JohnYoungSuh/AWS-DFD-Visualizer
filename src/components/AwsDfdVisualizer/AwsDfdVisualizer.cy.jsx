@@ -60,12 +60,22 @@ const ztaMockData = {
     ]
 };
 
+const complianceMockData = {
+    fields: [
+        {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "subnetId"}, {name: "vpcId"}, {name: "securityGroups"}
+    ],
+    rows: [
+        ["web-server", "db-server", "AWS::EC2::Instance", "Web Server", "SSH/22", "subnet-1", "vpc-1", "[{\"id\":\"sg-1\",\"is_compliant\":true}]"],
+        ["db-server", null, "AWS::EC2::Instance", "DB Server", null, "subnet-1", "vpc-1", "[{\"id\":\"sg-2\",\"is_compliant\":false}]"]
+    ]
+};
+
 describe('AwsDfdVisualizer Component Tests', () => {
     it('successfully parses SPL data, renders 7 unique nodes, and verifies D3 styling', () => {
         // Mount the React component
         mount(
             <div style={{ width: 1420, height: 552 }}>
-                <AwsDfdVisualizer data={mockData} config={{}} width={1420} height={552} isDarkTheme={true} />
+                <AwsDfdVisualizer data={mockData} config={{ layoutMode: 'force' }} width={1420} height={552} isDarkTheme={true} />
             </div>
         );
 
@@ -102,8 +112,9 @@ describe('AwsDfdVisualizer Component Tests', () => {
                 <AwsDfdVisualizer 
                     data={ztaMockData} 
                     config={{
-                        clusterBy: 'group'
-                    }} 
+                        clusterBy: 'group',
+                        layoutMode: 'force'
+                      }} 
                     width={1420} 
                     height={800} 
                     isDarkTheme={true} 
@@ -145,6 +156,69 @@ describe('AwsDfdVisualizer Component Tests', () => {
             .should('have.attr', 'href').and('contain', 'Arch_Amazon-Verified-Permissions_64.svg');
         cy.get('g.node-card').contains('Policy Enforcement Point (PEP)').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('contain', 'Arch_AWS-WAF_64.svg');
+    });
+
+    it('successfully renders Zero-Trust Deterministic Layout with nested enclosures and compliance envelopes', () => {
+        mount(
+            <div style={{ width: 1420, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={mockData} 
+                    config={{
+                        layoutMode: 'zero-trust'
+                    }} 
+                    width={1420} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        // Verify node and link counts (7 original nodes + 2 dummy containers = 9 total nodes)
+        cy.contains('Nodes: 9').should('be.visible');
+        cy.contains('Links: 7').should('be.visible');
+
+        // Verify static layout enclosures exist
+        cy.get('g.vpc-container').should('have.length', 1);
+        cy.get('g.subnet-container').should('have.length', 1);
+
+        // Verify static node cards exist
+        cy.get('g.node-card').should('have.length', 9);
+        
+        // Verify orthogonal link paths
+        cy.get('g.link-group path').first().should('have.attr', 'stroke');
+        
+        // Ensure viewBox has height 1400
+        cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
+    });
+
+    it('verifies mid-flight security group compliance routing and concentric envelopes', () => {
+        mount(
+            <div style={{ width: 1420, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={complianceMockData} 
+                    config={{
+                        layoutMode: 'zero-trust'
+                    }} 
+                    width={1420} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        // Verify nodes count HUD prints nodes.length (2 original nodes + 2 resolved VPC/Subnet containers = 4 nodes)
+        cy.contains('Nodes: 4').should('be.visible');
+        cy.contains('Links: 1').should('be.visible');
+
+        // Verify db-server has a red envelope (sg-2 is non-compliant)
+        cy.get('g.node-card').contains('DB Server').parents('g.node-card').find('rect[stroke="#FF0000"]').should('exist');
+        
+        // Verify web-server has a green envelope (sg-1 is compliant)
+        cy.get('g.node-card').contains('Web Server').parents('g.node-card').find('rect[stroke="#00FF00"]').should('exist');
+
+        // Verify link is colored red and dashed (SSH/22 violation)
+        cy.get('g.link-group path[stroke="#FF0000"]').should('exist');
+        cy.get('g.link-group path[stroke-dasharray="4,4"]').should('exist');
     });
 });
 

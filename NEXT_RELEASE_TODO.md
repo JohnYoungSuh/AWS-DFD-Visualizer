@@ -11,12 +11,19 @@ This list is based on failure analysis against mock config and standard D3 force
 - Both fixes verified: `webpack 5.105.4 compiled successfully`
 
 ### ✅ Session: May 22, 2026
-- [x] **Bug #1** — ARN-safe node ID normalization — Fixed in `AwsDfdVisualizer.jsx`.
+- [x] **Bug #1** — ARN-safe node ID normalization — Fixed in `AwsDfdVisualizer.jsx`
 
 ### ✅ Session: May 23, 2026
 - [x] **App Launcher Icon Missing** — Generated standard `appIcon.png` (36x36) and `appIcon_2x.png` (72x72) directly from the existing `logo_2x.png` to fix the generic Splunk icon issue.
 - [x] **`configurationItemCaptureTime` drift animation** — Added `configurationItemCaptureTime` parsing and implemented `stale-node-drift` CSS keyframes for old config entries. Both fixes verified via `make inspect` (0 errors, 0 failures).
 - [x] **App Visibility and Navigation (Option A)** — Created a dedicated Splunk navigation config `default/data/ui/nav/default.xml` and a comprehensive `default/data/ui/views/user_guide.xml` SimpleXML dashboard featuring a live interactive D3 mock-SPL diagram, fully styling the app launcher landing page. Both files verified clean via local `make inspect` (0 errors, 0 failures) and deployed.
+- [x] **Advanced Token Integration Drag Intercept Bug** — Resolved critical bug in Advanced Token Integration where the D3 drag physics engine aggressively intercepted and destroyed React synthetic click events. Fixed by migrating click event interception to the top-level React root via `onClickCapture`.
+
+### ✅ Session: May 25, 2026
+- [x] **AWS Well-Architected Plan Refinements & Roadmap Consolidation** — Restructured the Zero-Trust Layout Engine Plan based on new architectural overrides. Removed SGs from D3 stratification containment tree, mapped SGs as metadata attributes/envelope rings on instances, and locked WAF/CloudFront to Policy/Control plane sector (Y: 200-400). Consolidated duplicate ideas in roadmap and verified Webpack production build succeeds.
+
+### ✅ Session: June 1, 2026
+- [x] **Zero-Trust Static Deterministic Layout Engine** — Migrated layout calculation to a custom two-pass deterministic layout with nested VPC/Subnet containers, orthogonal Manhattan routing, mid-flight security group compliance check (dashed red paths on SSH violations), and concentric security group metadata rings. Passed all Cypress component tests and AppInspect precert verification (0 errors, 0 failures, 0 warnings).
 
 ---
 
@@ -35,18 +42,20 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🏛️ Epic: Zero-Trust Static Deterministic Layout Engine (IL5 RMF Audit Mode)
 
-*This is a massive architectural requirement designated for DoD IL5 RMF audits, replacing the standard force-directed layout with a 100% reproducible, nested-box architecture.*
+*This is a massive architectural requirement designated for DoD IL5 RMF audits, replacing the standard force-directed layout with a 100% reproducible, nested-box architecture. Detailed design formulas and coordinate rules are saved in [IMPLEMENTATION_PLAN.md](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/IMPLEMENTATION_PLAN.md).*
 
-- [ ] **Pure Deterministic Layout Engine**
+- [x] **Pure Deterministic Layout Engine** ✅ *Fixed June 1, 2026*
     - *Action*: Implement a custom two-pass recursive layout algorithm (Bottom-Up dimension calculation, Top-Down coordinate assignment) completely free of physics, `d3.forceSimulation`, or dragging.
-- [ ] **Hierarchical Data Transformation**
-    - *Action*: Create a robust `formatData` pipeline utilizing `d3.stratify()` to map raw Splunk rows into a strict hierarchy, complete with validation and error handling for malformed data.
-- [ ] **Nested Visual Enclosures**
-    - *Action*: Render static boundaries using nested `<g>` elements: Outer VPC (solid black stroke), Inner Subnets (dashed green stroke, light green fill).
-- [ ] **Deterministic Node Positioning**
-    - *Action*: Place PEP/WAF gateways exactly centered on the top border of their enclosing VPC. Arrange EC2 instances in a structured grid within their respective Subnets.
-- [ ] **Enterprise SVG Rendering Standards**
-    - *Action*: Store all icons securely in `<defs>` and render exclusively via `<use>`. Use `d3.line()` with `d3.curveStep` for strictly orthogonal connection paths. Maintain robust enter/update/exit lifecycles to prevent memory leaks during data refreshes.
+- [x] **Hierarchical Data Transformation** ✅ *Fixed June 1, 2026*
+    - *Action*: Create a robust data pipeline utilizing `d3.stratify()` to map raw Splunk rows into a strict hierarchy: `VPC -> Subnet -> ComputeNode/Instance`. Integrate Set-based ancestor cycle tracing to handle multi-node mesh relationships beyond self-loops.
+- [x] **Nested Visual Enclosures** ✅ *Fixed June 1, 2026*
+    - *Action*: Render static boundaries for Subnets and VPCs using nested `<g>` elements. Ensure physical SG container boxes are completely excluded. Set canvas bounds to $1200 \times 1400$ to prevent vertical layout clipping.
+- [x] **Global Edge & Identity Sectors** ✅ *Fixed June 1, 2026*
+    - *Action*: Lock global edge assets (AWS WAF, CloudFront) to the "Policy & Control Plane" canvas sector ($Y \in [200, 400]$), completely outside VPC boxes. Assign unassociated IAM nodes to the Identity Plane horizontal toolbar.
+- [x] **Mid-Flight Security Interception Routing** ✅ *Fixed June 1, 2026*
+    - *Action*: Route links directly between source and target instance, and interrogate security posture mid-flight. Split/recolor paths to Vibrant Red (`#FF0000`) and format as dashed gaps (`stroke-dasharray="4, 4"`) on Port 22 SG violations. Apply clamped $\hat{R}$ corner radius.
+- [x] **Concentric Security Group Envelopes** ✅ *Fixed June 1, 2026*
+    - *Action*: Draw concentric metadata envelope rings (Vibrant Green `#00FF00` or Vibrant Red `#FF0000`) expanding outward from core compute node cards to physically map assigned SGs and their compliance state.
 
 ## 🟡 High (Degrades Usability & Core Splunk Features)
 
@@ -105,6 +114,3 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 *Note: This list is tracked in `NEXT_RELEASE_TODO.md` as of May 2026. Prioritized and merged with legacy Network Diagram Viz parity ideas.*
-
-## 📍 Session Log
-- **May 2026**: Fixed critical bug in Advanced Token Integration where D3 drag physics engine aggressively intercepted and destroyed React synthetic click events. Resolved by migrating click event interception to the top-level React root via `onClickCapture`.
