@@ -21,9 +21,11 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ### ✅ Session: May 25, 2026
 - [x] **AWS Well-Architected Plan Refinements & Roadmap Consolidation** — Restructured the Zero-Trust Layout Engine Plan based on new architectural overrides. Removed SGs from D3 stratification containment tree, mapped SGs as metadata attributes/envelope rings on instances, and locked WAF/CloudFront to Policy/Control plane sector (Y: 200-400). Consolidated duplicate ideas in roadmap and verified Webpack production build succeeds.
-
 ### ✅ Session: June 1, 2026
 - [x] **Zero-Trust Static Deterministic Layout Engine** — Migrated layout calculation to a custom two-pass deterministic layout with nested VPC/Subnet containers, orthogonal Manhattan routing, mid-flight security group compliance check (dashed red paths on SSH violations), and concentric security group metadata rings. Passed all Cypress component tests and AppInspect precert verification (0 errors, 0 failures, 0 warnings).
+
+### ✅ Session: June 2, 2026
+- [x] **v2.7.0 Advanced Features** — Implemented remaining backlog items including client-side CSV console overlay (SPL → D3 Live Feed Mode), uncompressed draw.io XML diagram exporter, dashboard layout optimization (compact density scaling), alternate physics models (classic/cluster/horizontal-stack), and shakeTowards directional pull. Validated via Cypress component tests (8/8 passing) and local AppInspect validation (0 errors, 0 failures, 0 warnings).
 
 ---
 
@@ -103,13 +105,13 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Action*: Add `appIcon.png` and `appIcon_2x.png` into `appserver/static/` to brand the app.
 - [x] **`configurationItemCaptureTime` drift animation**
     - *Action*: Animate node opacity based on how stale the config snapshot is (older = more transparent).
-- [ ] **SPL → D3 live feed mode**
+- [x] **SPL → D3 live feed mode** ✅ *Fixed June 2, 2026*
     - *Action*: Accept edge table output from SPL queries as a CSV drop-in to refresh the graph without full JSON reload.
-- [ ] **Export to draw.io XML**
+- [x] **Export to draw.io XML** ✅ *Fixed June 2, 2026*
     - *Action*: Add an "Export as diagram" button that outputs draw.io-compatible XML for documentation (Federal/DoD requirement).
-- [ ] **Alternative Physics Models** (Merged from Network Diagram Viz)
+- [x] **Alternative Physics Models** (Merged from Network Diagram Viz) ✅ *Fixed June 2, 2026*
     - *Action*: Implement `physicsModel` styles and `shakeTowards` directional stabilizations.
-- [ ] **Dashboard Layout Optimization** (Merged from Network Diagram Viz)
+- [x] **Dashboard Layout Optimization** (Merged from Network Diagram Viz) ✅ *Fixed June 2, 2026*
     - *Action*: Implement `designLayoutDashboard` for specialized panel alignments.
 
 ---

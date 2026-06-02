@@ -1,3 +1,59 @@
+# Release Notes: AWS-DFD-Visualizer v2.7.0
+
+**Release Date:** June 1, 2026
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML
+
+## Overview
+Version 2.7.0 introduces four major advanced visualizer capabilities to improve diagram portability, dense dashboard integration, visual stabilization, and client-side testing:
+
+## Major Features & Enhancements
+
+### 1. Export to draw.io XML
+* **Portability:** Added an "Export to draw.io" button in the HUD overlay. Clicking this button dynamically generates an uncompressed, standard mxGraphModel XML diagram of the current network state, including node placement coordinates, nested subnet/VPC shapes, edge connection paths, and security compliance coloration.
+
+### 2. SPL → D3 Live Feed CSV Parser
+* **Ad-hoc Console:** Implemented a collapsable CSV console overlay. Pasting a standard CSV edge table (with headers like `from,to,node_label,vpcId,subnetId,securityGroups`) allows users to immediately render and test custom diagram topologies client-side without executing backend Splunk searches.
+
+### 3. Dashboard Layout Optimization (Compact Layouts)
+* **Density Scaling:** Introduced a "Dashboard Layout" formatter setting (`compact`, `default`, `expanded`). Selecting `compact` automatically down-scales compute node card boundaries, font sizes, padding metrics, and grid gaps, making it optimal for dense, multi-panel Splunk dashboards.
+
+### 4. Alternative Physics Models & shakeTowards Stabilization
+* **Alternate Formats:** Added `physicsModel` configurations (`classic`, `cluster`, `horizontal-stack`) to adjust node spacing and group alignments in Auto mode.
+* **Directional Pull:** Added `shakeTowards` option (`none`, `center`, `top`, `bottom`, `left`, `right`) to gently pull isolated nodes toward specific screen bounds to prevent layout drifts.
+
+---
+
+# Release Notes: AWS-DFD-Visualizer v2.6.2
+
+**Release Date:** June 1, 2026
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML
+
+## Overview
+Version 2.6.2 introduces the **Zero-Trust Static Deterministic Layout Engine (IL5 RMF Audit Mode)**. This release replaces the dynamic D3 force-directed physics engine with a 100% reproducible, static, nested-box network topology visualizer designed to meet DoD Impact Level 5 (IL5) Risk Management Framework (RMF) auditing requirements.
+
+## Major Features & Enhancements
+
+### 1. Pure Deterministic Layout Engine
+* **Two-Pass Layout Engine:** Developed custom Bottom-Up Dimensioning (`computeDimensions`) and Top-Down Coordinate Allocation (`assignCoordinates`) to render a predictable grid topology without physics jitter.
+* **Canvas Expansion:** Expanded the viewport viewBox boundary to $1200 \times 1400$ to prevent vertical layout clipping across high-density nodes.
+* **Physics & Drag Lockout:** Draggability and D3 tick calculations are completely frozen when Zero-Trust layout mode is active.
+
+### 2. Segmented Zero-Trust Planes (Swimlanes)
+* **Identity Plane Toolbar:** Locked unassociated IAM roles, users, and policy nodes horizontally at the top of the canvas to clarify identity boundaries.
+* **Policy & Control Plane:** Locked global network assets (AWS WAF, CloudFront distributions) centered horizontally between identity and infrastructure boundaries.
+* **Infrastructure Plane:** Nested VPC containers and subnet enclosures are placed strictly within the lower infrastructure bounds.
+* **Decorations:** Added distinct background bands, swimlane labels, and center-aligned placeholders for empty planes to improve layout scannability.
+
+### 3. Mid-Flight Compliance Interception & Manhattan Routing
+* **Orthogonal Manhattan Paths:** Routed connecting lines using rounded, orthogonal Manhattan vectors.
+* **Clamped Corner Radius ($\hat{R}$):** Curvature radius dynamically clamps to prevent loop overlaps on high-density node clusters.
+* **Interception Interrogation:** Interrogates target security posture mid-flight. Port 22/SSH connections targeting non-compliant nodes are rendered in Vibrant Red with dashed line styles, while compliant links render in Vibrant Green.
+
+### 4. Concentric Security Group Envelopes
+* **Visual Compliance Envelopes:** Renders nested outer rings around compute nodes representing their associated security groups, colored by their compliance state (Green for compliant, Red for non-compliant) to make configurations immediately auditable.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.6.1
 
 **Release Date:** May 22, 2026

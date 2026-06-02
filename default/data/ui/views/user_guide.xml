@@ -167,10 +167,26 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
 | eval edge_label=if(edge_label="null", null(), edge_label)
 | table from to type node_label edge_label group icon status]]></pre>
 
-          <h3 style="color: #FF9900; margin-top: 25px;">Scenario C: Zero-Trust Static Layout &amp; Compliance Interception</h3>
-          <p style="margin-bottom: 5px;">This scenario models instances inside VPCs and Subnets with associated Security Groups, highlighting non-compliant configurations (rendered with red envelopes) and violating connections like SSH (port 22) to non-compliant targets (rendered as red dashed lines):</p>
+          <h3 style="color: #FF9900; margin-top: 25px;">Scenario C: Zero-Trust Static Layout &amp; Multi-Plane Compliance Interception</h3>
+          <p style="margin-bottom: 5px;">This scenario models elements across all three Zero-Trust planes (Identity, Policy &amp; Control, and Infrastructure). It features assumed roles, WAF-protected CDNs routing to VPC subnets, compliant/non-compliant security groups, and mid-flight compliance violations (SSH/22 rendered in dashed red):</p>
           <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| makeresults 
-| eval from="bastion-host", to="web-server", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="HTTPS/443", subnetId="subnet-2", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-3\",\"name\":\"bastion-sg\",\"is_compliant\":true}]"
+| eval from="user-dev", to="audit-role", type="AWS::IAM::User", node_label="Developer User", edge_label="Assumes Role", subnetId="", vpcId="", securityGroups=""
+| append [
+    | makeresults
+    | eval from="audit-role", to="", type="AWS::IAM::Role", node_label="Audit Administrator Role", edge_label="", subnetId="", vpcId="", securityGroups=""
+  ]
+| append [
+    | makeresults
+    | eval from="edge-waf", to="cf-cdn", type="AWS::WAFV2::WebACL", node_label="Edge WAF WebACL", edge_label="Protects CDN", subnetId="", vpcId="", securityGroups=""
+  ]
+| append [
+    | makeresults
+    | eval from="cf-cdn", to="bastion-host", type="AWS::CloudFront::Distribution", node_label="CloudFront CDN", edge_label="Routes Traffic", subnetId="", vpcId="", securityGroups=""
+  ]
+| append [
+    | makeresults
+    | eval from="bastion-host", to="web-server", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="HTTPS/443", subnetId="subnet-2", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-3\",\"name\":\"bastion-sg\",\"is_compliant\":true}]"
+  ]
 | append [
     | makeresults
     | eval from="web-server", to="db-server", type="AWS::EC2::Instance", node_label="Web Server", edge_label="SSH/22", subnetId="subnet-1", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-1\",\"name\":\"web-sg\",\"is_compliant\":true}]"

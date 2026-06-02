@@ -220,5 +220,97 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.link-group path[stroke="#FF0000"]').should('exist');
         cy.get('g.link-group path[stroke-dasharray="4,4"]').should('exist');
     });
+
+    it('verifies dashboard layout optimization settings (compact mode)', () => {
+        mount(
+            <div style={{ width: 1420, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={complianceMockData} 
+                    config={{
+                        layoutMode: 'zero-trust',
+                        designLayoutDashboard: 'compact'
+                    }} 
+                    width={1420} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        // Verify the node cards render with width 220 and height 80
+        cy.get('g.node-card rect').first().should('have.attr', 'width', '220');
+        cy.get('g.node-card rect').first().should('have.attr', 'height', '80');
+    });
+
+    it('verifies CSV live feed console paste and apply mechanism', () => {
+        mount(
+            <div style={{ width: 1420, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={complianceMockData} 
+                    config={{
+                        layoutMode: 'zero-trust'
+                    }} 
+                    width={1420} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        // Initially HUD shows 4 nodes
+        cy.contains('Nodes: 4').should('be.visible');
+
+        // Toggle CSV console
+        cy.get('#btn-toggle-csv-console').click();
+        cy.get('#csv-import-panel').should('be.visible');
+
+        // Paste new CSV data
+        const newCsv = `from,to,node_label,edge_label\nnodeA,nodeB,Node A,HTTPS\nnodeB,,Node B,\nnodeC,,Node C,`;
+        cy.get('#csv-textarea').then(($el) => {
+            const textarea = $el[0];
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+            nativeInputValueSetter.call(textarea, newCsv);
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        cy.get('#btn-apply-csv').click();
+
+        // HUD should update to show 5 nodes (including the default VPC and default Subnet containers generated)
+        cy.contains('Nodes: 5').should('be.visible');
+        cy.get('g.node-card').should('have.length', 3);
+        cy.get('g.node-card').contains('Node A').should('exist');
+    });
+
+    it('verifies Export to Draw.io button click trigger', () => {
+        const downloadStub = cy.stub();
+        cy.window().then((win) => {
+            const doc = win.document;
+            cy.stub(doc, 'createElement').callsFake((tagName) => {
+                const el = doc.createElement.wrappedMethod.call(doc, tagName);
+                if (tagName === 'a') {
+                    cy.stub(el, 'click').callsFake(() => {
+                        downloadStub(el.href, el.download);
+                    });
+                }
+                return el;
+            });
+        });
+
+        mount(
+            <div style={{ width: 1420, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={complianceMockData} 
+                    config={{
+                        layoutMode: 'zero-trust'
+                    }} 
+                    width={1420} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.get('#btn-export-drawio').click();
+        cy.wrap(downloadStub).should('have.been.calledWith', Cypress.sinon.match.string, Cypress.sinon.match.string);
+    });
 });
 

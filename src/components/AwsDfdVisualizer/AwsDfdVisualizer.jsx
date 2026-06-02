@@ -275,6 +275,18 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
     let d;
     let isViolated = false;
 
+    const designLayout = config?.designLayoutDashboard || 'default';
+    let cardHalfWidth = 140;
+    let cardHalfHeight = 50;
+    
+    if (designLayout === 'compact') {
+        cardHalfWidth = 110;
+        cardHalfHeight = 40;
+    } else if (designLayout === 'expanded') {
+        cardHalfWidth = 170;
+        cardHalfHeight = 60;
+    }
+
     if (isZeroTrust) {
         const xA = source.x;
         const yA = source.y;
@@ -284,16 +296,16 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
         let xStart, yStart, xEnd, yEnd;
         let isVertical = false;
 
-        if (Math.abs(xB - xA) < 280) {
+        if (Math.abs(xB - xA) < cardHalfWidth * 2) {
             isVertical = true;
             xStart = xA;
-            yStart = yB > yA ? yA + 50 : yA - 50;
+            yStart = yB > yA ? yA + cardHalfHeight : yA - cardHalfHeight;
             xEnd = xB;
-            yEnd = yB > yA ? yB - 50 : yB + 50;
+            yEnd = yB > yA ? yB - cardHalfHeight : yB + cardHalfHeight;
         } else {
-            xStart = xB > xA ? xA + 140 : xA - 140;
+            xStart = xB > xA ? xA + cardHalfWidth : xA - cardHalfWidth;
             yStart = yA;
-            xEnd = xB > xA ? xB - 140 : xB + 140;
+            xEnd = xB > xA ? xB - cardHalfWidth : xB + cardHalfWidth;
             yEnd = yB;
         }
 
@@ -329,8 +341,6 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
         const dy = target.y - source.y;
         const dr = Math.sqrt(dx * dx + dy * dy) || 1;
 
-        const cardHalfWidth = 140;
-        const cardHalfHeight = 50;
         const padding = 12;
 
         let targetOffsetX = 0;
@@ -409,12 +419,38 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
     const fallbackUrl = config?.missingImageURL || '/static/app/AWS-DFD-Visualizer/icons/generic.svg';
     const iconPath = getIconPath(node, fallbackUrl);
     const wrapText = String(config?.wrapNodeText || 'true') === 'true';
+
+    const designLayout = config?.designLayoutDashboard || 'default';
+    let wNode = 280;
+    let hNode = 100;
+    let textScale = 1.0;
+
+    let wImgBox = 66, hImgBox = 66, xImgBox = -128, yImgBox = -33;
+    let wImg = 58, hImg = 58, xImg = -124, yImg = -29;
+    let xText = -45, yTypeText = -14, yLabelText = 22, wLabelWrap = 180, hLabelWrap = 45, yLabelWrap = 0;
+
+    if (designLayout === 'compact') {
+        wNode = 220;
+        hNode = 80;
+        textScale = 0.8;
+        wImgBox = 50; hImgBox = 50; xImgBox = -100; yImgBox = -25;
+        wImg = 42; hImg = 42; xImg = -96; yImg = -21;
+        xText = -40; yTypeText = -10; yLabelText = 18; wLabelWrap = 140; hLabelWrap = 35; yLabelWrap = 0;
+    } else if (designLayout === 'expanded') {
+        wNode = 340;
+        hNode = 120;
+        textScale = 1.2;
+        wImgBox = 80; hImgBox = 80; xImgBox = -156; yImgBox = -40;
+        wImg = 70; hImg = 70; xImg = -151; yImg = -35;
+        xText = -60; yTypeText = -18; yLabelText = 26; wLabelWrap = 210; hLabelWrap = 50; yLabelWrap = 5;
+    }
     
-    let fontSize = 18;
+    let fontSize = Math.round(18 * textScale);
+    let typeFontSize = Math.round(14 * textScale);
     const sizeConf = config?.nodeTextSize || 'medium';
-    if (sizeConf === 'small') fontSize = 14;
-    if (sizeConf === 'large') fontSize = 24;
-    if (sizeConf === 'extraLarge') fontSize = 32;
+    if (sizeConf === 'small') fontSize = Math.round(14 * textScale);
+    if (sizeConf === 'large') fontSize = Math.round(24 * textScale);
+    if (sizeConf === 'extraLarge') fontSize = Math.round(32 * textScale);
 
     const truncatedLabel = displayLabel.length > 25 ? displayLabel.substring(0, 22) + '...' : displayLabel;
     
@@ -425,6 +461,9 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
 
     const driftClass = node.isStale && !isDeleted ? 'stale-node-drift' : '';
 
+    const wEnvCore = wNode / 2;
+    const hEnvCore = hNode * 0.6;
+
     return (
         <g className={`node-card ${driftClass}`} transform={`translate(${node.x},${node.y})`} 
            onClickCapture={(e) => {
@@ -434,14 +473,14 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
            onDoubleClick={(e) => onNodeDoubleClick(e, node)} 
            style={{ cursor: 'pointer', opacity: cardOpacity, '--base-opacity': cardOpacity }}>
             <title>{node.arn || node.id} ({typeLabel}){isDeleted ? ` [${node.status}]` : ''}</title>
-            <rect width={280} height={100} x={-140} y={-50} fill={fillColor} stroke={cardStroke} strokeDasharray={cardDash} strokeWidth={isDeleted ? 2 : 1} rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
+            <rect width={wNode} height={hNode} x={-(wNode/2)} y={-(hNode/2)} fill={fillColor} stroke={cardStroke} strokeDasharray={cardDash} strokeWidth={isDeleted ? 2 : 1} rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
             
             {/* Concentric SG Envelopes */}
             {isZeroTrust && node.security_groups && node.security_groups.map((sg, i) => {
-                const wEnv = 140 + (i * 12);
-                const hEnv = 60 + (i * 12);
-                const xEnv = -70 - (i * 6);
-                const yEnv = -30 - (i * 6);
+                const wEnv = wEnvCore + (i * 12);
+                const hEnv = hEnvCore + (i * 12);
+                const xEnv = -(wEnvCore / 2) - (i * 6);
+                const yEnv = -(hEnvCore / 2) - (i * 6);
                 const strokeColor = (sg.is_compliant === false || String(sg.is_compliant) === 'false') ? '#FF0000' : '#00FF00';
                 return (
                     <rect
@@ -460,17 +499,17 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
                 );
             })}
 
-            <rect width={66} height={66} x={-128} y={-33} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
-            <image href={iconPath} x={-124} y={-29} width={58} height={58} preserveAspectRatio="xMidYMid meet" />
-            <text x={-45} y={-14} fontSize={14} fill={subTextColor}>{typeLabel}</text>
+            <rect width={wImgBox} height={hImgBox} x={xImgBox} y={yImgBox} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
+            <image href={iconPath} x={xImg} y={yImg} width={wImg} height={hImg} preserveAspectRatio="xMidYMid meet" />
+            <text x={xText} y={yTypeText} fontSize={typeFontSize} fill={subTextColor}>{typeLabel}</text>
             {wrapText ? (
-                <foreignObject x={-45} y={0} width={180} height={45}>
+                <foreignObject x={xText} y={yLabelWrap} width={wLabelWrap} height={hLabelWrap}>
                     <div xmlns="http://www.w3.org/1999/xhtml" style={{ fontSize: `${fontSize}px`, fontWeight: 'bold', color: textColor, display: 'flex', alignItems: 'center', height: '100%', wordBreak: 'break-word', lineHeight: '1.1' }}>
                         {displayLabel}
                     </div>
                 </foreignObject>
             ) : (
-                <text x={-45} y={22} fontSize={fontSize} fontWeight="bold" fill={textColor}>{truncatedLabel}</text>
+                <text x={xText} y={yLabelText} fontSize={fontSize} fontWeight="bold" fill={textColor}>{truncatedLabel}</text>
             )}
         </g>
     );
@@ -672,9 +711,10 @@ const resolveHierarchy = (nodes) => {
     };
 };
 
-const computeDimensions = (node) => {
+const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
+    const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     if (node.children && node.children.length > 0) {
-        node.children.forEach(child => computeDimensions(child));
+        node.children.forEach(child => computeDimensions(child, layoutParams));
 
         if (node.id === 'virtual-canvas-root') {
             node.width = 1200;
@@ -686,14 +726,14 @@ const computeDimensions = (node) => {
         const type = (node.data.type || '').toUpperCase();
 
         if (type.includes('VPC') || type === 'CLOUD_REGION' || node.data.id === 'aws-global-root') {
-            const P = 40;
-            const dx = 120;
+            const P = padding;
+            const dx = gapX;
             node.width = 2 * P + node.children.reduce((sum, c) => sum + c.width, 0) + (m - 1) * dx;
             node.height = 2 * P + Math.max(...node.children.map(c => c.height)) + 30;
         } else {
-            const P = 40;
-            const dx = 120;
-            const dy = 100;
+            const P = padding;
+            const dx = gapX;
+            const dy = gapY;
             const K = Math.ceil(Math.sqrt(m));
             const R = Math.ceil(m / K);
 
@@ -703,8 +743,8 @@ const computeDimensions = (node) => {
             node.children.forEach((child, idx) => {
                 const col = idx % K;
                 const row = Math.floor(idx / K);
-                colWidths[col] = Math.max(colWidths[col], child.width || 280);
-                rowHeights[row] = Math.max(rowHeights[row], child.height || 100);
+                colWidths[col] = Math.max(colWidths[col], child.width || nodeWidth);
+                rowHeights[row] = Math.max(rowHeights[row], child.height || nodeHeight);
             });
 
             node.width = 2 * P + colWidths.reduce((sum, w) => sum + w, 0) + (K - 1) * dx;
@@ -717,24 +757,25 @@ const computeDimensions = (node) => {
     } else {
         const type = (node.data.type || '').toUpperCase();
         if (type.includes('VPC') || type.includes('SUBNET')) {
-            node.width = 360;
-            node.height = 180;
+            node.width = nodeWidth * 1.3;
+            node.height = nodeHeight * 1.8;
         } else {
-            node.width = 280;
-            node.height = 100;
+            node.width = nodeWidth;
+            node.height = nodeHeight;
         }
     }
 };
 
-const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets) => {
+const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
+    const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     unassociatedNodes.forEach((node, idx) => {
-        node.x = 180 + idx * 320;
+        node.x = (nodeWidth / 2) + 40 + idx * (nodeWidth + 40);
         node.y = 100;
     });
 
     const M = globalEdgeAssets.length;
     globalEdgeAssets.forEach((node, idx) => {
-        node.x = 600 - ((M - 1) * 350) / 2 + idx * 350;
+        node.x = 600 - ((M - 1) * (nodeWidth + 70)) / 2 + idx * (nodeWidth + 70);
         node.y = 300;
         
         const hNode = root.descendants().find(d => d.id === node.id);
@@ -754,8 +795,8 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets) => {
         const Y_TL = p.y - p.height / 2 + 15;
         
         if (type.includes('VPC') || type === 'CLOUD_REGION' || p.data.id === 'aws-global-root') {
-            const P = 40;
-            const dx = 120;
+            const P = padding;
+            const dx = gapX;
             let currentX = X_TL + P;
             
             p.children.forEach(child => {
@@ -797,8 +838,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets) => {
         infraRoots[0].y = 900;
         positionChildren(infraRoots[0]);
     } else if (infraRoots.length > 1) {
-        const P = 40;
-        const dx = 120;
+        const dx = gapX;
         const totalWidth = infraRoots.reduce((sum, c) => sum + c.width, 0) + (infraRoots.length - 1) * dx;
         let currentX = 600 - totalWidth / 2;
         
@@ -816,6 +856,152 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets) => {
     });
 };
 
+const exportToDrawio = (nodes, links, isZeroTrust, config) => {
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.7.0" type="device">\n`;
+    xml += `  <diagram id="aws-dfd-diagram" name="AWS DFD Diagram">\n`;
+    xml += `    <mxGraphModel dx="1200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">\n`;
+    xml += `      <root>\n`;
+    xml += `        <mxCell id="0" />\n`;
+    xml += `        <mxCell id="1" parent="0" />\n`;
+
+    const designLayout = config?.designLayoutDashboard || 'default';
+    let wNode = 280;
+    let hNode = 100;
+    if (designLayout === 'compact') {
+        wNode = 220;
+        hNode = 80;
+    } else if (designLayout === 'expanded') {
+        wNode = 340;
+        hNode = 120;
+    }
+
+    const escapeXml = (unsafe) => {
+        if (!unsafe) return '';
+        return String(unsafe)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    };
+
+    if (isZeroTrust) {
+        xml += `        <mxCell id="zt-plane-identity" value="Identity Plane" style="swimlane;horizontal=1;startSize=20;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
+        xml += `          <mxGeometry x="0" y="0" width="1200" height="200" as="geometry" />\n`;
+        xml += `        </mxCell>\n`;
+        
+        xml += `        <mxCell id="zt-plane-control" value="Policy &amp; Control Plane" style="swimlane;horizontal=1;startSize=20;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
+        xml += `          <mxGeometry x="0" y="200" width="1200" height="200" as="geometry" />\n`;
+        xml += `        </mxCell>\n`;
+        
+        xml += `        <mxCell id="zt-plane-infra" value="Infrastructure Plane" style="swimlane;horizontal=1;startSize=20;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
+        xml += `          <mxGeometry x="0" y="400" width="1200" height="1000" as="geometry" />\n`;
+        xml += `        </mxCell>\n`;
+    }
+
+    nodes.forEach(node => {
+        const type = (node.type || '').toUpperCase();
+        const isContainer = type.includes('VPC') || type.includes('SUBNET') || type === 'CLOUD_REGION';
+        if (isZeroTrust && isContainer) {
+            const parentId = "zt-plane-infra";
+            const val = escapeXml(node.label || node.id);
+            const style = type.includes('VPC')
+                ? "swimlane;horizontal=1;startSize=30;fillColor=#e2e8f0;strokeColor=#94a3b8;strokeWidth=2;rounded=1;arcSize=12;"
+                : "swimlane;horizontal=1;startSize=25;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;dashed=1;rounded=1;arcSize=12;";
+            
+            const w = node.width || 360;
+            const h = node.height || 180;
+            const x = node.x - w / 2;
+            const y = node.y - h / 2;
+            
+            xml += `        <mxCell id="${escapeXml(node.id)}" value="${val}" style="${style}" vertex="1" parent="${parentId}">\n`;
+            xml += `          <mxGeometry x="${x}" y="${y}" width="${w}" height="${h}" as="geometry" />\n`;
+            xml += `        </mxCell>\n`;
+            return;
+        }
+
+        const label = escapeXml(node.label || node.id);
+        const typeLabel = escapeXml((node.type || 'AWS::Resource').replace('AWS::', ''));
+        const htmlVal = `<b>${label}</b><br/>${typeLabel}`;
+        
+        let parent = "1";
+        if (isZeroTrust) {
+            const t = (node.type || '').toUpperCase();
+            if (node.isGlobalEdge) parent = "zt-plane-control";
+            else if (t.includes('IAM') || t.includes('ROLE') || t.includes('USER') || t.includes('POLICY')) parent = "zt-plane-identity";
+            else parent = node.parentId && node.parentId !== 'virtual-canvas-root' ? escapeXml(node.parentId) : "zt-plane-infra";
+        }
+
+        const isDeleted = node.status === 'ResourceDeleted' || node.status === 'ResourceNotRecorded';
+        const opacityStyle = isDeleted ? "opacity=60;" : "";
+        const dashedStyle = isDeleted ? "dashed=1;" : "";
+        const style = `rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#1e2832;strokeColor=#D5D7D8;strokeWidth=1;fontColor=#dcdcdc;fontSize=12;${opacityStyle}${dashedStyle}`;
+        
+        let x = node.x - wNode / 2;
+        let y = node.y - hNode / 2;
+        
+        if (isZeroTrust && parent !== 'zt-plane-infra' && parent !== 'zt-plane-control' && parent !== 'zt-plane-identity' && parent !== '1') {
+            const parentNode = nodes.find(n => n.id === parent);
+            if (parentNode) {
+                x = node.x - (parentNode.x - parentNode.width / 2) - wNode / 2;
+                y = node.y - (parentNode.y - parentNode.height / 2) - hNode / 2;
+            }
+        } else if (isZeroTrust && parent === 'zt-plane-control') {
+            y = node.y - 200 - hNode / 2;
+        } else if (isZeroTrust && parent === 'zt-plane-infra') {
+            y = node.y - 400 - hNode / 2;
+        }
+
+        xml += `        <mxCell id="${escapeXml(node.id)}" value="${htmlVal}" style="${style}" vertex="1" parent="${parent}">\n`;
+        xml += `          <mxGeometry x="${x}" y="${y}" width="${wNode}" height="${hNode}" as="geometry" />\n`;
+        xml += `        </mxCell>\n`;
+    });
+
+    links.forEach((link, idx) => {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        const edgeLabel = escapeXml(link.label || '');
+
+        let isViolated = false;
+        if (isZeroTrust) {
+            const targetNode = nodes.find(n => n.id === targetId);
+            if (targetNode && targetNode.security_groups && Array.isArray(targetNode.security_groups)) {
+                const hasNonCompliantSG = targetNode.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
+                if (hasNonCompliantSG) {
+                    const lStr = String(link.label || '').toLowerCase();
+                    if (lStr.includes('22') || lStr.includes('ssh') || link.port === 22) {
+                        isViolated = true;
+                    }
+                }
+            }
+        }
+
+        const strokeColor = isZeroTrust ? (isViolated ? '#FF0000' : '#00FF00') : '#879196';
+        const dashed = isZeroTrust && isViolated ? "dashed=1;" : "";
+        const style = `edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=${strokeColor};strokeWidth=3;${dashed}`;
+
+        xml += `        <mxCell id="edge-${idx}" value="${edgeLabel}" style="${style}" edge="1" parent="1" source="${escapeXml(sourceId)}" target="${escapeXml(targetId)}">\n`;
+        xml += `          <mxGeometry relative="1" as="geometry" />\n`;
+        xml += `        </mxCell>\n`;
+    });
+
+    xml += `      </root>\n`;
+    xml += `    </mxGraphModel>\n`;
+    xml += `  </diagram>\n`;
+    xml += `</mxfile>\n`;
+
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aws_dfd_diagram_${new Date().toISOString().split('T')[0]}.drawio`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
 // SECTION: MAIN_COMPONENT — D3 forceSimulation, zoom/pan, drag, tick→React state bridge
 // Key rules: jitter on init, scaleExtent on zoom, viewBox 0 0 1200 1000 (do not change)
 const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldown }) => {
@@ -826,6 +1012,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const [isDragging, setIsDragging] = useState(false);
     const clickTimeoutRef = useRef(null);
 
+    const [showCsvConsole, setShowCsvConsole] = useState(false);
+    const [csvInput, setCsvInput] = useState('');
+    const [localData, setLocalData] = useState(null);
+
     const drilldownClick = config?.drilldownClick || 'singleOrDouble';
     const clusterBy = config?.clusterBy || 'none';
     const layoutMode = config?.layoutMode || 'zero-trust';
@@ -833,6 +1023,45 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const draggableNodes = String(config?.draggableNodes || 'true') === 'true';
     const enablePhysics = String(config?.enablePhysics ?? 'true') === 'true';
     const hideEdgesOnDrag = String(config?.hideEdgesOnDrag || 'false') === 'true';
+
+    const designLayout = config?.designLayoutDashboard || 'default';
+    const layoutParams = useMemo(() => {
+        let params = {
+            nodeWidth: 280,
+            nodeHeight: 100,
+            padding: 40,
+            gapX: 120,
+            gapY: 100,
+            fontScale: 1.0,
+            canvasWidth: 1200,
+            canvasHeight: 1400
+        };
+
+        if (designLayout === 'compact') {
+            params = {
+                nodeWidth: 220,
+                nodeHeight: 80,
+                padding: 25,
+                gapX: 80,
+                gapY: 70,
+                fontScale: 0.8,
+                canvasWidth: 1200,
+                canvasHeight: 1400
+            };
+        } else if (designLayout === 'expanded') {
+            params = {
+                nodeWidth: 340,
+                nodeHeight: 120,
+                padding: 50,
+                gapX: 150,
+                gapY: 130,
+                fontScale: 1.2,
+                canvasWidth: 1200,
+                canvasHeight: 1400
+            };
+        }
+        return params;
+    }, [designLayout]);
 
     console.log("AWS-DFD-Visualizer: Config values read from props:", {
         config,
@@ -890,6 +1119,52 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         }
     };
 
+    const handleApplyCsv = () => {
+        if (!csvInput.trim()) {
+            setLocalData(null);
+            return;
+        }
+
+        const lines = csvInput.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length < 2) return;
+
+        const parseCsvLine = (line) => {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        };
+
+        const headers = parseCsvLine(lines[0]).map(h => h.replace(/^["']|["']$/g, '').toLowerCase().trim());
+        const results = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const rowValues = parseCsvLine(lines[i]).map(v => v.replace(/^["']|["']$/g, ''));
+            const rowObj = {};
+            headers.forEach((header, idx) => {
+                rowObj[header] = rowValues[idx] || '';
+            });
+            results.push(rowObj);
+        }
+
+        setLocalData({
+            fields: headers.map(h => ({ name: h })),
+            results: results
+        });
+    };
+
     const isZeroTrustLayout = layoutMode === 'zero-trust' || 
         (layoutMode !== 'force' && layoutMode !== 'hierarchy' && clusterBy !== 'group');
 
@@ -903,7 +1178,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         globalEdgeAssets, 
         isZeroTrust 
     } = useMemo(() => {
-        const parsed = parseSplunkData(data);
+        const activeData = localData || data;
+        const parsed = parseSplunkData(activeData);
         const gNames = Array.from(new Set(parsed.nodes.map(n => n.group)));
         
         let maxTime = 0;
@@ -939,8 +1215,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 .parentId(d => d.parentId);
             
             const hierarchy = stratify(stratifiedNodes);
-            computeDimensions(hierarchy);
-            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets);
+            computeDimensions(hierarchy, layoutParams);
+            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, layoutParams);
             
             const resolvedNodes = [];
             const vpcContainers = [];
@@ -995,7 +1271,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             globalEdgeAssets: [],
             isZeroTrust: false 
         };
-    }, [data, isZeroTrustLayout]);
+    }, [data, localData, isZeroTrustLayout, layoutParams]);
 
     console.log("AWS-DFD-Visualizer: layout determination result:", {
         isZeroTrustLayout,
@@ -1068,13 +1344,65 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         });
         nodes.forEach(n => n.degree = degreeMap.get(n.id) || 0);
 
+        const pModel = config?.physicsModel || 'classic';
+        const shake = config?.shakeTowards || 'none';
+
+        let linkDistance = 220;
+        let chargeStrength = -1800;
+        let collideRadius = 150;
+
+        if (designLayout === 'compact') {
+            linkDistance = 160;
+            chargeStrength = -1200;
+            collideRadius = 110;
+        } else if (designLayout === 'expanded') {
+            linkDistance = 300;
+            chargeStrength = -2500;
+            collideRadius = 190;
+        }
+
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(220))
-            .force('charge', d3.forceManyBody().strength(-1800))
+            .force('link', d3.forceLink(links).id(d => d.id).distance(linkDistance))
+            .force('charge', d3.forceManyBody().strength(chargeStrength))
             .force('center', d3.forceCenter(W / 2, H / 2))
-            .force('collision', d3.forceCollide().radius(150))
+            .force('collision', d3.forceCollide().radius(collideRadius))
             .force('x-isolated', d3.forceX(W / 2).strength(d => d.degree === 0 ? 0.05 : 0))
             .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
+
+        if (pModel === 'cluster') {
+            const numGroups = groupNames.length || 1;
+            simulation.force('x-cluster', d3.forceX().x(d => {
+                const idx = groupNames.indexOf(d.group);
+                const angle = (idx / numGroups) * 2 * Math.PI - Math.PI / 2;
+                return (W / 2) + Math.cos(angle) * (W / 3.5);
+            }).strength(0.7));
+            
+            simulation.force('y-cluster', d3.forceY().y(d => {
+                const idx = groupNames.indexOf(d.group);
+                const angle = (idx / numGroups) * 2 * Math.PI - Math.PI / 2;
+                return (H / 2) + Math.sin(angle) * (H / 3.5);
+            }).strength(0.7));
+        } else if (pModel === 'horizontal-stack') {
+            const groupWidth = W / (groupNames.length + 1);
+            simulation.force('x-stack', d3.forceX().x(d => {
+                const idx = groupNames.indexOf(d.group);
+                return groupWidth * (idx + 1);
+            }).strength(0.8));
+            simulation.force('y-stack', d3.forceY(H / 2).strength(0.1));
+        }
+
+        if (shake === 'center') {
+            simulation.force('shake-x', d3.forceX(W / 2).strength(0.15));
+            simulation.force('shake-y', d3.forceY(H / 2).strength(0.15));
+        } else if (shake === 'top') {
+            simulation.force('shake-y', d3.forceY(80).strength(0.2));
+        } else if (shake === 'bottom') {
+            simulation.force('shake-y', d3.forceY(H - 80).strength(0.2));
+        } else if (shake === 'left') {
+            simulation.force('shake-x', d3.forceX(80).strength(0.2));
+        } else if (shake === 'right') {
+            simulation.force('shake-x', d3.forceX(W - 80).strength(0.2));
+        }
 
         if (layoutMode === 'hierarchy') {
             const inDegree = new Map();
@@ -1221,9 +1549,131 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.6.2 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.7.0 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
+            </div>
+            
+            {/* Control Panel overlay: Draw.io Export and CSV Import Console */}
+            <div style={{ 
+                position: 'absolute', 
+                top: 10, 
+                right: 10, 
+                zIndex: 100, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'flex-end', 
+                gap: 10 
+            }}>
+                <button 
+                    id="btn-export-drawio"
+                    onClick={() => exportToDrawio(nodes, links, isZeroTrust, config)}
+                    style={{
+                        padding: '6px 12px',
+                        background: '#FF9900',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                >
+                    📥 Export to draw.io
+                </button>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <button 
+                        id="btn-toggle-csv-console"
+                        onClick={() => setShowCsvConsole(!showCsvConsole)}
+                        style={{
+                            padding: '6px 12px',
+                            background: '#232F3E',
+                            color: 'white',
+                            border: '1px solid #545b64',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        {showCsvConsole ? '✕ Close CSV Console' : '📝 CSV Live Feed'}
+                    </button>
+                    
+                    {showCsvConsole && (
+                        <div id="csv-import-panel" style={{
+                            marginTop: '5px',
+                            padding: '10px',
+                            background: isDarkTheme ? '#1e2832' : 'white',
+                            border: '1px solid #545b64',
+                            borderRadius: '6px',
+                            width: '320px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                        }}>
+                            <span style={{ fontSize: '11px', color: isDarkTheme ? '#dcdcdc' : '#232f3e', fontWeight: 'bold' }}>
+                                Paste Edge Table CSV (headers: from,to,node_label,edge_label,vpcId,subnetId,securityGroups)
+                            </span>
+                            <textarea
+                                id="csv-textarea"
+                                value={csvInput}
+                                onChange={(e) => setCsvInput(e.target.value)}
+                                placeholder={`from,to,node_label,edge_label,vpcId,subnetId,securityGroups\nbastion,web,Bastion,HTTPS/443,vpc-1,subnet-2,"[]"\nweb,db,Web Server,SSH/22,vpc-1,subnet-1,"[{\\"id\\":\\"sg-1\\",\\"is_compliant\\":false}]"\ndb,,Database Server,,vpc-1,subnet-1,"[]"`}
+                                rows={6}
+                                style={{
+                                    width: '100%',
+                                    boxSizing: 'border-box',
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    padding: '4px',
+                                    background: isDarkTheme ? '#111827' : '#f8fafc',
+                                    color: isDarkTheme ? '#dcdcdc' : '#232f3e',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button 
+                                    id="btn-clear-csv"
+                                    onClick={() => {
+                                        setCsvInput('');
+                                        setLocalData(null);
+                                    }}
+                                    style={{
+                                        padding: '4px 8px',
+                                        background: '#d32f2f',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px'
+                                    }}
+                                >
+                                    Reset
+                                </button>
+                                <button 
+                                    id="btn-apply-csv"
+                                    onClick={handleApplyCsv}
+                                    style={{
+                                        padding: '4px 8px',
+                                        background: '#2e7d32',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Apply Feed
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
             <svg ref={svgRef} width="100%" height="100%" viewBox={isZeroTrust ? "0 0 1200 1400" : "0 0 1200 1000"} style={{ backgroundColor: 'transparent' }}>
                 <defs>
