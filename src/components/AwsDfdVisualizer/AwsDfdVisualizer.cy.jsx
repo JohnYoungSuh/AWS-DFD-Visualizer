@@ -181,8 +181,8 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.vpc-container').should('have.length', 1);
         cy.get('g.subnet-container').should('have.length', 1);
 
-        // Verify static node cards exist
-        cy.get('g.node-card').should('have.length', 9);
+        // Verify static node cards exist (only compute nodes are rendered as node-cards, containers are filtered out)
+        cy.get('g.node-card').should('have.length', 7);
         
         // Verify orthogonal link paths
         cy.get('g.link-group path').first().should('have.attr', 'stroke');

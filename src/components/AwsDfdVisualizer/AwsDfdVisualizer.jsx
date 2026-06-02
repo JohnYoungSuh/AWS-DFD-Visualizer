@@ -1330,17 +1330,25 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
                     {/* Render Nodes */}
                     <g className="nodes">
-                        {nodes.map(node => (
-                            <NodeCard 
-                                key={node.id} 
-                                node={node} 
-                                isDarkTheme={isDarkTheme} 
-                                onNodeClick={handleNodeClick}
-                                onNodeDoubleClick={handleNodeDoubleClick}
-                                config={config}
-                                isZeroTrust={isZeroTrust}
-                            />
-                        ))}
+                        {nodes.map(node => {
+                            if (isZeroTrust) {
+                                const type = (node.type || '').toUpperCase();
+                                if (type.includes('VPC') || type.includes('SUBNET') || type === 'CLOUD_REGION') {
+                                    return null;
+                                }
+                            }
+                            return (
+                                <NodeCard 
+                                    key={node.id} 
+                                    node={node} 
+                                    isDarkTheme={isDarkTheme} 
+                                    onNodeClick={handleNodeClick}
+                                    onNodeDoubleClick={handleNodeDoubleClick}
+                                    config={config}
+                                    isZeroTrust={isZeroTrust}
+                                />
+                            );
+                        })}
                     </g>
                 </g>
             </svg>
