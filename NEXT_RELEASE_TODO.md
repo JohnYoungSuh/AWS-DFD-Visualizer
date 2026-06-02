@@ -28,7 +28,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **v2.7.0 Advanced Features** — Implemented remaining backlog items including client-side CSV console overlay (SPL → D3 Live Feed Mode), uncompressed draw.io XML diagram exporter, dashboard layout optimization (compact density scaling), alternate physics models (classic/cluster/horizontal-stack), and shakeTowards directional pull. Validated via Cypress component tests (8/8 passing) and local AppInspect validation (0 errors, 0 failures, 0 warnings).
 
 ### 📝 Session: June 2, 2026 (Feedback Ingestion)
-- [ ] **Ingest Production Feedback** — Registered critical bug where `clusterBy` is ignored in Hierarchy layout mode. Added static grouped "Blueprint" engine updates to critical backlog. Added User Guide updates (including ZTA recipes and live `aws:config:json` SPL ingestion patterns), dashboard navigation, and lookup configuration tasks to high backlog. Recorded the lookup and XML append production workaround details.
+- [ ] **Ingest Production Feedback** — Registered critical bug where `clusterBy` is ignored in Hierarchy layout mode. Added static grouped "Blueprint" engine updates to critical backlog. Added User Guide updates (including ZTA recipes and live `aws:config:json` SPL ingestion patterns), static layout verification panel/test case, dashboard navigation, and lookup configuration tasks to high backlog. Recorded the lookup and XML append production workaround details.
 
 ---
 
@@ -89,6 +89,12 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Action*:
         1. Define the `my_asset_inventory` lookup in `default/transforms.conf` and create a placeholder/initial `lookups/my_asset_inventory.csv` file with standard columns (`resourceId`, `role`, `asset_count`, etc.).
         2. Create a nightly scheduled search in `default/savedsearches.conf` to build the classification and populate the lookup table automatically.
+- [ ] **Add Static Grouped Layout Test Case Panel to User Guide Dashboard**
+    - *Context*: To ensure the `clusterBy` and `layoutMode="Hierarchy"` rendering engine bug is fixed and does not regress, we need a dedicated static Zero-Trust diagram panel directly in the user guide dashboard (`user_guide.xml`).
+    - *Action*:
+        1. Add a second `<viz>` panel to `user_guide.xml` that runs the Scenario C static layout SPL.
+        2. Set the panel options to: `layoutMode=Hierarchy`, `clusterBy=group`, and `draggableNodes=false`.
+        3. Add a corresponding Cypress component test in `src/components/AwsDfdVisualizer/AwsDfdVisualizer.cy.jsx` verifying correct polygon rendering and edge routing in this configuration.
 - [x] **ARN-format resourceId in tooltip/inspector**
     - *Action*: Display the original ARN in the inspector panel but use the slugged ID internally for D3. Store both: `{ id: safeId, arn: d.resourceId }`.
 - [x] **Isolated node handling**
