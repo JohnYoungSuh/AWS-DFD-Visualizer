@@ -10,8 +10,9 @@
         </div>
     </div>
 
-    <splunk-control-group label="Layout Engine" help="Choose between force-directed or strict hierarchical trees.">
-        <splunk-radio-input name="{{VIZ_NAMESPACE}}.layoutMode" value="force">
+    <splunk-control-group label="Layout Engine" help="Choose between Zero-Trust static, force-directed, or hierarchical tree layouts.">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.layoutMode" value="zero-trust">
+            <option value="zero-trust">Zero-Trust Static</option>
             <option value="force">Force Directed</option>
             <option value="hierarchy">Hierarchy (Tree)</option>
         </splunk-radio-input>
