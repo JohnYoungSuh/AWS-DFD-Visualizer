@@ -29,12 +29,14 @@ export default SplunkVisualizationBase.extend({
         console.log("AWS-DFD-Visualizer: updateView() called", { data, config });
         if (!this.reactRoot) return;
 
-        // Strip Splunk's verbose config key prefix
-        const propertyPrefix = 'display.visualizations.custom.AWS-DFD-Visualizer.';
+        // Strip Splunk's verbose config key prefix (supports both single and double namespace prefixes)
         const cleanConfig = {};
         if (config) {
             Object.keys(config).forEach(key => {
-                cleanConfig[key.replace(propertyPrefix, '')] = config[key];
+                let cleanKey = key;
+                cleanKey = cleanKey.replace('display.visualizations.custom.AWS-DFD-Visualizer.AWS-DFD-Visualizer.', '');
+                cleanKey = cleanKey.replace('display.visualizations.custom.AWS-DFD-Visualizer.', '');
+                cleanConfig[cleanKey] = config[key];
             });
         }
         const isDark = document.body && (document.body.classList.contains('themed-dark') || document.body.classList.contains('theme-dark'));
