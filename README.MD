@@ -25,10 +25,12 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust (Z
 - **Dynamic Physics**: Optimized spread and layout for large architectures.
 - **D3.js v7 Core**: Stable, high-performance rendering for Splunk 9.x.
 
-## Installation
+## Installation & Upgrades
 
-1. Clone this repository into `$SPLUNK_HOME/etc/apps/`.
-2. Restart Splunk or use `/en-US/_bump`.
+1. Clone this repository (or extract the `.spl` package) into `$SPLUNK_HOME/etc/apps/`.
+2. **Splunk Restart Rule**:
+   - **For New Installations**: Restart Splunk or use `/en-US/_bump` to clear the cache.
+   - **For Upgrades**: A full Splunk restart is **mandatory** to ensure RequireJS reload and that the updated visualization bundle is loaded correctly.
 3. Select "AWS DFD Visualizer" from the search visualization picker.
 
 ## Technical Details
