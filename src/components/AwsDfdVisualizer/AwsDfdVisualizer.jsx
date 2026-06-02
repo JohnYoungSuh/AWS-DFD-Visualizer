@@ -1241,11 +1241,23 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     {/* Render Zero-Trust Plane separator lines & labels */}
                     {isZeroTrust && (
                         <g className="zt-plane-decorations">
-                            <line x1={0} y1={200} x2={1200} y2={200} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} strokeDasharray="5,5" />
-                            <line x1={0} y1={400} x2={1200} y2={400} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} strokeDasharray="5,5" />
-                            <text x={20} y={40} fill={isDarkTheme ? "#6b7280" : "#94a3b8"} fontSize={12} fontWeight="bold" opacity={0.6}>IDENTITY PLANE</text>
-                            <text x={20} y={240} fill={isDarkTheme ? "#6b7280" : "#94a3b8"} fontSize={12} fontWeight="bold" opacity={0.6}>POLICY & CONTROL PLANE</text>
-                            <text x={20} y={440} fill={isDarkTheme ? "#6b7280" : "#94a3b8"} fontSize={12} fontWeight="bold" opacity={0.6}>INFRASTRUCTURE PLANE</text>
+                            {/* Plane 1: Identity Plane */}
+                            <rect x={2} y={2} width={1196} height={196} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
+                            <text x={20} y={30} fill={isDarkTheme ? "#9ca3af" : "#475569"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">IDENTITY PLANE</text>
+                            {unassociatedNodes.length === 0 && (
+                                <text x={600} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Identity Plane Assets (e.g. IAM, Users, Roles)</text>
+                            )}
+
+                            {/* Plane 2: Policy & Control Plane */}
+                            <rect x={2} y={202} width={1196} height={196} fill={isDarkTheme ? "#111827" : "#f1f5f9"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
+                            <text x={20} y={230} fill={isDarkTheme ? "#9ca3af" : "#475569"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">POLICY &amp; CONTROL PLANE</text>
+                            {globalEdgeAssets.length === 0 && (
+                                <text x={600} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Policy &amp; Control Plane Assets (e.g. WAF, CloudFront)</text>
+                            )}
+
+                            {/* Plane 3: Infrastructure Plane */}
+                            <rect x={2} y={402} width={1196} height={996} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.08 : 0.2} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
+                            <text x={20} y={430} fill={isDarkTheme ? "#9ca3af" : "#475569"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">INFRASTRUCTURE PLANE</text>
                         </g>
                     )}
 
