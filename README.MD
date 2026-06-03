@@ -37,3 +37,11 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust (Z
 
 - **Icon Resolution**: Uses a semantic keyword scanner in `visualization.js` to map search results to official AWS architecture icons.
 - **Pathing**: Strictly uses absolute app-relative paths to satisfy RequireJS requirements in Splunk 9.2+.
+
+## Troubleshooting
+
+### 🔄 Missing Features or Outdated Layouts After Upgrade
+If you do not see the new ZTA visualizer features, compliance envelopes, or updated layout options after upgrading:
+1. **Use Private/Incognito Mode**: Open a new Private/Incognito browser window to force the browser to request the latest `visualization.js` bundle directly from Splunk without utilizing local cached state.
+2. **Clear Browser Cache**: Splunk Web aggressively caches RequireJS visualization assets. Clear your browser cache or perform a hard refresh (`Ctrl + F5` or `Cmd + Shift + R`).
+3. **Verify Restart**: Ensure Splunk Enterprise was fully restarted after deploying the upgrade.
