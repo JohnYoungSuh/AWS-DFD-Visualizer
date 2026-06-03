@@ -138,6 +138,9 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🔵 Low (Polish / Future)
 
+- [ ] **Upgrade Application Screenshots**
+    - *Context*: Now that the custom Zero-Trust static layout engine and high-fidelity blueprint mode are fully implemented, the repository documentation screenshots need to be updated.
+    - *Action*: Take new high-resolution screenshots of the Zero-Trust Executive Blueprint and Scenario C multi-plane layout from Splunk and update the assets in the repository.
 - [x] **App Launcher Icon Missing**
     - *Context*: The app shows a generic "App" icon in the Splunk side navigation menu instead of a custom visualizer logo.
     - *Action*: Add `appIcon.png` and `appIcon_2x.png` into `appserver/static/` to brand the app.
