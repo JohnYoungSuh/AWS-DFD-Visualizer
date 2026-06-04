@@ -84,6 +84,15 @@ const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/g
 
 // SECTION: PARSE_SPLUNK_DATA — Handles both data.rows (Classic XML) and data.results (Dashboard Studio)
 // Also applies: edgeSet dedup (Bug #2), null label guard (Bug #3), named-column access (no positional indexing)
+const ensureString = (val) => {
+    if (val === null || val === undefined) return '';
+    if (Array.isArray(val)) {
+        const first = val.find(v => v !== null && v !== undefined && String(v).trim() !== '');
+        return first !== undefined ? String(first) : '';
+    }
+    return String(val);
+};
+
 const parseSplunkData = (data) => {
     if (!data) return { nodes: [], links: [] };
 
@@ -114,75 +123,99 @@ const parseSplunkData = (data) => {
     const edgeSet = new Set();
 
     rows.forEach(row => {
-        let from, to, type, label, edge, group, icon, status, suppConfig, captureTime;
-        let vpcId, subnetId, securityGroups;
+        let rawFrom, rawTo, rawType, rawLabel, rawEdge, rawGroup, rawIcon, rawStatus, suppConfig, captureTime;
+        let rawVpcId, rawSubnetId, securityGroups;
         
         if (isObjectMode) {
-            from  = row.from || row.source;
-            to    = row.to || row.destination;
-            type  = row.type || 'AWS::Resource';
-            label = row.node_label || row.label || String(from).split(/[:/]/).pop() || from || '';
-            edge  = row.edge_label || row.link_text || '';
-            group = row.group || 'Default';
-            icon  = row.icon || row.stencil || '';
-            status = row.configurationItemStatus || row.status || '';
+            rawFrom  = row.from || row.source;
+            rawTo    = row.to || row.destination;
+            rawType  = row.type || 'AWS::Resource';
+            rawLabel = row.node_label || row.label;
+            rawEdge  = row.edge_label || row.link_text;
+            rawGroup = row.group || 'Default';
+            rawIcon  = row.icon || row.stencil;
+            rawStatus = row.configurationItemStatus || row.status;
             suppConfig = row.supplementaryConfiguration;
             captureTime = row.configurationItemCaptureTime || row.captureTime || null;
-            vpcId = row.vpcId || row.vpc_id || null;
-            subnetId = row.subnetId || row.subnet_id || null;
+            rawVpcId = row.vpcId || row.vpc_id;
+            rawSubnetId = row.subnetId || row.subnet_id;
             securityGroups = row.securityGroups || row.security_groups || null;
         } else {
-            from  = idxFrom > -1 ? row[idxFrom] : row[0];
-            to    = idxTo > -1 ? row[idxTo] : row[1];
-            type  = fields.indexOf('type') > -1 ? row[fields.indexOf('type')] : (row[2] || 'AWS::Resource');
-            label = (fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : null) || String(from).split(/[:/]/).pop() || from || '';
-            edge  = fields.indexOf('edge_label') > -1 ? row[fields.indexOf('edge_label')] : '';
-            group = fields.indexOf('group') > -1 ? row[fields.indexOf('group')] : 'Default';
+            rawFrom  = idxFrom > -1 ? row[idxFrom] : row[0];
+            rawTo    = idxTo > -1 ? row[idxTo] : row[1];
+            rawType  = fields.indexOf('type') > -1 ? row[fields.indexOf('type')] : (row[2] || 'AWS::Resource');
+            rawLabel = fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : null;
+            rawEdge  = fields.indexOf('edge_label') > -1 ? row[fields.indexOf('edge_label')] : '';
+            rawGroup = fields.indexOf('group') > -1 ? row[fields.indexOf('group')] : 'Default';
             let iIcon = Math.max(fields.indexOf('icon'), fields.indexOf('stencil'));
-            icon  = iIcon > -1 ? row[iIcon] : '';
+            rawIcon  = iIcon > -1 ? row[iIcon] : '';
             let iStatus = Math.max(fields.indexOf('configurationitemstatus'), fields.indexOf('status'));
-            status = iStatus > -1 ? row[iStatus] : '';
+            rawStatus = iStatus > -1 ? row[iStatus] : '';
             let iSupp = fields.indexOf('supplementaryconfiguration');
             suppConfig = iSupp > -1 ? row[iSupp] : null;
             let iCapTime = Math.max(fields.indexOf('configurationitemcapturetime'), fields.indexOf('capturetime'));
             captureTime = iCapTime > -1 ? row[iCapTime] : null;
             
             let iVpc = Math.max(fields.indexOf('vpcid'), fields.indexOf('vpc_id'));
-            vpcId = iVpc > -1 ? row[iVpc] : null;
+            rawVpcId = iVpc > -1 ? row[iVpc] : null;
             let iSubnet = Math.max(fields.indexOf('subnetid'), fields.indexOf('subnet_id'));
-            subnetId = iSubnet > -1 ? row[iSubnet] : null;
+            rawSubnetId = iSubnet > -1 ? row[iSubnet] : null;
             let iSg = Math.max(fields.indexOf('securitygroups'), fields.indexOf('security_groups'));
             securityGroups = iSg > -1 ? row[iSg] : null;
         }
 
-        let parsedTime = captureTime ? new Date(captureTime).getTime() : null;
+        const from  = ensureString(rawFrom);
+        const to    = ensureString(rawTo);
+        const type  = ensureString(rawType) || 'AWS::Resource';
+        let label = ensureString(rawLabel);
+        const edge  = ensureString(rawEdge);
+        const group = ensureString(rawGroup) || 'Default';
+        const icon  = ensureString(rawIcon);
+        const status = ensureString(rawStatus);
+        const vpcId = ensureString(rawVpcId);
+        const subnetId = ensureString(rawSubnetId);
+
+        if (!label) {
+            label = from.split(/[:/]/).pop() || from || '';
+        }
+
+        let rawCapStr = captureTime;
+        if (Array.isArray(rawCapStr)) {
+            rawCapStr = rawCapStr.find(v => v !== null && v !== undefined && String(v).trim() !== '');
+        }
+        let parsedTime = rawCapStr ? new Date(rawCapStr).getTime() : null;
         if (isNaN(parsedTime)) parsedTime = null;
 
         let parsedSGs = [];
         if (securityGroups) {
-            try {
-                parsedSGs = typeof securityGroups === 'string' ? JSON.parse(securityGroups) : securityGroups;
-                if (!Array.isArray(parsedSGs)) {
-                    parsedSGs = [parsedSGs];
-                }
-            } catch (e) {
-                if (typeof securityGroups === 'string') {
-                    parsedSGs = securityGroups.split(',').map(id => ({ id: id.trim(), name: id.trim(), is_compliant: true }));
+            let sgVal = securityGroups;
+            if (Array.isArray(sgVal)) {
+                sgVal = sgVal.find(v => v !== null && v !== undefined && String(v).trim() !== '');
+            }
+            if (sgVal) {
+                try {
+                    parsedSGs = typeof sgVal === 'string' ? JSON.parse(sgVal) : sgVal;
+                    if (!Array.isArray(parsedSGs)) {
+                        parsedSGs = [parsedSGs];
+                    }
+                } catch (e) {
+                    if (typeof sgVal === 'string') {
+                        parsedSGs = sgVal.split(',').map(id => ({ id: id.trim(), name: id.trim(), is_compliant: true }));
+                    }
                 }
             }
         }
 
-        if (!from || from === 'null' || String(from).trim() === '') return;
+        if (!from || from === 'null' || from.trim() === '') return;
 
         const safeId = idStr => String(idStr).replace(/[/:]/g, '-').toLowerCase();
         const safeFromId = safeId(from);
 
         if (!nodesMap.has(safeFromId)) {
-            const safeLabel = label || String(from).split(/[:/]/).pop() || from;
             nodesMap.set(safeFromId, { 
                 id: safeFromId, 
                 arn: from, 
-                label: safeLabel, 
+                label: label, 
                 type, 
                 group, 
                 icon, 
@@ -196,7 +229,7 @@ const parseSplunkData = (data) => {
             });
         } else {
             const existingNode = nodesMap.get(safeFromId);
-            const fallbackLabel = String(from).split(/[:/]/).pop() || from;
+            const fallbackLabel = from.split(/[:/]/).pop() || from;
             if (label && label !== fallbackLabel && existingNode.label === fallbackLabel) {
                 existingNode.label = label;
             }
@@ -225,7 +258,7 @@ const parseSplunkData = (data) => {
                 existingNode.security_groups = parsedSGs;
             }
         }
-        if (to && to !== 'null' && String(to).trim() !== '') {
+        if (to && to !== 'null' && to.trim() !== '') {
             const safeToId = safeId(to);
             const edgeKey = [safeFromId, safeToId].sort().join('|');
             if (!edgeSet.has(edgeKey)) {
@@ -233,32 +266,38 @@ const parseSplunkData = (data) => {
                 links.push({ source: safeFromId, target: safeToId, label: edge });
             }
             if (!nodesMap.has(safeToId)) {
-                const toLabel = String(to).split(/[:/]/).pop() || to;
+                const toLabel = to.split(/[:/]/).pop() || to;
                 nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
             }
         }
         
         if (suppConfig) {
-            try {
-                let parsedSupp = typeof suppConfig === 'string' ? JSON.parse(suppConfig) : suppConfig;
-                const strSupp = JSON.stringify(parsedSupp);
-                const arnMatches = strSupp.match(/arn:aws:[a-zA-Z0-9-:]+/g) || [];
-                arnMatches.forEach(arn => {
-                    if (arn !== from) {
-                        const safeArnId = safeId(arn);
-                        const edgeKey = [safeFromId, safeArnId].sort().join('|');
-                        if (!edgeSet.has(edgeKey)) {
-                            edgeSet.add(edgeKey);
-                            links.push({ source: safeFromId, target: safeArnId, label: 'supplementary' });
+            let suppVal = suppConfig;
+            if (Array.isArray(suppVal)) {
+                suppVal = suppVal.find(v => v !== null && v !== undefined && String(v).trim() !== '');
+            }
+            if (suppVal) {
+                try {
+                    let parsedSupp = typeof suppVal === 'string' ? JSON.parse(suppVal) : suppVal;
+                    const strSupp = JSON.stringify(parsedSupp);
+                    const arnMatches = strSupp.match(/arn:aws:[a-zA-Z0-9-:]+/g) || [];
+                    arnMatches.forEach(arn => {
+                        if (arn !== from) {
+                            const safeArnId = safeId(arn);
+                            const edgeKey = [safeFromId, safeArnId].sort().join('|');
+                            if (!edgeSet.has(edgeKey)) {
+                                edgeSet.add(edgeKey);
+                                links.push({ source: safeFromId, target: safeArnId, label: 'supplementary' });
+                            }
+                            if (!nodesMap.has(safeArnId)) {
+                                const arnLabel = arn.split(/[:/]/).pop() || arn;
+                                nodesMap.set(safeArnId, { id: safeArnId, arn: arn, label: arnLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
+                            }
                         }
-                        if (!nodesMap.has(safeArnId)) {
-                            const arnLabel = arn.split(/[:/]/).pop() || arn;
-                            nodesMap.set(safeArnId, { id: safeArnId, arn: arn, label: arnLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
-                        }
-                    }
-                });
-            } catch (e) {
-                // ignore invalid json
+                    });
+                } catch (e) {
+                    // ignore invalid json
+                }
             }
         }
     });

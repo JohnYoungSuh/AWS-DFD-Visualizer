@@ -353,6 +353,43 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Verify viewBox height is 1400
         cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
     });
+
+    it('successfully handles multivalue fields (Array types) without throwing', () => {
+        const multivalueMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "status"}
+            ],
+            rows: [
+                [
+                    ["web-server", "web-server"],
+                    ["db-server", "db-server"],
+                    ["AWS::EC2::Instance", "AWS::EC2::Instance"],
+                    ["Web Server", "Web Server"],
+                    "SSH/22",
+                    ["us-west-2", "us-west-2"],
+                    ["OK", "OK"]
+                ]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={multivalueMockData} 
+                    config={{
+                        layoutMode: 'zero-trust'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.contains('Nodes: 4').should('be.visible');
+        cy.get('g.node-card').should('have.length', 2);
+        cy.get('g.node-card').contains('Web Server').should('exist');
+    });
 });
 
 

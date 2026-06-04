@@ -116,6 +116,12 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Advanced Token Integration** (Merged from Network Diagram Viz)
     - *Context*: Splunk dashboards require setting multiple tokens upon clicking nodes/edges to drive other panels.
     - *Action*: Implement `tokenValue`, `tokenNode`, `tokenToNode`, and `tokenToolTip` to allow fine-grained token setting on specific node/link interactions.
+- [ ] **Hybrid Dynamic JIT Drilldown SPL Generation**
+    - *Context*: Users need the ability to click any node or link in the DFD and instantly run a targeted SPL search query to inspect raw log details (such as VPC flow logs or configuration history) for that specific segment.
+    - *Action*:
+        1. Support global JIT templates configured via visual settings (e.g. `drilldownNodeTemplate="index=aws_config resourceId=\"$arn$\""`).
+        2. Support column-driven overrides (if the initial SPL returns columns `node_drilldown` or `link_drilldown`, use those strings directly).
+        3. Parse, sanitize (to prevent SPL injection), interpolate variables, and pass the resulting query inside the Splunk drilldown token payload as `clicked_drilldown_search` to support custom `<link>` redirections.
 
 ## 🟢 Medium (UX/Accuracy Improvements)
 
@@ -135,6 +141,18 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Action*: Enforce positioning with `forceX` / `forceY` based on `awsRegion` + `vpcId` tags if provided.
 - [x] **Physics Engine Overrides** (Merged from Network Diagram Viz)
     - *Action*: Add `enablePhysics` to freeze the graph, and `hideEdgesOnDrag` to improve rendering performance during layout adjustments.
+- [ ] **Dynamic Contrast Text Labels for Planes, VPC, and Subnet**
+    - *Context*: In light theme canvas mode, text labels (such as "IDENTITY PLANE", "Default VPC", and "Default Subnet") suffer from low contrast and poor readability.
+    - *Action*: Make font fill colors dynamic based on `isDarkTheme` (e.g. dark slate `#1e293b`/`#0f172a` for light mode and light slate `#cbd5e1`/`#e2e8f0` for dark mode) to satisfy accessibility and legibility requirements.
+- [ ] **Compliance Violation Styling for Edge & Zone Labels**
+    - *Context*: Violating edge/link protocols and enclosures holding violations should have clear visual text states.
+    - *Action*: Style edge labels (e.g. `SSH/22`) to be bold red (`#FF0000`) or prefixed with a warning icon (e.g., `⚠️`) during active compliance violations. If an enclosure (VPC or Subnet) has violations inside it, append a warning label count (e.g. `Default VPC (1 Violation)`) in red.
+- [ ] **Resource Lifecycle & Staleness Text Styling**
+    - *Context*: Historical or deleted resources need to be distinguished at a glance from active resources.
+    - *Action*: Apply strikethrough text decoration (`text-decoration: line-through`) for deleted resources (`configurationItemStatus: ResourceDeleted`) and italicized, muted text styling for stale configuration nodes (`configurationItemCaptureTime` older than the threshold) to reflect snapshots clearly.
+- [ ] **Hover State Font Enlargement and Background Halo**
+    - *Context*: Labels on hovered nodes and links can overlap with background structures and edges, causing clutter.
+    - *Action*: Dynamically scale hovered edge/node labels slightly and add an SVG `text-shadow` or background halo filter to maximize legibility.
 
 ## 🔵 Low (Polish / Future)
 
