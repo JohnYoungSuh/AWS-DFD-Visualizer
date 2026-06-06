@@ -303,6 +303,11 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
           <p>
             In AWS Config relationships, associations are often declared on both ends (e.g. from EC2 pointing to Subnet and vice-versa). The visualizer uses a sorted canonical edge set key (<code>[from, to].sort().join('|')</code>) to automatically prune duplicate connections, preventing D3 forces from double-pulling nodes and collapsing the diagram into visual anomalies.
           </p>
+          
+          <h3 style="color: #FF9900;">Layout Persistence &amp; Maintenance (Blueprint Mode)</h3>
+          <p>
+            Traditional D3 force-directed visualizers place a heavy maintenance burden on administrators, who must manually drag cards to organize the layout and save their coordinates. The AWS-DFD-Visualizer completely eliminates this layout persistence overhead via its <strong>Pure Deterministic Static Layout Engine</strong>. In Blueprint Mode (activated by setting <code>layoutMode="Hierarchy"</code>, <code>clusterBy="group"</code>, and <code>draggableNodes="false"</code>), new subnets or EC2 scaling groups automatically compute their own structural grid dimensions bottom-up on search refresh. No human dragging, coordinate databases, or manual drag-and-drop maintenance is required.
+          </p>
         </div>
       </html>
     </panel>

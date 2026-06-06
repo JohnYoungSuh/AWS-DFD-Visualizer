@@ -118,13 +118,11 @@ const parseSplunkData = (data) => {
     let idxTo = Math.max(fields.indexOf('to'), fields.indexOf('destination'));
 
     const nodesMap = new Map();
-    const links = [];
-    // Bug #2: track canonical edge keys to deduplicate bidirectional AWS Config relationships
-    const edgeSet = new Set();
+    const rawLinks = [];
 
     rows.forEach(row => {
         let rawFrom, rawTo, rawType, rawLabel, rawEdge, rawGroup, rawIcon, rawStatus, suppConfig, captureTime;
-        let rawVpcId, rawSubnetId, securityGroups;
+        let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown;
         
         if (isObjectMode) {
             rawFrom  = row.from || row.source;
@@ -140,6 +138,8 @@ const parseSplunkData = (data) => {
             rawVpcId = row.vpcId || row.vpc_id;
             rawSubnetId = row.subnetId || row.subnet_id;
             securityGroups = row.securityGroups || row.security_groups || null;
+            rawNodeDrilldown = row.node_drilldown || null;
+            rawLinkDrilldown = row.link_drilldown || null;
         } else {
             rawFrom  = idxFrom > -1 ? row[idxFrom] : row[0];
             rawTo    = idxTo > -1 ? row[idxTo] : row[1];
@@ -162,6 +162,10 @@ const parseSplunkData = (data) => {
             rawSubnetId = iSubnet > -1 ? row[iSubnet] : null;
             let iSg = Math.max(fields.indexOf('securitygroups'), fields.indexOf('security_groups'));
             securityGroups = iSg > -1 ? row[iSg] : null;
+            let iNodeDrilldown = fields.indexOf('node_drilldown');
+            rawNodeDrilldown = iNodeDrilldown > -1 ? row[iNodeDrilldown] : null;
+            let iLinkDrilldown = fields.indexOf('link_drilldown');
+            rawLinkDrilldown = iLinkDrilldown > -1 ? row[iLinkDrilldown] : null;
         }
 
         const from  = ensureString(rawFrom);
@@ -174,6 +178,8 @@ const parseSplunkData = (data) => {
         const status = ensureString(rawStatus);
         const vpcId = ensureString(rawVpcId);
         const subnetId = ensureString(rawSubnetId);
+        const node_drilldown = ensureString(rawNodeDrilldown);
+        const link_drilldown = ensureString(rawLinkDrilldown);
 
         if (!label) {
             label = from.split(/[:/]/).pop() || from || '';
@@ -224,6 +230,7 @@ const parseSplunkData = (data) => {
                 vpcId, 
                 subnetId, 
                 security_groups: parsedSGs, 
+                node_drilldown,
                 x: 0, 
                 y: 0 
             });
@@ -257,14 +264,14 @@ const parseSplunkData = (data) => {
             if (parsedSGs && parsedSGs.length && (!existingNode.security_groups || !existingNode.security_groups.length)) {
                 existingNode.security_groups = parsedSGs;
             }
+            if (node_drilldown && !existingNode.node_drilldown) {
+                existingNode.node_drilldown = node_drilldown;
+            }
         }
+
         if (to && to !== 'null' && to.trim() !== '') {
             const safeToId = safeId(to);
-            const edgeKey = [safeFromId, safeToId].sort().join('|');
-            if (!edgeSet.has(edgeKey)) {
-                edgeSet.add(edgeKey);
-                links.push({ source: safeFromId, target: safeToId, label: edge });
-            }
+            rawLinks.push({ source: safeFromId, target: safeToId, label: edge, link_drilldown });
             if (!nodesMap.has(safeToId)) {
                 const toLabel = to.split(/[:/]/).pop() || to;
                 nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
@@ -284,11 +291,7 @@ const parseSplunkData = (data) => {
                     arnMatches.forEach(arn => {
                         if (arn !== from) {
                             const safeArnId = safeId(arn);
-                            const edgeKey = [safeFromId, safeArnId].sort().join('|');
-                            if (!edgeSet.has(edgeKey)) {
-                                edgeSet.add(edgeKey);
-                                links.push({ source: safeFromId, target: safeArnId, label: 'supplementary' });
-                            }
+                            rawLinks.push({ source: safeFromId, target: safeArnId, label: 'supplementary' });
                             if (!nodesMap.has(safeArnId)) {
                                 const arnLabel = arn.split(/[:/]/).pop() || arn;
                                 nodesMap.set(safeArnId, { id: safeArnId, arn: arn, label: arnLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
@@ -301,11 +304,42 @@ const parseSplunkData = (data) => {
             }
         }
     });
-    return { nodes: Array.from(nodesMap.values()), links };
+
+    const aggregatedEdges = rawLinks.reduce((acc, currentEdge) => {
+        const sortedPair = [currentEdge.source, currentEdge.target].sort();
+        const deterministicKey = sortedPair.join('|');
+
+        if (!acc.has(deterministicKey)) {
+            acc.set(deterministicKey, { 
+                source: sortedPair[0], 
+                target: sortedPair[1], 
+                link_drilldown: currentEdge.link_drilldown || null,
+                protocols: new Set(currentEdge.label ? [currentEdge.label] : []) 
+            });
+        } else {
+            const existingRecord = acc.get(deterministicKey);
+            if (currentEdge.label) {
+                existingRecord.protocols.add(currentEdge.label);
+            }
+            if (currentEdge.link_drilldown && !existingRecord.link_drilldown) {
+                existingRecord.link_drilldown = currentEdge.link_drilldown;
+            }
+        }
+        return acc;
+    }, new Map());
+
+    const cleanEdges = Array.from(aggregatedEdges.values()).map(edge => ({
+        source: edge.source,
+        target: edge.target,
+        label: Array.from(edge.protocols).filter(Boolean).sort().join(', '),
+        link_drilldown: edge.link_drilldown
+    }));
+
+    return { nodes: Array.from(nodesMap.values()), links: cleanEdges };
 };
 
 // SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line, edge label with halo)
-const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
+const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }) => {
     const { useState } = React;
     const [isHovered, setIsHovered] = useState(false);
     const { source, target, label } = link;
@@ -313,6 +347,26 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
 
     let d;
     let isViolated = false;
+
+    const checkNodeViolation = (node) => {
+        if (node && node.security_groups && Array.isArray(node.security_groups)) {
+            const hasNonCompliantSG = node.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
+            if (hasNonCompliantSG) {
+                const edgeLabel = String(label || '').toLowerCase();
+                const portMatch = edgeLabel.match(/\b(22)\b/) || (link.port === 22);
+                if (portMatch || edgeLabel.includes('ssh') || edgeLabel.includes('port 22')) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    if (isZeroTrust || (config?.layoutMode || '').toLowerCase() === 'hierarchy') {
+        if (checkNodeViolation(targetNode) || checkNodeViolation(sourceNode)) {
+            isViolated = true;
+        }
+    }
 
     const designLayout = config?.designLayoutDashboard || 'default';
     let cardHalfWidth = 140;
@@ -344,17 +398,6 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
             const yEnd = target.y - cardHalfHeight;
             const My = (yStart + yEnd) / 2;
             d = `M ${xStart} ${yStart} L ${xStart} ${My} L ${xEnd} ${My} L ${xEnd} ${yEnd}`;
-        }
-
-        if (targetNode && targetNode.security_groups && Array.isArray(targetNode.security_groups)) {
-            const hasNonCompliantSG = targetNode.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
-            if (hasNonCompliantSG) {
-                const edgeLabel = String(label || '').toLowerCase();
-                const portMatch = edgeLabel.match(/\b(22)\b/) || (link.port === 22);
-                if (portMatch || edgeLabel.includes('ssh') || edgeLabel.includes('port 22')) {
-                    isViolated = true;
-                }
-            }
         }
     } else if (isZeroTrust) {
         const xA = source.x;
@@ -393,17 +436,6 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
                 `L ${Mx} ${yEnd - sy * R_hat} ` +
                 `Q ${Mx} ${yEnd} ${Mx + sx * R_hat} ${yEnd} ` +
                 `L ${xEnd} ${yEnd}`;
-        }
-
-        if (targetNode && targetNode.security_groups && Array.isArray(targetNode.security_groups)) {
-            const hasNonCompliantSG = targetNode.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
-            if (hasNonCompliantSG) {
-                const edgeLabel = String(label || '').toLowerCase();
-                const portMatch = edgeLabel.match(/\b(22)\b/) || (link.port === 22);
-                if (portMatch || edgeLabel.includes('ssh') || edgeLabel.includes('port 22')) {
-                    isViolated = true;
-                }
-            }
         }
     } else {
         const dx = target.x - source.x;
@@ -466,7 +498,7 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode }) => {
             <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
             <path d={d} stroke={strokeColor} fill="none" strokeWidth={3} strokeDasharray={strokeDash} markerEnd={markerEnd} />
             {label && (
-                <g transform={`translate(${midX},${midY})`}>
+                <g className="link-label-group" transform={`translate(${midX},${midY})`}>
                     <rect width={bgWidth} height={fontSize + 16} rx={15} fill="white" stroke="#D5D7D8" x={-(bgWidth/2)} y={-((fontSize + 16)/2)} />
                     <text textAnchor="middle" dy={fontSize/3} fontSize={fontSize} fill="#232F3E">{label}</text>
                 </g>
@@ -555,6 +587,7 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
                 return (
                     <rect
                         key={`sg-env-${i}`}
+                        className="concentric-ring"
                         x={xEnv}
                         y={yEnv}
                         width={wEnv}
@@ -571,22 +604,22 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
 
             <rect width={wImgBox} height={hImgBox} x={xImgBox} y={yImgBox} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
             <image href={iconPath} x={xImg} y={yImg} width={wImg} height={hImg} preserveAspectRatio="xMidYMid meet" />
-            <text x={xText} y={yTypeText} fontSize={typeFontSize} fill={subTextColor}>{typeLabel}</text>
+            <text className="node-label-wrapper" x={xText} y={yTypeText} fontSize={typeFontSize} fill={subTextColor}>{typeLabel}</text>
             {wrapText ? (
-                <foreignObject x={xText} y={yLabelWrap} width={wLabelWrap} height={hLabelWrap}>
+                <foreignObject className="node-label-wrapper" x={xText} y={yLabelWrap} width={wLabelWrap} height={hLabelWrap}>
                     <div xmlns="http://www.w3.org/1999/xhtml" style={{ fontSize: `${fontSize}px`, fontWeight: 'bold', color: textColor, display: 'flex', alignItems: 'center', height: '100%', wordBreak: 'break-word', lineHeight: '1.1' }}>
                         {displayLabel}
                     </div>
                 </foreignObject>
             ) : (
-                <text x={xText} y={yLabelText} fontSize={fontSize} fontWeight="bold" fill={textColor}>{truncatedLabel}</text>
+                <text className="node-label-wrapper" x={xText} y={yLabelText} fontSize={fontSize} fontWeight="bold" fill={textColor}>{truncatedLabel}</text>
             )}
         </g>
     );
 };
 
 // SECTION: ZONE — VPC/subnet enclosure rectangle (groupBy clustering placeholder)
-const Zone = ({ groupName, nodes }) => {
+const Zone = ({ groupName, nodes, isDarkTheme }) => {
     if (nodes.length === 0 || !nodes[0].x) return null;
     
     // Medium 3: Control Plane visual boundary
@@ -647,7 +680,7 @@ const Zone = ({ groupName, nodes }) => {
     return (
         <g className="zone">
             <path d={pathD} fill={fillColor} fillOpacity={fillOpacity} stroke={strokeColor} strokeDasharray={strokeDash} strokeWidth={2} />
-            <text x={textX} y={textY} fill={isControlPlane ? "#545b64" : "#838e9c"} fontSize={isControlPlane ? 20 : 18} fontWeight="bold">
+            <text x={textX} y={textY} fill={isControlPlane ? (isDarkTheme ? "#9ca3af" : "#475569") : (isDarkTheme ? "#cbd5e1" : "#0f172a")} fontSize={isControlPlane ? 20 : 18} fontWeight="bold">
                 {isControlPlane ? "⚙️ CONTROL PLANE" : groupName.toUpperCase()}
             </text>
         </g>
@@ -839,7 +872,7 @@ const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 10
 const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
     const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     unassociatedNodes.forEach((node, idx) => {
-        node.x = (nodeWidth / 2) + 40 + idx * (nodeWidth + 40);
+        node.x = (nodeWidth / 2) + 150 + idx * (nodeWidth + 150);
         node.y = 100;
     });
 
@@ -1085,6 +1118,12 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const [showCsvConsole, setShowCsvConsole] = useState(false);
     const [csvInput, setCsvInput] = useState('');
     const [localData, setLocalData] = useState(null);
+    const [lodActive, setLodActive] = useState(false);
+
+    const sanitizeSplunkToken = (rawToken) => {
+        if (typeof rawToken !== 'string') return '';
+        return rawToken.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    };
 
     const drilldownClick = config?.drilldownClick || 'singleOrDouble';
     const clusterBy = config?.clusterBy || 'none';
@@ -1160,12 +1199,24 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         console.log("AWS-DFD-Visualizer: Click validated! Executing drilldown...", { actionType, nodeId: node.id || node.arn });
         
         const executeDrilldown = () => {
+            let drilldownQuery = '';
+            if (node.node_drilldown) {
+                drilldownQuery = node.node_drilldown;
+            } else if (config.drilldownNodeTemplate) {
+                drilldownQuery = config.drilldownNodeTemplate
+                    .replace(/\$arn\$/g, sanitizeSplunkToken(node.arn || node.id))
+                    .replace(/\$id\$/g, sanitizeSplunkToken(node.id))
+                    .replace(/\$label\$/g, sanitizeSplunkToken(node.label || ''))
+                    .replace(/\$type\$/g, sanitizeSplunkToken(node.type || ''));
+            }
+
             if (onDrilldown) {
                 onDrilldown({
                     action: actionType,
                     [config.tokenValue || 'tokenValue']: node.arn || node.id,
                     [config.tokenNode || 'tokenNode']: node.label,
-                    [config.tokenToolTip || 'tokenToolTip']: node.type
+                    [config.tokenToolTip || 'tokenToolTip']: node.type,
+                    clicked_drilldown_search: drilldownQuery
                 }, e);
             }
         };
@@ -1179,13 +1230,29 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     const handleLinkClick = (e, link) => {
         console.log("AWS-DFD-Visualizer: Click received on link!", { source: link.source.id, target: link.target.id });
+        
+        let drilldownQuery = '';
+        if (link.link_drilldown) {
+            drilldownQuery = link.link_drilldown;
+        } else if (config.drilldownLinkTemplate) {
+            drilldownQuery = config.drilldownLinkTemplate
+                .replace(/\$sourceArn\$/g, sanitizeSplunkToken(link.source.arn || link.source.id))
+                .replace(/\$targetArn\$/g, sanitizeSplunkToken(link.target.arn || link.target.id))
+                .replace(/\$sourceId\$/g, sanitizeSplunkToken(link.source.id))
+                .replace(/\$targetId\$/g, sanitizeSplunkToken(link.target.id))
+                .replace(/\$label\$/g, sanitizeSplunkToken(link.label || ''))
+                .replace(/\$sourceLabel\$/g, sanitizeSplunkToken(link.source.label || ''))
+                .replace(/\$targetLabel\$/g, sanitizeSplunkToken(link.target.label || ''));
+        }
+
         if (onDrilldown) {
             onDrilldown({
                 action: 'click',
                 [config.tokenValue || 'tokenValue']: link.source.arn || link.source.id,
                 [config.tokenNode || 'tokenNode']: link.source.label,
                 [config.tokenToNode || 'tokenToNode']: link.target.label,
-                [config.tokenToolTip || 'tokenToolTip']: link.label
+                [config.tokenToolTip || 'tokenToolTip']: link.label,
+                clicked_drilldown_search: drilldownQuery
             }, e);
         }
     };
@@ -1248,10 +1315,28 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         unassociatedNodes, 
         globalEdgeAssets, 
         isZeroTrust,
-        groupBounds
+        groupBounds,
+        originalNodesCount
     } = useMemo(() => {
         const activeData = localData || data;
         const parsed = parseSplunkData(activeData);
+
+        // SVG DOM Limit Safety Cap & Isolated Link Pruning
+        const originalNodesCount = parsed.nodes.length;
+        if (originalNodesCount > 1000) {
+            // Pass 1: Prune Nodes cleanly
+            const prunedNodes = parsed.nodes.slice(0, 1000);
+            const activeNodeIds = new Set(prunedNodes.map(n => n.id));
+
+            // Pass 2: Cleanly prune dangling links to avoid D3 TypeErrors
+            const safeLinks = parsed.links.filter(l => 
+                activeNodeIds.has(l.source) && activeNodeIds.has(l.target)
+            );
+
+            parsed.nodes = prunedNodes;
+            parsed.links = safeLinks;
+        }
+
         const gNames = Array.from(new Set(parsed.nodes.map(n => n.group)));
         
         let maxTime = 0;
@@ -1456,7 +1541,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 unassociatedNodes: [],
                 globalEdgeAssets: [],
                 isZeroTrust: false,
-                groupBounds: calculatedBounds
+                groupBounds: calculatedBounds,
+                originalNodesCount
             };
         }
 
@@ -1511,7 +1597,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 unassociatedNodes,
                 globalEdgeAssets,
                 isZeroTrust: true,
-                groupBounds: []
+                groupBounds: [],
+                originalNodesCount
             };
         }
         
@@ -1524,7 +1611,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             unassociatedNodes: [],
             globalEdgeAssets: [],
             isZeroTrust: false,
-            groupBounds: []
+            groupBounds: [],
+            originalNodesCount
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
@@ -1543,6 +1631,15 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             .scaleExtent([0.2, 3])
             .on('zoom', (event) => {
                 d3.select(gRef.current).attr('transform', event.transform);
+                
+                const newScale = event.transform.k;
+                const isBelowThreshold = newScale < 0.45;
+                setLodActive(prev => {
+                    if (prev !== isBelowThreshold) {
+                        return isBelowThreshold;
+                    }
+                    return prev;
+                });
             });
         
         if (canZoom) {
@@ -1802,6 +1899,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 .stale-node-drift {
                     animation: drift-fade 4s infinite ease-in-out;
                 }
+                .svg-canvas[data-lod="active"] .node-label-wrapper { display: none; }
+                .svg-canvas[data-lod="active"] .concentric-ring { display: none; }
+                .svg-canvas[data-lod="active"] .link-label-group { display: none; }
+                .svg-canvas[data-lod="active"] .node-card rect { filter: none !important; }
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
@@ -1931,7 +2032,48 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     )}
                 </div>
             </div>
-            <svg ref={svgRef} width="100%" height="100%" viewBox={isZeroTrust || isStaticBlueprint ? "0 0 1200 1400" : "0 0 1200 1000"} style={{ backgroundColor: 'transparent' }}>
+
+            {originalNodesCount > 500 && (
+                <div id="high-volume-warning-banner" style={{
+                    position: 'absolute',
+                    top: 45,
+                    left: 10,
+                    right: 10,
+                    zIndex: 200,
+                    background: '#fff3cd',
+                    color: '#856404',
+                    border: '1px solid #ffeeba',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <span>
+                        ⚠️ Warning: High-volume dataset detected ({originalNodesCount} nodes). 
+                        {originalNodesCount > 1000 ? ' Display capped at 1,000 nodes.' : ''} 
+                        Performance may be degraded; please aggregate or filter your SPL search.
+                    </span>
+                    <button 
+                        onClick={(e) => e.target.parentElement.style.display = 'none'}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#856404',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            <svg ref={svgRef} className="svg-canvas" data-lod={lodActive ? "active" : "inactive"} width="100%" height="100%" viewBox={isZeroTrust || isStaticBlueprint ? "0 0 1200 1400" : "0 0 1200 1000"} style={{ backgroundColor: 'transparent' }}>
                 <defs>
                     <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#879196" />
@@ -1949,21 +2091,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                         <g className="zt-plane-decorations">
                             {/* Plane 1: Identity Plane */}
                             <rect x={2} y={2} width={1196} height={196} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
-                            <text x={20} y={30} fill={isDarkTheme ? "#9ca3af" : "#475569"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">IDENTITY PLANE</text>
+                            <text x={20} y={30} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">IDENTITY PLANE</text>
                             {unassociatedNodes.length === 0 && (
                                 <text x={600} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Identity Plane Assets (e.g. IAM, Users, Roles)</text>
                             )}
 
                             {/* Plane 2: Policy & Control Plane */}
                             <rect x={2} y={202} width={1196} height={196} fill={isDarkTheme ? "#111827" : "#f1f5f9"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
-                            <text x={20} y={230} fill={isDarkTheme ? "#9ca3af" : "#475569"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">POLICY &amp; CONTROL PLANE</text>
+                            <text x={20} y={230} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">POLICY &amp; CONTROL PLANE</text>
                             {globalEdgeAssets.length === 0 && (
                                 <text x={600} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Policy &amp; Control Plane Assets (e.g. WAF, CloudFront)</text>
                             )}
 
                             {/* Plane 3: Infrastructure Plane */}
                             <rect x={2} y={402} width={1196} height={996} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.08 : 0.2} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
-                            <text x={20} y={430} fill={isDarkTheme ? "#9ca3af" : "#475569"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">INFRASTRUCTURE PLANE</text>
+                            <text x={20} y={430} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">INFRASTRUCTURE PLANE</text>
                         </g>
                     )}
 
@@ -1986,7 +2128,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     <text 
                                         x={c.x - c.width / 2 + 20} 
                                         y={c.y - c.height / 2 + 30} 
-                                        fill={isDarkTheme ? '#9ca3af' : '#64748b'} 
+                                        fill={isDarkTheme ? '#cbd5e1' : '#0f172a'} 
                                         fontSize={16} 
                                         fontWeight="bold"
                                     >
@@ -2011,7 +2153,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     <text 
                                         x={c.x - c.width / 2 + 15} 
                                         y={c.y - c.height / 2 + 25} 
-                                        fill={isDarkTheme ? '#6b7280' : '#94a3b8'} 
+                                        fill={isDarkTheme ? '#cbd5e1' : '#1e293b'} 
                                         fontSize={12} 
                                         fontWeight="bold"
                                     >
@@ -2039,7 +2181,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     <text 
                                         x={b.x + 20} 
                                         y={b.y + 30} 
-                                        fill={isDarkTheme ? '#9ca3af' : '#475569'} 
+                                        fill={isDarkTheme ? '#cbd5e1' : '#0f172a'} 
                                         fontSize={14} 
                                         fontWeight="bold"
                                     >
@@ -2051,7 +2193,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     ) : (
                         <g className="zones">
                             {groupNames.map(grp => (
-                                <Zone key={grp} groupName={grp} nodes={nodes.filter(n => n.group === grp)} />
+                                <Zone key={grp} groupName={grp} nodes={nodes.filter(n => n.group === grp)} isDarkTheme={isDarkTheme} />
                             ))}
                         </g>
                     )}
@@ -2060,7 +2202,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     <g className="links" style={{ opacity: isDragging ? 0 : 1, transition: 'opacity 0.2s' }}>
                         {links.map((link, idx) => {
                             const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+                            const srcId = typeof link.source === 'object' ? link.source.id : link.source;
                             const targetNode = nodes.find(n => n.id === tgtId);
+                            const sourceNode = nodes.find(n => n.id === srcId);
                             return (
                                 <Link 
                                     key={`link-${idx}`} 
@@ -2069,6 +2213,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     onLinkClick={handleLinkClick} 
                                     isZeroTrust={isZeroTrust}
                                     targetNode={targetNode}
+                                    sourceNode={sourceNode}
                                 />
                             );
                         })}

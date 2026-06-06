@@ -390,6 +390,135 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').should('have.length', 2);
         cy.get('g.node-card').contains('Web Server').should('exist');
     });
+
+    it('truncates node payload to 1,000 exactly and prunes dangling links for high-volume inputs', () => {
+        const highVolNodes = [];
+        for (let i = 1; i <= 1200; i++) {
+            highVolNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
+        }
+        highVolNodes.push(["Node_1", "Node_2", "AWS::Resource", "Node Label 1", "HTTP/80", "Default", "", "OK"]);
+        highVolNodes.push(["Node_1", "Node_1200", "AWS::Resource", "Node Label 1", "SSH/22", "Default", "", "OK"]);
+
+        const highVolMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
+            ],
+            rows: highVolNodes
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={highVolMockData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+
+        cy.contains('Nodes: 1000').should('be.visible');
+        cy.contains('Links: 1').should('be.visible');
+        cy.get('#high-volume-warning-banner').should('be.visible');
+        cy.contains('Warning: High-volume dataset detected (1200 nodes). Display capped at 1,000 nodes.').should('be.visible');
+    });
+
+    it('verifies discrete zoom triggers data-lod active attribute precisely once and does not crash', () => {
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={mockData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        cy.get('svg.svg-canvas').should('have.attr', 'data-lod', 'inactive');
+
+        cy.get('svg.svg-canvas').trigger('wheel', { deltaY: 200, force: true });
+        cy.get('svg.svg-canvas').trigger('wheel', { deltaY: 200, force: true });
+        cy.get('svg.svg-canvas').trigger('wheel', { deltaY: 200, force: true });
+        cy.get('svg.svg-canvas').trigger('wheel', { deltaY: 200, force: true });
+
+        cy.get('svg.svg-canvas').should('have.attr', 'data-lod', 'active');
+    });
+
+    it('aggregates bidirectional parallel edges and sorts their labels correctly', () => {
+        const parallelMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "stencil"}, {name: "edge_label"}, {name: "status"}
+            ],
+            rows: [
+                ["client-node", "db-node", "compute", "443", "ALLOW"],
+                ["db-node", "client-node", "compute", "1433", "ALLOW"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={parallelMockData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        cy.contains('Nodes: 2').should('be.visible');
+        cy.contains('Links: 1').should('be.visible');
+
+        cy.get('g.link-label-group').contains('1433, 443').should('exist');
+    });
+
+    it('safeguards against SPL injection during dynamic JIT drilldown interpolation', () => {
+        const drilldownStub = cy.stub().as('onDrilldownStub');
+        const injectionMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "status"}
+            ],
+            rows: [
+                ["evil-node\" OR 1=1 --", "target-node", "AWS::Resource", "Evil Node", "HTTPS", "OK"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={injectionMockData} 
+                    config={{ 
+                        layoutMode: 'force',
+                        drilldownNodeTemplate: 'index=aws_config resourceId="$arn$" label="$label$"',
+                        tokenValue: 'tokenValue'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                    onDrilldown={drilldownStub} 
+                />
+            </div>
+        );
+        cy.wait(500);
+
+        cy.get('g.node-card').first().click({ force: true });
+        
+        cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
+            clicked_drilldown_search: 'index=aws_config resourceId="evil-node\\" OR 1=1 --" label="Evil Node"'
+        }));
+    });
+
+    it('verifies plane, VPC, and Subnet text fill colors dynamically adapt based on isDarkTheme', () => {
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={mockData} config={{ layoutMode: 'zero-trust' }} width={1200} height={800} isDarkTheme={false} />
+            </div>
+        );
+        cy.wait(500);
+
+        cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', '#0f172a');
+        cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#0f172a');
+        cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#1e293b');
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={mockData} config={{ layoutMode: 'zero-trust' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', '#cbd5e1');
+        cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#cbd5e1');
+        cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#cbd5e1');
+    });
 });
 
 

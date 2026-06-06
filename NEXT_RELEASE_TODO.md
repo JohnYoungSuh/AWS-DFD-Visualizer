@@ -5,6 +5,13 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: June 6, 2026
+- [x] **SVG DOM Limit Warning & LOD Controls** — Implemented safe node cap (1,000) with safe link pruning (dangling edges) and discrete LOD state toggling (`data-lod="active"` at k < 0.45) to hide text labels and shadows.
+- [x] **Hybrid Dynamic JIT SPL Drilldowns** — Implemented secure token escaping via `sanitizeSplunkToken` and query interpolation in click handlers.
+- [x] **Identity Plane Node Spacing** — Increased unassociated nodes spacing gap to prevent label overlapping.
+- [x] **Overlapping Parallel Edges** — Added reduce-based bidirectional aggregation to comma-separated format.
+- [x] **Dynamic Theme Contrast Labels** — Adapted fills dynamically based on theme mode.
+
 ### ✅ Session: May 21, 2026
 - [x] **Bug #3** — Null/undefined label guard (`parseSplunkData` + `NodeCard`) — Fixed in `AwsDfdVisualizer.jsx`
 - [x] **Bug #2** — Bidirectional edge deduplication (`edgeSet` canonical key) — Fixed in `AwsDfdVisualizer.jsx`
@@ -56,6 +63,11 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Null/undefined label guard** ✅ *Fixed May 21, 2026*
     - *Context*: If `resourceName` is missing, D3 renders `undefined` as a text node.
     - *Fix*: Added `.split(/[:/]/).pop()` fallback at all 4 label assignment points in `parseSplunkData` + `NodeCard.displayLabel`.
+- [x] **SVG DOM Limit Browser Crash on High-Volume Datasets (5,000+ Nodes)** ✅ *Fixed June 6, 2026*
+    - *Context*: When rendering large-scale environments with thousands of unique AWS resources, the visualization draws thousands of complex SVG elements (cards, text fields, images, paths). This overflows the browser's DOM/reflow limits, causing tab freezes and browser crashes.
+    - *Action*:
+        1. Implement a client-side circuit breaker. If the number of nodes exceeds 500, display a warning banner to the user suggesting data aggregation/filtering.
+        2. Set a rendering safety cap (e.g., maximum 1000 nodes rendered) and implement Level of Detail (LOD) controls to disable label elements and visual filters when zoomed out to improve rendering performance.
 
 ## 🏛️ Epic: Zero-Trust Static Deterministic Layout Engine (IL5 RMF Audit Mode)
 
@@ -116,15 +128,25 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Advanced Token Integration** (Merged from Network Diagram Viz)
     - *Context*: Splunk dashboards require setting multiple tokens upon clicking nodes/edges to drive other panels.
     - *Action*: Implement `tokenValue`, `tokenNode`, `tokenToNode`, and `tokenToolTip` to allow fine-grained token setting on specific node/link interactions.
-- [ ] **Hybrid Dynamic JIT Drilldown SPL Generation**
+- [x] **Hybrid Dynamic JIT Drilldown SPL Generation** ✅ *Fixed June 6, 2026*
     - *Context*: Users need the ability to click any node or link in the DFD and instantly run a targeted SPL search query to inspect raw log details (such as VPC flow logs or configuration history) for that specific segment.
     - *Action*:
         1. Support global JIT templates configured via visual settings (e.g. `drilldownNodeTemplate="index=aws_config resourceId=\"$arn$\""`).
         2. Support column-driven overrides (if the initial SPL returns columns `node_drilldown` or `link_drilldown`, use those strings directly).
         3. Parse, sanitize (to prevent SPL injection), interpolate variables, and pass the resulting query inside the Splunk drilldown token payload as `clicked_drilldown_search` to support custom `<link>` redirections.
-- [ ] **Identity Plane Node Spacing Fix**
+- [x] **Identity Plane Node Spacing Fix** ✅ *Fixed June 6, 2026*
     - *Context*: In Zero-Trust mode, unassociated nodes in the Identity Plane (e.g., IAM Users and Roles) are positioned with a very narrow horizontal gap (40px). When links exist between them (e.g., "Assumes Role"), the link label text overlaps or is obscured behind the node cards.
     - *Action*: Increase the horizontal gap parameter for the Identity Plane nodes in `assignCoordinates` (e.g., from 40px to 120px or 150px) to ensure connecting link labels are fully visible and legible.
+- [ ] **The Export / Snapshot PDF Generation Failure**
+    - *Context*: Splunk's headless dashboard PDF generator captures page states via background workers that fail to wait for React/D3 canvases inside iFrames or fail to resolve absolute app-relative assets, leading to blank or broken visualization exports.
+    - *Action*:
+        1. Add a native client-side "Download SVG/PNG" button in the visualization controls using canvas/SVG XML serialization.
+        2. Establish print-friendly media CSS overrides (`@media print`) for custom stylesheets.
+- [x] **Overlapping Parallel Edge Labels** ✅ *Fixed June 6, 2026*
+    - *Context*: When multiple connection protocols (e.g. HTTP/80, HTTPS/443, SSH/22) link the exact same source and target nodes, their paths and labels overlay directly on top of each other, making the labels unreadable.
+    - *Action*:
+        1. Calculate dynamic curved offsets based on link index for parallel edges so paths separate.
+        2. Alternatively, support multi-protocol aggregation on parsing, grouping multiple links into a single visual edge with a comma-separated label.
 
 ## 🟢 Medium (UX/Accuracy Improvements)
 
@@ -144,7 +166,7 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Action*: Enforce positioning with `forceX` / `forceY` based on `awsRegion` + `vpcId` tags if provided.
 - [x] **Physics Engine Overrides** (Merged from Network Diagram Viz)
     - *Action*: Add `enablePhysics` to freeze the graph, and `hideEdgesOnDrag` to improve rendering performance during layout adjustments.
-- [ ] **Dynamic Contrast Text Labels for Planes, VPC, and Subnet**
+- [x] **Dynamic Contrast Text Labels for Planes, VPC, and Subnet** ✅ *Fixed June 6, 2026*
     - *Context*: In light theme canvas mode, text labels (such as "IDENTITY PLANE", "Default VPC", and "Default Subnet") suffer from low contrast and poor readability.
     - *Action*: Make font fill colors dynamic based on `isDarkTheme` (e.g. dark slate `#1e293b`/`#0f172a` for light mode and light slate `#cbd5e1`/`#e2e8f0` for dark mode) to satisfy accessibility and legibility requirements.
 - [ ] **Compliance Violation Styling for Edge & Zone Labels**
@@ -156,6 +178,9 @@ This list is based on failure analysis against mock config and standard D3 force
 - [ ] **Hover State Font Enlargement and Background Halo**
     - *Context*: Labels on hovered nodes and links can overlap with background structures and edges, causing clutter.
     - *Action*: Dynamically scale hovered edge/node labels slightly and add an SVG `text-shadow` or background halo filter to maximize legibility.
+- [ ] **Arbitrary Compliance Status Override Styling (Aesthetic Rigidity)**
+    - *Context*: The visualizer lacks support for dynamic status-based visual overrides, forcing users to structure complex Security Group schemas to render violations in red. Users should be able to map status fields (e.g., `status="violation"` or `status="incident"`) directly to card highlights.
+    - *Action*: Update `NodeCard` and styling logic to map arbitrary severity states or custom status field values directly to node card visual overrides (such as flashing red/yellow borders or warning halos).
 
 ## 🔵 Low (Polish / Future)
 
