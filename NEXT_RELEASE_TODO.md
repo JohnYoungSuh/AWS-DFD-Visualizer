@@ -181,6 +181,15 @@ This list is based on failure analysis against mock config and standard D3 force
 - [ ] **Arbitrary Compliance Status Override Styling (Aesthetic Rigidity)**
     - *Context*: The visualizer lacks support for dynamic status-based visual overrides, forcing users to structure complex Security Group schemas to render violations in red. Users should be able to map status fields (e.g., `status="violation"` or `status="incident"`) directly to card highlights.
     - *Action*: Update `NodeCard` and styling logic to map arbitrary severity states or custom status field values directly to node card visual overrides (such as flashing red/yellow borders or warning halos).
+- [ ] **Zero-Trust Layout GLOBAL_ROOT Fallback Refinement**
+    - *Context*: D3 tree layouts require a single stable root. If ingestion encounters null asset paths, falling back to a canonical "GLOBAL_ROOT" identifier protects D3 tree stratification from crash loops.
+    - *Action*: Update resolveHierarchy logic to fallback to a unified "GLOBAL_ROOT" node identifier for null/empty asset paths instead of "virtual-canvas-root".
+- [ ] **Node Status-Based Link Compliance Interception**
+    - *Context*: Link violation routing currently only interrogates SGs. It should support direct evaluation of a node's status="violation" to trigger dashed red Port 22/SSH links.
+    - *Action*: Update checkNodeViolation and Link layout validation to look at the node's status field directly alongside individual Security Group compliance checks.
+- [ ] **Standardized D3 Step Curve Layout Generators**
+    - *Context*: The static grouped calculations currently use manual Manhattan coordinate calculation. Standardizing to standard d3.curveStepBefore and d3.curveStepAfter functions simplifies path drawing in static layout mode.
+    - *Action*: Refactor Manhattan path construction inside Link to use standard D3 step layout curves.
 
 ## 🔵 Low (Polish / Future)
 
@@ -204,39 +213,3 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 *Note: This list is tracked in `NEXT_RELEASE_TODO.md` as of May 2026. Prioritized and merged with legacy Network Diagram Viz parity ideas.*
 
-## 📐 Zero-Trust Layout Engine & "Blueprint Mode" Reference Prompt
-
-When generating SPL, SimpleXML, React, or D3.js engine code for the AWS-DFD-Visualizer inside DoD IL5 environments, adhere to the following standards:
-
-### 1. Core Architectural Mandate
-- **Enforce the Zero-Trust Static Deterministic Layout Engine**: Standard chaotic force-directed physics graphs are restricted unless explicitly toggled.
-
-### 2. Strict Layout Engine Rules (IL5 RMF Audit Mode)
-- **Two-Pass Deterministic Calculations**: Use a custom two-pass recursive layout (Bottom-Up dimensions, Top-Down coordinates). Never use `d3.forceSimulation` by default.
-- **Nested Structural Enclosures**: Render physical boundaries for VPC and Subnet using nested `<g>` elements. Canvas coordinates must be set to a compact $1200 \times 1400$ to prevent vertical layout clipping.
-- **Security Group (SG) Isolation**:
-  - **DO NOT** render Security Groups as physical layout containment boxes.
-  - **DO** render SGs as concentric metadata envelope rings (Vibrant Green `#00FF00` or Vibrant Red `#FF0000` on violation) expanding outward from the core compute node cards.
-- **Canvas Sector Lockdowns**:
-  - Lock global edge assets (AWS WAF, CloudFront) strictly to the Policy & Control plane sector ($Y \in [200, 400]$), completely outside VPC enclosures.
-  - Unassociated IAM nodes must align horizontally on the Identity Plane toolbar.
-
-### 3. Link Routing & Mid-Flight Policy Interception
-- **Orthogonal Routing**: Use Manhattan (90-degree) step-curve routing instead of curves.
-  - **Top-to-Bottom layouts**: `d3.curveStepBefore` (vertical-first).
-  - **Left-to-Right layouts**: `d3.curveStepAfter` (horizontal-first).
-- **Interception Violation Styling**: Interrogate paths mid-flight. If a Port 22/SSH or RMF AC-4 compliance gap is detected, split and render the path as a Vibrant Red (`#FF0000`) dashed line (`stroke-dasharray="4, 4"`) with a clamped corner radius.
-
-### 4. Advanced v2.7.0 System Features
-- **CSV Console Overlay**: Support a live feed mode accepting direct CSV output streams (`SPL -> D3 Live Feed`).
-- **draw.io XML Exporter**: Maintain the uncompressed draw.io-compliant XML diagram exporter for federal compliance documentation.
-- **Capture Time & Status Parsing**:
-  - Parse `configurationItemCaptureTime` and animate node opacity/drift (`stale-node-drift` keyframes) for old snapshots.
-  - Parse `configurationItemStatus` (render `ResourceDeleted` using dashed node borders and reduced opacity).
-
-### 5. Splunk Dashboard Workaround (Bypassing Dashboard Engine Bugs)
-- **The Bug**: Standard Splunk dashboards silently ignore `clusterBy="group"` when `layoutMode="Hierarchy"` is active, dropping all visual hulls.
-- **The Bypass (Executive Blueprint Framework)**:
-  - **Nightly Scheduled Search**: Classify EC2 assets into ZTA roles and output to `my_asset_inventory.csv` lookup.
-  - **`makeresults | append` Chain**: Hardcode node-by-node static architectures in the dashboard SimpleXML to bypass live D3 coordinate conflicts.
-  - **Mandatory XML Settings**: Explicitly lock the visualization options: `layoutMode=Hierarchy`, `clusterBy=group`, and `draggableNodes=false`.
