@@ -166,6 +166,24 @@
   </row>
 
   <row>
+    <panel title="1.2. Integrated Data Source Targeting &amp; SPL Best Practices">
+      <html>
+        <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
+          <p>When query-generating data from live AWS Config JSON tables or building mock datasets, adhere strictly to the following ingestion best practices:</p>
+          <ul style="padding-left: 20px;">
+            <li><strong>JSON Targeting:</strong> Base queries on <code>sourcetype="aws:config"</code> or equivalent JSON formats. Utilize <code>spath</code> to extract fields cleanly.</li>
+            <li><strong>Memory-Safe Relationship Extraction:</strong> Always append a limit when expanding relationship arrays (e.g. <code>| mvexpand rels limit=1000</code>) to prevent high-volume workloads from hitting Splunk memory caps.</li>
+            <li><strong>Schema Field Retention:</strong> Ensure extended attributes (<code>subnetId</code>, <code>vpcId</code>, and <code>securityGroups</code>) are explicitly returned in your terminal <code>| table</code> command, even if not represented as nodes. These fields are mandatory to drive active drilldowns and concentric compliance rings.</li>
+            <li><strong>Mandatory Group Boundaries:</strong> Nesting structures correctly requires formatting the <code>group</code> field inline: <code>| eval group = case(isnotnull(vpcId) AND isnotnull(subnetId), vpcId . "/" . subnetId, isnotnull(vpcId), vpcId, 1=1, "GLOBAL_ROOT")</code>.</li>
+            <li><strong>JSON Escaping inside SPL:</strong> When hardcoding mock nodes (e.g. via <code>| makeresults</code>), all quote characters inside the JSON strings (such as <code>securityGroups</code>) MUST be escaped with a backslash: <code>\"</code>.</li>
+            <li><strong>Tabular Schema Padding:</strong> If using <code>append</code> combinations, initialize empty attributes (e.g. <code>subnetId="" vpcId="" securityGroups=""</code>) on non-infrastructure layers to prevent schema mismatch rendering failures.</li>
+          </ul>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
     <panel title="2. NIST 800-207 Zero-Trust Architecture (ZTA) Copy-Paste SPL Scenarios">
       <html>
         <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
