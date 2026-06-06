@@ -11,6 +11,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Identity Plane Node Spacing** — Increased unassociated nodes spacing gap to prevent label overlapping.
 - [x] **Overlapping Parallel Edges** — Added reduce-based bidirectional aggregation to comma-separated format.
 - [x] **Dynamic Theme Contrast Labels** — Adapted fills dynamically based on theme mode.
+- [x] **Next-Release Enhancements & Security Integration** — Implemented client-side SVG download button, print overrides, compliance violation indicators on links and containers, lifecycle text decorations, hover halos, arbitrary compliance status mapping, threat pulsing animations, skull icon override for critical statuses, GLOBAL_ROOT fallbacks, D3 step curves, and Splunk macros (`default/macros.conf`).
 
 ### ✅ Session: May 21, 2026
 - [x] **Bug #3** — Null/undefined label guard (`parseSplunkData` + `NodeCard`) — Fixed in `AwsDfdVisualizer.jsx`
@@ -137,7 +138,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Identity Plane Node Spacing Fix** ✅ *Fixed June 6, 2026*
     - *Context*: In Zero-Trust mode, unassociated nodes in the Identity Plane (e.g., IAM Users and Roles) are positioned with a very narrow horizontal gap (40px). When links exist between them (e.g., "Assumes Role"), the link label text overlaps or is obscured behind the node cards.
     - *Action*: Increase the horizontal gap parameter for the Identity Plane nodes in `assignCoordinates` (e.g., from 40px to 120px or 150px) to ensure connecting link labels are fully visible and legible.
-- [ ] **The Export / Snapshot PDF Generation Failure**
+- [x] **The Export / Snapshot PDF Generation Failure** ✅ *Fixed June 6, 2026*
     - *Context*: Splunk's headless dashboard PDF generator captures page states via background workers that fail to wait for React/D3 canvases inside iFrames or fail to resolve absolute app-relative assets, leading to blank or broken visualization exports.
     - *Action*:
         1. Add a native client-side "Download SVG/PNG" button in the visualization controls using canvas/SVG XML serialization.
@@ -169,36 +170,40 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Dynamic Contrast Text Labels for Planes, VPC, and Subnet** ✅ *Fixed June 6, 2026*
     - *Context*: In light theme canvas mode, text labels (such as "IDENTITY PLANE", "Default VPC", and "Default Subnet") suffer from low contrast and poor readability.
     - *Action*: Make font fill colors dynamic based on `isDarkTheme` (e.g. dark slate `#1e293b`/`#0f172a` for light mode and light slate `#cbd5e1`/`#e2e8f0` for dark mode) to satisfy accessibility and legibility requirements.
-- [ ] **Compliance Violation Styling for Edge & Zone Labels**
+- [x] **Compliance Violation Styling for Edge & Zone Labels** ✅ *Fixed June 6, 2026*
     - *Context*: Violating edge/link protocols and enclosures holding violations should have clear visual text states.
     - *Action*: Style edge labels (e.g. `SSH/22`) to be bold red (`#FF0000`) or prefixed with a warning icon (e.g., `⚠️`) during active compliance violations. If an enclosure (VPC or Subnet) has violations inside it, append a warning label count (e.g. `Default VPC (1 Violation)`) in red.
-- [ ] **Resource Lifecycle & Staleness Text Styling**
+- [x] **Resource Lifecycle & Staleness Text Styling** ✅ *Fixed June 6, 2026*
     - *Context*: Historical or deleted resources need to be distinguished at a glance from active resources.
     - *Action*: Apply strikethrough text decoration (`text-decoration: line-through`) for deleted resources (`configurationItemStatus: ResourceDeleted`) and italicized, muted text styling for stale configuration nodes (`configurationItemCaptureTime` older than the threshold) to reflect snapshots clearly.
-- [ ] **Hover State Font Enlargement and Background Halo**
+- [x] **Hover State Font Enlargement and Background Halo** ✅ *Fixed June 6, 2026*
     - *Context*: Labels on hovered nodes and links can overlap with background structures and edges, causing clutter.
     - *Action*: Dynamically scale hovered edge/node labels slightly and add an SVG `text-shadow` or background halo filter to maximize legibility.
-- [ ] **Arbitrary Compliance Status Override Styling (Aesthetic Rigidity)**
+- [x] **Arbitrary Compliance Status Override Styling (Aesthetic Rigidity)** ✅ *Fixed June 6, 2026*
     - *Context*: The visualizer lacks support for dynamic status-based visual overrides, forcing users to structure complex Security Group schemas to render violations in red. Users should be able to map status fields (e.g., `status="violation"` or `status="incident"`) directly to card highlights.
     - *Action*: Update `NodeCard` and styling logic to map arbitrary severity states or custom status field values directly to node card visual overrides (such as flashing red/yellow borders or warning halos).
-- [ ] **Zero-Trust Layout GLOBAL_ROOT Fallback Refinement**
+- [x] **Zero-Trust Layout GLOBAL_ROOT Fallback Refinement** ✅ *Fixed June 6, 2026*
     - *Context*: D3 tree layouts require a single stable root. If ingestion encounters null asset paths, falling back to a canonical "GLOBAL_ROOT" identifier protects D3 tree stratification from crash loops.
     - *Action*: Update resolveHierarchy logic to fallback to a unified "GLOBAL_ROOT" node identifier for null/empty asset paths instead of "virtual-canvas-root".
-- [ ] **Node Status-Based Link Compliance Interception**
+- [x] **Node Status-Based Link Compliance Interception** ✅ *Fixed June 6, 2026*
     - *Context*: Link violation routing currently only interrogates SGs. It should support direct evaluation of a node's status="violation", status="incident", or status="failing" to trigger dashed red Port 22/SSH links.
     - *Action*: Update checkNodeViolation and Link layout validation to look at the node's status field directly alongside individual Security Group compliance checks.
-- [ ] **Standardized D3 Step Curve Layout Generators**
+- [x] **Standardized D3 Step Curve Layout Generators** ✅ *Fixed June 6, 2026*
     - *Context*: The static grouped calculations currently use manual Manhattan coordinate calculation. Standardizing to standard d3.curveStepBefore and d3.curveStepAfter functions simplifies path drawing in static layout mode.
     - *Action*: Refactor Manhattan path construction inside Link to use standard D3 step layout curves.
-- [ ] **Threat and Telemetry Overlay: Flashing Red Pulsing States**
+- [x] **Threat and Telemetry Overlay: Flashing Red Pulsing States** ✅ *Fixed June 6, 2026*
     - *Context*: Active threat signals must be visually emphasized on compute cards. Nodes flagged with status="incident" or status="failing" must trigger flashing red CSS pulsing animations in the D3 layout.
     - *Action*: Update NodeCard and styles to apply a keyframe red pulsing transition on nodes matching threat alert status values.
-- [ ] **Tenable/Nessus Vulnerability State Icon Overrides**
+- [x] **Tenable/Nessus Vulnerability State Icon Overrides** ✅ *Fixed June 6, 2026*
     - *Context*: When Tenable vulnerability scans map critical CVE threat states, the engine must support overriding icons to "skull" and styling status="Critical" visual states.
     - *Action*: Map the "SKULL" icon file in getIconPath and add custom visual styling rules for status="Critical" compute cards.
-- [ ] **Native SVG Print & Clone Engine**
+- [x] **Native SVG Print & Clone Engine** ✅ *Fixed June 6, 2026*
     - *Context*: Splunk's headless PDF exporter frequently clips HTML iFrame elements or fails to wait for React/D3 renders, causing empty print outputs.
     - *Action*: Implement a client-side SVG serialization clone downloader using canvas/SVG XML serialization to fetch uncompressed SVG diagrams natively.
+- [x] **Standardized Splunk Search Macros for Threat Overlay Ingestion** ✅ *Fixed June 6, 2026*
+    - *Context*: Rather than forcing users to write complex, error-prone `join` and `eval` queries inline in dashboards, the app should ship with predefined Splunk search macros in `default/macros.conf` (e.g. `aws_dfd_vulnerability_join` and `aws_dfd_threat_join`) to normalize and merge Tenable/Nessus, GuardDuty, and latency metrics onto the visualizer's status fields.
+    - *Action*: Create `default/macros.conf` and define standard macros mapping external vulnerability and incident data directly to the visualizer's status and icon properties.
+
 
 ## 🔵 Low (Polish / Future)
 

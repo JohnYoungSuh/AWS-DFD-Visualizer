@@ -519,6 +519,146 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#cbd5e1');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#cbd5e1');
     });
+
+    it('verifies client-side SVG download and print style elements existence', () => {
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={mockData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        // Verify download button exists
+        cy.get('#btn-export-svg').should('exist').and('be.visible');
+
+        // Check if window print trigger or download works on click (stub download like the draw.io test)
+        const downloadStub = cy.stub();
+        cy.window().then((win) => {
+            const doc = win.document;
+            cy.stub(doc, 'createElement').callsFake((tagName) => {
+                const el = doc.createElement.wrappedMethod.call(doc, tagName);
+                if (tagName === 'a') {
+                    cy.stub(el, 'click').callsFake(() => {
+                        downloadStub(el.href, el.download);
+                    });
+                }
+                return el;
+            });
+        });
+        cy.get('#btn-export-svg').click();
+        cy.wrap(downloadStub).should('have.been.calledWith', Cypress.sinon.match.string, Cypress.sinon.match.string);
+    });
+
+    it('verifies resource lifecycle strikethrough and staleness italic text styling', () => {
+        const lifecycleMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "status"}, {name: "captureTime"}
+            ],
+            rows: [
+                ["deleted-node", null, "AWS::EC2::Instance", "Deleted Instance", "ResourceDeleted", null],
+                ["stale-node", null, "AWS::EC2::Instance", "Stale Instance", "OK", "2026-05-01T00:00:00Z"],
+                // Add a reference node with a recent captureTime to establish the max time context
+                ["recent-node", null, "AWS::EC2::Instance", "Recent Instance", "OK", "2026-06-06T00:00:00Z"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={lifecycleMockData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        // Deleted node should have strikethrough styling
+        cy.get('g.node-card').contains('Deleted Instance').parents('foreignObject').find('div')
+            .should('have.css', 'text-decoration-line', 'line-through');
+
+        // Stale node should have italic styling and reduced opacity
+        cy.get('g.node-card').contains('Stale Instance').parents('foreignObject').find('div')
+            .should('have.css', 'font-style', 'italic');
+    });
+
+    it('verifies threat status maps to pulsing border and skull icon overrides', () => {
+        const threatMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "status"}
+            ],
+            rows: [
+                ["incident-node", "target-node", "AWS::EC2::Instance", "Incident Instance", "incident"],
+                ["critical-node", null, "AWS::EC2::Instance", "Critical Instance", "Critical"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={threatMockData} config={{ layoutMode: 'zero-trust' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        // Verify status icons overridden to skull.svg
+        cy.get('g.node-card').contains('Incident Instance').parents('g.node-card').find('image')
+            .should('have.attr', 'href').and('contain', 'skull.svg');
+        cy.get('g.node-card').contains('Critical Instance').parents('g.node-card').find('image')
+            .should('have.attr', 'href').and('contain', 'skull.svg');
+
+        // Verify pulsing border class and emoji prepend
+        cy.get('g.node-card').contains('Incident Instance').parents('g.node-card').find('rect').first()
+            .should('have.class', 'pulsing-red');
+        cy.get('g.node-card').contains('🚨 Incident Instance').should('exist');
+    });
+
+    it('verifies link and enclosure compliance indicators inside zero-trust layout', () => {
+        const violationMock = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "vpcId"}, {name: "subnetId"}, {name: "status"}
+            ],
+            rows: [
+                ["node-a", "node-b", "AWS::EC2::Instance", "Instance A", "SSH/22", "vpc-1", "subnet-1", "OK"],
+                ["node-b", null, "AWS::EC2::Instance", "Instance B", null, "vpc-1", "subnet-1", "violation"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={violationMock} config={{ layoutMode: 'zero-trust' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        // Link with SSH/22 to a container with violation should be flagged
+        cy.get('g.link-group').contains('⚠️ SSH/22').should('exist');
+        cy.get('g.link-group text').should('have.attr', 'fill', '#FF0000');
+
+        // Enclosures should show violation count
+        cy.get('g.vpc-container text').contains('VPC (vpc-1) (1 Violation)').should('exist');
+        cy.get('g.subnet-container text').contains('Subnet (subnet-1) (1 Violation)').should('exist');
+        cy.get('g.vpc-container rect').first().should('have.attr', 'stroke', '#FF0000');
+    });
+
+    it('verifies GLOBAL_ROOT fallback refinement is mapped correctly', () => {
+        const nullParentMock = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}
+            ],
+            rows: [
+                // Ingesting compute nodes with missing subnet/vpc IDs forces layout engine fallback to GLOBAL_ROOT
+                ["isolated-compute", null, "AWS::EC2::Instance", "Isolated Compute"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={nullParentMock} config={{ layoutMode: 'zero-trust' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        // Verification: check default vpc and default subnet are constructed under GLOBAL_ROOT
+        cy.get('g.vpc-container').should('exist');
+        cy.get('g.subnet-container').should('exist');
+        cy.get('g.node-card').should('have.length', 1);
+    });
 });
 
 

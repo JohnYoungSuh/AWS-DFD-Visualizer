@@ -7,6 +7,7 @@ const ARCH_SVC  = 'Architecture-Service-Icons_01302026/';
 
 // SECTION: ICON_MAP_RAW — AWS resource type → icon filename (NEVER remove entries — breaks existing deployments)
 const ICON_MAP_RAW = {
+    'SKULL':            'skull.svg',
     'LAMBDA':           'lambda.svg',
     'WAFV2':            ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-WAF_64.svg',
     'WAF':              ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-WAF_64.svg',
@@ -53,6 +54,11 @@ const ICON_MAP = new Map(Object.entries(ICON_MAP_RAW));
 
 // SECTION: ICON_RESOLUTION — Priority: explicit icon/stencil → type → id → label → generic fallback
 const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/generic.svg') => {
+    const status = String(node.status || '').toUpperCase().trim();
+    if (status === 'CRITICAL' || status === 'INCIDENT') {
+        return ICON_BASE + 'skull.svg';
+    }
+
     const explicitIcon = (node.icon || node.stencil || '').toUpperCase();
     if (explicitIcon && ICON_MAP.has(explicitIcon)) {
         return ICON_BASE + ICON_MAP.get(explicitIcon);
@@ -349,14 +355,22 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
     let isViolated = false;
 
     const checkNodeViolation = (node) => {
-        if (node && node.security_groups && Array.isArray(node.security_groups)) {
-            const hasNonCompliantSG = node.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
-            if (hasNonCompliantSG) {
-                const edgeLabel = String(label || '').toLowerCase();
-                const portMatch = edgeLabel.match(/\b(22)\b/) || (link.port === 22);
-                if (portMatch || edgeLabel.includes('ssh') || edgeLabel.includes('port 22')) {
-                    return true;
-                }
+        if (!node) return false;
+        
+        // Direct node status evaluation: status="violation", "incident", or "failing"
+        const nodeStatus = String(node.status || '').toLowerCase().trim();
+        const isNodeViolated = nodeStatus === 'violation' || nodeStatus === 'incident' || nodeStatus === 'failing';
+        
+        let hasNonCompliantSG = false;
+        if (node.security_groups && Array.isArray(node.security_groups)) {
+            hasNonCompliantSG = node.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
+        }
+        
+        if (isNodeViolated || hasNonCompliantSG) {
+            const edgeLabel = String(label || '').toLowerCase();
+            const portMatch = edgeLabel.match(/\b(22)\b/) || (link.port === 22);
+            if (portMatch || edgeLabel.includes('ssh') || edgeLabel.includes('port 22')) {
+                return true;
             }
         }
         return false;
@@ -389,15 +403,13 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
             const yStart = source.y;
             const xEnd = target.x - cardHalfWidth;
             const yEnd = target.y;
-            const Mx = (xStart + xEnd) / 2;
-            d = `M ${xStart} ${yStart} L ${Mx} ${yStart} L ${Mx} ${yEnd} L ${xEnd} ${yEnd}`;
+            d = d3.line().curve(d3.curveStepAfter)([[xStart, yStart], [xEnd, yEnd]]);
         } else {
             const xStart = source.x;
             const yStart = source.y + cardHalfHeight;
             const xEnd = target.x;
             const yEnd = target.y - cardHalfHeight;
-            const My = (yStart + yEnd) / 2;
-            d = `M ${xStart} ${yStart} L ${xStart} ${My} L ${xEnd} ${My} L ${xEnd} ${yEnd}`;
+            d = d3.line().curve(d3.curveStepBefore)([[xStart, yStart], [xEnd, yEnd]]);
         }
     } else if (isZeroTrust) {
         const xA = source.x;
@@ -493,14 +505,37 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
     const strokeDash = isZeroTrustColors && isViolated ? '4,4' : 'none';
     const markerEnd = isZeroTrustColors ? (isViolated ? 'url(#arrow-red)' : 'url(#arrow-green)') : 'url(#arrow)';
 
+    const displayFontSize = isHovered ? Math.round(fontSize * 1.15) : fontSize;
+    const displayBgWidth = isHovered ? bgWidth * 1.15 : bgWidth;
+
     return (
         <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
             <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
             <path d={d} stroke={strokeColor} fill="none" strokeWidth={3} strokeDasharray={strokeDash} markerEnd={markerEnd} />
             {label && (
                 <g className="link-label-group" transform={`translate(${midX},${midY})`}>
-                    <rect width={bgWidth} height={fontSize + 16} rx={15} fill="white" stroke="#D5D7D8" x={-(bgWidth/2)} y={-((fontSize + 16)/2)} />
-                    <text textAnchor="middle" dy={fontSize/3} fontSize={fontSize} fill="#232F3E">{label}</text>
+                    <rect 
+                        width={displayBgWidth} 
+                        height={displayFontSize + 16} 
+                        rx={15} 
+                        fill="white" 
+                        stroke={isViolated ? "#FF0000" : "#D5D7D8"} 
+                        strokeWidth={isViolated ? 2 : (isHovered ? 1.5 : 1)}
+                        x={-(displayBgWidth/2)} 
+                        y={-((displayFontSize + 16)/2)} 
+                    />
+                    <text 
+                        textAnchor="middle" 
+                        dy={displayFontSize/3} 
+                        fontSize={displayFontSize} 
+                        fontWeight={isViolated || isHovered ? "bold" : "normal"}
+                        fill={isViolated ? "#FF0000" : "#232F3E"}
+                        style={{
+                            textShadow: isHovered ? '0 0 4px #fff' : 'none'
+                        }}
+                    >
+                        {isViolated ? `⚠️ ${label}` : label}
+                    </text>
                 </g>
             )}
         </g>
@@ -511,12 +546,23 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
 const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, isZeroTrust }) => {
     if (!node.x) return null;
 
-    const fillColor = isDarkTheme ? '#1e2832' : 'white';
-    const textColor = isDarkTheme ? '#dcdcdc' : '#232f3e';
-    const subTextColor = isDarkTheme ? '#a9b1ba' : '#545b64';
-    const shadowColor = isDarkTheme ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.22)';
-    
-    const displayLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
+    const [isHovered, setIsHovered] = React.useState(false);
+
+    const getStatusHighlight = (status) => {
+        const s = String(status || '').toLowerCase().trim();
+        if (s === 'incident' || s === 'failing' || s === 'critical' || s === 'violation' || s === 'non-compliant' || s === 'critical-threat') {
+            return { color: '#FF0000', className: 'pulsing-red', labelPrefix: '🚨 ' };
+        }
+        if (s === 'warning' || s === 'alert' || s === 'suspicious') {
+            return { color: '#FFA500', className: 'pulsing-yellow', labelPrefix: '⚠️ ' };
+        }
+        return null;
+    };
+
+    const highlight = getStatusHighlight(node.status);
+    const prefix = highlight ? highlight.labelPrefix : '';
+    const baseLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
+    const displayLabel = prefix + baseLabel;
     const typeLabel = (node.type || 'AWS::Resource').replace('AWS::', '');
     const fallbackUrl = config?.missingImageURL || '/static/app/AWS-DFD-Visualizer/icons/generic.svg';
     const iconPath = getIconPath(node, fallbackUrl);
@@ -558,16 +604,31 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
     
     const isDeleted = node.status === 'ResourceDeleted' || node.status === 'ResourceNotRecorded';
     const cardOpacity = isDeleted ? 0.6 : (node.staleOpacity || 1);
-    const cardStroke = isDeleted ? "#879196" : "#D5D7D8";
+    const cardStroke = highlight ? highlight.color : (isDeleted ? "#879196" : "#D5D7D8");
     const cardDash = isDeleted ? "6,6" : "none";
+    const cardStrokeWidth = highlight ? 3 : (isDeleted ? 2 : 1);
 
     const driftClass = node.isStale && !isDeleted ? 'stale-node-drift' : '';
 
     const wEnvCore = wNode / 2;
     const hEnvCore = hNode * 0.6;
 
+    const fillColor = isDarkTheme ? '#1e2832' : 'white';
+    const textColor = isDarkTheme ? '#dcdcdc' : '#232f3e';
+    const subTextColor = isDarkTheme ? '#a9b1ba' : '#545b64';
+    const shadowColor = isDarkTheme ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.22)';
+
+    const hoveredScale = isHovered ? 1.15 : 1.0;
+    const displayFontSize = Math.round(fontSize * hoveredScale);
+    const displayTypeFontSize = Math.round(typeFontSize * hoveredScale);
+    const textShadowStyle = isHovered 
+        ? (isDarkTheme ? '0 0 5px #000, 0 0 5px #000' : '0 0 5px #fff, 0 0 5px #fff') 
+        : 'none';
+
     return (
         <g className={`node-card ${driftClass}`} transform={`translate(${node.x},${node.y})`} 
+           onMouseEnter={() => setIsHovered(true)}
+           onMouseLeave={() => setIsHovered(false)}
            onClickCapture={(e) => {
                console.log("AWS-DFD-Visualizer: onClickCapture fired!", node.id);
                onNodeClick(e, node, 'click');
@@ -575,7 +636,19 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
            onDoubleClick={(e) => onNodeDoubleClick(e, node)} 
            style={{ cursor: 'pointer', opacity: cardOpacity, '--base-opacity': cardOpacity }}>
             <title>{node.arn || node.id} ({typeLabel}){isDeleted ? ` [${node.status}]` : ''}</title>
-            <rect width={wNode} height={hNode} x={-(wNode/2)} y={-(hNode/2)} fill={fillColor} stroke={cardStroke} strokeDasharray={cardDash} strokeWidth={isDeleted ? 2 : 1} rx={12} style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} />
+            <rect 
+                width={wNode} 
+                height={hNode} 
+                x={-(wNode/2)} 
+                y={-(hNode/2)} 
+                fill={fillColor} 
+                stroke={cardStroke} 
+                strokeDasharray={cardDash} 
+                strokeWidth={cardStrokeWidth} 
+                rx={12} 
+                className={highlight ? highlight.className : ''}
+                style={{ filter: `drop-shadow(0px 8px 12px ${shadowColor})` }} 
+            />
             
             {/* Concentric SG Envelopes */}
             {isZeroTrust && node.security_groups && node.security_groups.map((sg, i) => {
@@ -604,15 +677,41 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
 
             <rect width={wImgBox} height={hImgBox} x={xImgBox} y={yImgBox} fill={isDeleted ? "#545b64" : "#232F3E"} rx={10} />
             <image href={iconPath} x={xImg} y={yImg} width={wImg} height={hImg} preserveAspectRatio="xMidYMid meet" />
-            <text className="node-label-wrapper" x={xText} y={yTypeText} fontSize={typeFontSize} fill={subTextColor}>{typeLabel}</text>
+            <text className="node-label-wrapper" x={xText} y={yTypeText} fontSize={displayTypeFontSize} fill={subTextColor} style={{ textShadow: textShadowStyle }}>{typeLabel}</text>
             {wrapText ? (
                 <foreignObject className="node-label-wrapper" x={xText} y={yLabelWrap} width={wLabelWrap} height={hLabelWrap}>
-                    <div xmlns="http://www.w3.org/1999/xhtml" style={{ fontSize: `${fontSize}px`, fontWeight: 'bold', color: textColor, display: 'flex', alignItems: 'center', height: '100%', wordBreak: 'break-word', lineHeight: '1.1' }}>
+                    <div xmlns="http://www.w3.org/1999/xhtml" style={{ 
+                        fontSize: `${displayFontSize}px`, 
+                        fontWeight: 'bold', 
+                        color: textColor, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        height: '100%', 
+                        wordBreak: 'break-word', 
+                        lineHeight: '1.1',
+                        textDecoration: isDeleted ? 'line-through' : 'none',
+                        fontStyle: node.isStale && !isDeleted ? 'italic' : 'normal',
+                        textShadow: textShadowStyle
+                    }}>
                         {displayLabel}
                     </div>
                 </foreignObject>
             ) : (
-                <text className="node-label-wrapper" x={xText} y={yLabelText} fontSize={fontSize} fontWeight="bold" fill={textColor}>{truncatedLabel}</text>
+                <text 
+                    className="node-label-wrapper" 
+                    x={xText} 
+                    y={yLabelText} 
+                    fontSize={displayFontSize} 
+                    fontWeight="bold" 
+                    fill={textColor}
+                    style={{
+                        textDecoration: isDeleted ? 'line-through' : 'none',
+                        fontStyle: node.isStale && !isDeleted ? 'italic' : 'normal',
+                        textShadow: textShadowStyle
+                    }}
+                >
+                    {truncatedLabel}
+                </text>
             )}
         </g>
     );
@@ -776,31 +875,31 @@ const resolveHierarchy = (nodes) => {
     }
 
     const stratifiedNodes = [];
-    stratifiedNodes.push({ id: "virtual-canvas-root", parentId: null, label: "Virtual Canvas Root", type: "VIRTUAL_ROOT", group: "Default" });
+    stratifiedNodes.push({ id: "GLOBAL_ROOT", parentId: null, label: "Global Root", type: "VIRTUAL_ROOT", group: "Default" });
 
     vpcs.forEach(vpc => {
-        vpc.parentId = "virtual-canvas-root";
+        vpc.parentId = "GLOBAL_ROOT";
         stratifiedNodes.push(vpc);
     });
 
     subnets.forEach(sub => {
         const parentId = sub.vpcId 
             ? sub.vpcId.replace(/[/:]/g, '-').toLowerCase() 
-            : (vpcs[0] ? vpcs[0].id : "virtual-canvas-root");
-        sub.parentId = nodeMap.has(parentId) ? parentId : "virtual-canvas-root";
+            : (vpcs[0] ? vpcs[0].id : "GLOBAL_ROOT");
+        sub.parentId = nodeMap.has(parentId) ? parentId : "GLOBAL_ROOT";
         stratifiedNodes.push(sub);
     });
 
     computes.forEach(node => {
         const parentId = node.subnetId 
             ? node.subnetId.replace(/[/:]/g, '-').toLowerCase() 
-            : (subnets[0] ? subnets[0].id : (vpcs[0] ? vpcs[0].id : "virtual-canvas-root"));
-        node.parentId = nodeMap.has(parentId) ? parentId : "virtual-canvas-root";
+            : (subnets[0] ? subnets[0].id : (vpcs[0] ? vpcs[0].id : "GLOBAL_ROOT"));
+        node.parentId = nodeMap.has(parentId) ? parentId : "GLOBAL_ROOT";
         stratifiedNodes.push(node);
     });
 
     globalEdgeAssets.forEach(node => {
-        node.parentId = "virtual-canvas-root";
+        node.parentId = "GLOBAL_ROOT";
         stratifiedNodes.push(node);
     });
 
@@ -819,7 +918,7 @@ const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 10
     if (node.children && node.children.length > 0) {
         node.children.forEach(child => computeDimensions(child, layoutParams));
 
-        if (node.id === 'virtual-canvas-root') {
+        if (node.id === 'GLOBAL_ROOT') {
             node.width = 1200;
             node.height = 1400;
             return;
@@ -1033,7 +1132,7 @@ const exportToDrawio = (nodes, links, isZeroTrust, config) => {
             const t = (node.type || '').toUpperCase();
             if (node.isGlobalEdge) parent = "zt-plane-control";
             else if (t.includes('IAM') || t.includes('ROLE') || t.includes('USER') || t.includes('POLICY')) parent = "zt-plane-identity";
-            else parent = node.parentId && node.parentId !== 'virtual-canvas-root' ? escapeXml(node.parentId) : "zt-plane-infra";
+            else parent = node.parentId && node.parentId !== 'GLOBAL_ROOT' ? escapeXml(node.parentId) : "zt-plane-infra";
         }
 
         const isDeleted = node.status === 'ResourceDeleted' || node.status === 'ResourceNotRecorded';
@@ -1562,7 +1661,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const subnetContainers = [];
             
             hierarchy.descendants().forEach(d => {
-                if (d.id !== 'virtual-canvas-root') {
+                if (d.id !== 'GLOBAL_ROOT') {
                     resolvedNodes.push(d.data);
                     const type = (d.data.type || '').toUpperCase();
                     if (type.includes('VPC') || d.data.type === 'CLOUD_REGION') {
@@ -1575,6 +1674,33 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             
             unassociatedNodes.forEach(un => {
                 resolvedNodes.push(un);
+            });
+
+            // Calculate violations in VPC and Subnet containers
+            const getViolationsInContainer = (containerId, type) => {
+                const childNodes = resolvedNodes.filter(n => {
+                    if (type === 'subnet') {
+                        return n.parentId === containerId;
+                    } else { // vpc
+                        if (n.parentId === containerId) return true;
+                        const sub = subnetContainers.find(s => s.id === n.parentId);
+                        return sub && (sub.parent ? sub.parent.id : sub.data.parentId) === containerId;
+                    }
+                });
+                return childNodes.filter(n => {
+                    const nodeStatus = String(n.status || '').toLowerCase().trim();
+                    const isNodeViolated = nodeStatus === 'violation' || nodeStatus === 'incident' || nodeStatus === 'failing';
+                    const hasNonCompliantSG = n.security_groups && Array.isArray(n.security_groups) && 
+                        n.security_groups.some(sg => sg.is_compliant === false || String(sg.is_compliant) === 'false');
+                    return isNodeViolated || hasNonCompliantSG;
+                }).length;
+            };
+
+            vpcContainers.forEach(c => {
+                c.violationsCount = getViolationsInContainer(c.id, 'vpc');
+            });
+            subnetContainers.forEach(c => {
+                c.violationsCount = getViolationsInContainer(c.id, 'subnet');
             });
             
             const nodeMap = new Map(resolvedNodes.map(n => [n.id, n]));
@@ -1877,6 +2003,28 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         };
     }, [nodes, links, width, height, config, isZeroTrust]);
 
+    const exportToSvg = (svgElement) => {
+        if (!svgElement) return;
+        try {
+            const clone = svgElement.cloneNode(true);
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(clone);
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aws_dfd_snapshot_${new Date().toISOString().split('T')[0]}.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("AWS-DFD-Visualizer: SVG export failed", err);
+        }
+    };
+
     if (!nodes.length) {
         return (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
@@ -1903,6 +2051,37 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 .svg-canvas[data-lod="active"] .concentric-ring { display: none; }
                 .svg-canvas[data-lod="active"] .link-label-group { display: none; }
                 .svg-canvas[data-lod="active"] .node-card rect { filter: none !important; }
+                @keyframes pulsing-red-border {
+                    0% { stroke: #FF0000; stroke-width: 3px; filter: drop-shadow(0 0 2px rgba(255,0,0,0.5)); }
+                    50% { stroke: #FF3333; stroke-width: 5px; filter: drop-shadow(0 0 10px rgba(255,0,0,0.8)); }
+                    100% { stroke: #FF0000; stroke-width: 3px; filter: drop-shadow(0 0 2px rgba(255,0,0,0.5)); }
+                }
+                @keyframes pulsing-yellow-border {
+                    0% { stroke: #FFA500; stroke-width: 3px; filter: drop-shadow(0 0 2px rgba(255,165,0,0.5)); }
+                    50% { stroke: #FFB732; stroke-width: 5px; filter: drop-shadow(0 0 10px rgba(255,165,0,0.8)); }
+                    100% { stroke: #FFA500; stroke-width: 3px; filter: drop-shadow(0 0 2px rgba(255,165,0,0.5)); }
+                }
+                .pulsing-red {
+                    animation: pulsing-red-border 2s infinite ease-in-out;
+                }
+                .pulsing-yellow {
+                    animation: pulsing-yellow-border 2s infinite ease-in-out;
+                }
+                @media print {
+                    #btn-export-svg,
+                    #btn-export-drawio,
+                    #btn-toggle-csv-console,
+                    #csv-import-panel,
+                    #high-volume-warning-banner,
+                    .control-buttons {
+                        display: none !important;
+                    }
+                    .svg-canvas {
+                        width: 100% !important;
+                        height: auto !important;
+                        background: white !important;
+                    }
+                }
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
@@ -1922,23 +2101,42 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 alignItems: 'flex-end', 
                 gap: 10 
             }}>
-                <button 
-                    id="btn-export-drawio"
-                    onClick={() => exportToDrawio(nodes, links, isZeroTrust, config)}
-                    style={{
-                        padding: '6px 12px',
-                        background: '#FF9900',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                >
-                    📥 Export to draw.io
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }} className="control-buttons">
+                    <button 
+                        id="btn-export-svg"
+                        onClick={() => exportToSvg(svgRef.current)}
+                        style={{
+                            padding: '6px 12px',
+                            background: '#0073BB',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        📷 Download SVG
+                    </button>
+                    <button 
+                        id="btn-export-drawio"
+                        onClick={() => exportToDrawio(nodes, links, isZeroTrust, config)}
+                        style={{
+                            padding: '6px 12px',
+                            background: '#FF9900',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        📥 Export to draw.io
+                    </button>
+                </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <button 
@@ -2112,55 +2310,67 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     {/* Render Zones / Enclosures */}
                     {isZeroTrust ? (
                         <g className="enclosures">
-                            {vpcContainers.map(c => (
-                                <g key={c.id} className="vpc-container">
-                                    <rect 
-                                        x={c.x - c.width / 2} 
-                                        y={c.y - c.height / 2} 
-                                        width={c.width} 
-                                        height={c.height} 
-                                        fill={isDarkTheme ? '#1e2832' : '#f8fafc'} 
-                                        fillOpacity={isDarkTheme ? 0.2 : 0.4} 
-                                        stroke={isDarkTheme ? '#4b5563' : '#cbd5e1'} 
-                                        strokeWidth={2} 
-                                        rx={16} 
-                                    />
-                                    <text 
-                                        x={c.x - c.width / 2 + 20} 
-                                        y={c.y - c.height / 2 + 30} 
-                                        fill={isDarkTheme ? '#cbd5e1' : '#0f172a'} 
-                                        fontSize={16} 
-                                        fontWeight="bold"
-                                    >
-                                        {c.data.label}
-                                    </text>
-                                </g>
-                            ))}
-                            {subnetContainers.map(c => (
-                                <g key={c.id} className="subnet-container">
-                                    <rect 
-                                        x={c.x - c.width / 2} 
-                                        y={c.y - c.height / 2} 
-                                        width={c.width} 
-                                        height={c.height} 
-                                        fill={isDarkTheme ? '#111827' : '#ffffff'} 
-                                        fillOpacity={isDarkTheme ? 0.3 : 0.6} 
-                                        stroke={isDarkTheme ? '#374151' : '#e2e8f0'} 
-                                        strokeWidth={1.5} 
-                                        strokeDasharray="6,4" 
-                                        rx={12} 
-                                    />
-                                    <text 
-                                        x={c.x - c.width / 2 + 15} 
-                                        y={c.y - c.height / 2 + 25} 
-                                        fill={isDarkTheme ? '#cbd5e1' : '#1e293b'} 
-                                        fontSize={12} 
-                                        fontWeight="bold"
-                                    >
-                                        {c.data.label}
-                                    </text>
-                                </g>
-                            ))}
+                            {vpcContainers.map(c => {
+                                const vpcViolations = c.violationsCount || 0;
+                                const vpcLabel = vpcViolations > 0 
+                                    ? `${c.data.label} (${vpcViolations} Violation${vpcViolations > 1 ? 's' : ''})`
+                                    : c.data.label;
+                                return (
+                                    <g key={c.id} className="vpc-container">
+                                        <rect 
+                                            x={c.x - c.width / 2} 
+                                            y={c.y - c.height / 2} 
+                                            width={c.width} 
+                                            height={c.height} 
+                                            fill={isDarkTheme ? '#1e2832' : '#f8fafc'} 
+                                            fillOpacity={isDarkTheme ? 0.2 : 0.4} 
+                                            stroke={vpcViolations > 0 ? '#FF0000' : (isDarkTheme ? '#4b5563' : '#cbd5e1')} 
+                                            strokeWidth={vpcViolations > 0 ? 3 : 2} 
+                                            rx={16} 
+                                        />
+                                        <text 
+                                            x={c.x - c.width / 2 + 20} 
+                                            y={c.y - c.height / 2 + 30} 
+                                            fill={vpcViolations > 0 ? '#FF0000' : (isDarkTheme ? '#cbd5e1' : '#0f172a')} 
+                                            fontSize={16} 
+                                            fontWeight="bold"
+                                        >
+                                            {vpcLabel}
+                                        </text>
+                                    </g>
+                                );
+                            })}
+                            {subnetContainers.map(c => {
+                                const subnetViolations = c.violationsCount || 0;
+                                const subnetLabel = subnetViolations > 0 
+                                    ? `${c.data.label} (${subnetViolations} Violation${subnetViolations > 1 ? 's' : ''})`
+                                    : c.data.label;
+                                return (
+                                    <g key={c.id} className="subnet-container">
+                                        <rect 
+                                            x={c.x - c.width / 2} 
+                                            y={c.y - c.height / 2} 
+                                            width={c.width} 
+                                            height={c.height} 
+                                            fill={isDarkTheme ? '#111827' : '#ffffff'} 
+                                            fillOpacity={isDarkTheme ? 0.3 : 0.6} 
+                                            stroke={subnetViolations > 0 ? '#FF0000' : (isDarkTheme ? '#374151' : '#e2e8f0')} 
+                                            strokeWidth={subnetViolations > 0 ? 2 : 1.5} 
+                                            strokeDasharray={subnetViolations > 0 ? "none" : "6,4"} 
+                                            rx={12} 
+                                        />
+                                        <text 
+                                            x={c.x - c.width / 2 + 15} 
+                                            y={c.y - c.height / 2 + 25} 
+                                            fill={subnetViolations > 0 ? '#FF0000' : (isDarkTheme ? '#cbd5e1' : '#1e293b')} 
+                                            fontSize={12} 
+                                            fontWeight="bold"
+                                        >
+                                            {subnetLabel}
+                                        </text>
+                                    </g>
+                                );
+                            })}
                         </g>
                     ) : isStaticBlueprint ? (
                         <g className="blueprint-boundaries">
