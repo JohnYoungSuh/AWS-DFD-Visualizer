@@ -185,11 +185,20 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Context*: D3 tree layouts require a single stable root. If ingestion encounters null asset paths, falling back to a canonical "GLOBAL_ROOT" identifier protects D3 tree stratification from crash loops.
     - *Action*: Update resolveHierarchy logic to fallback to a unified "GLOBAL_ROOT" node identifier for null/empty asset paths instead of "virtual-canvas-root".
 - [ ] **Node Status-Based Link Compliance Interception**
-    - *Context*: Link violation routing currently only interrogates SGs. It should support direct evaluation of a node's status="violation" to trigger dashed red Port 22/SSH links.
+    - *Context*: Link violation routing currently only interrogates SGs. It should support direct evaluation of a node's status="violation", status="incident", or status="failing" to trigger dashed red Port 22/SSH links.
     - *Action*: Update checkNodeViolation and Link layout validation to look at the node's status field directly alongside individual Security Group compliance checks.
 - [ ] **Standardized D3 Step Curve Layout Generators**
     - *Context*: The static grouped calculations currently use manual Manhattan coordinate calculation. Standardizing to standard d3.curveStepBefore and d3.curveStepAfter functions simplifies path drawing in static layout mode.
     - *Action*: Refactor Manhattan path construction inside Link to use standard D3 step layout curves.
+- [ ] **Threat and Telemetry Overlay: Flashing Red Pulsing States**
+    - *Context*: Active threat signals must be visually emphasized on compute cards. Nodes flagged with status="incident" or status="failing" must trigger flashing red CSS pulsing animations in the D3 layout.
+    - *Action*: Update NodeCard and styles to apply a keyframe red pulsing transition on nodes matching threat alert status values.
+- [ ] **Tenable/Nessus Vulnerability State Icon Overrides**
+    - *Context*: When Tenable vulnerability scans map critical CVE threat states, the engine must support overriding icons to "skull" and styling status="Critical" visual states.
+    - *Action*: Map the "SKULL" icon file in getIconPath and add custom visual styling rules for status="Critical" compute cards.
+- [ ] **Native SVG Print & Clone Engine**
+    - *Context*: Splunk's headless PDF exporter frequently clips HTML iFrame elements or fails to wait for React/D3 renders, causing empty print outputs.
+    - *Action*: Implement a client-side SVG serialization clone downloader using canvas/SVG XML serialization to fetch uncompressed SVG diagrams natively.
 
 ## 🔵 Low (Polish / Future)
 
@@ -212,4 +221,23 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 *Note: This list is tracked in `NEXT_RELEASE_TODO.md` as of May 2026. Prioritized and merged with legacy Network Diagram Viz parity ideas.*
+
+## 🔮 Future Release Backlog (v2.9.0 Roadmap)
+
+### Section A: Hybrid / Multi-Cloud Stitching
+- [ ] **On-Premise to Cloud Data Paths**
+    - *Context*: Correlate cross-platform logs (VMware/Cisco NAT feeds joined with `sourcetype=aws:config`).
+    - *Action*: Build queries and schemas linking Transit Gateway destinations with NAT endpoints inside on-premise subnets.
+- [ ] **Cross-Cloud Identity-to-Compute ZTA Flows**
+    - *Context*: Authenticate user paths crossing Azure Entra ID and AWS EKS.
+    - *Action*: Extract access log tokens from Azure and map Entra ID users (`Azure::User`) to AWS EKS compute node targets.
+
+### Section B: The "Time Machine" & Blast Radius Simulation
+- [ ] **Post-Incident Root Cause Analysis (RCA)**
+    - *Context*: Shift topology diagrams dynamically using the native Splunk time picker.
+    - *Action*: Load historical `aws:config` states valid for chosen snapshots to trace misconfigurations.
+- [ ] **Targeted Incident Blast Radius Isolation**
+    - *Context*: Isolate blast radius during active intrusions.
+    - *Action*: Render sub-graphs filtered tightly around compromised hosts to support containment actions.
+
 
