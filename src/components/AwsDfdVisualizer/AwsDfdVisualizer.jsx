@@ -394,7 +394,7 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
         cardHalfHeight = 60;
     }
 
-    const isStaticBlueprint = (config?.layoutMode || '').toLowerCase() === 'hierarchy' && config?.clusterBy === 'group';
+    const isStaticBlueprint = (config?.layoutMode || '').toLowerCase() === 'hierarchy' && (config?.clusterBy || '').toLowerCase() === 'group';
 
     if (isStaticBlueprint) {
         const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
@@ -1060,7 +1060,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutPara
 
 const exportToDrawio = (nodes, links, isZeroTrust, config) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.7.0" type="device">\n`;
+    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.7.1" type="device">\n`;
     xml += `  <diagram id="aws-dfd-diagram" name="AWS DFD Diagram">\n`;
     xml += `    <mxGraphModel dx="1200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">\n`;
     xml += `      <root>\n`;
@@ -1225,8 +1225,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     };
 
     const drilldownClick = config?.drilldownClick || 'singleOrDouble';
-    const clusterBy = config?.clusterBy || 'none';
-    const layoutMode = config?.layoutMode || 'zero-trust';
+    const clusterBy = (config?.clusterBy || 'none').toLowerCase();
+    const layoutMode = (config?.layoutMode || 'zero-trust').toLowerCase();
     const canZoom = String(config?.canZoom || 'true') === 'true';
     const draggableNodes = String(config?.draggableNodes || 'true') === 'true';
     const enablePhysics = String(config?.enablePhysics ?? 'true') === 'true';
@@ -2108,7 +2108,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.7.0 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.7.1 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
