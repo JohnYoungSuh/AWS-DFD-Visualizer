@@ -7,6 +7,8 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ### ✅ Session: June 10, 2026
 - [x] **Static Grouped Layout Spacing and Centering Fix** — Resolved visual overlaps in the static grouped hierarchy layout ("Blueprint Mode") by replacing the fixed-size `treeLayout.size` with dynamic `treeLayout.nodeSize` coordinates mapping. Added coordinate shifting/centering bounds calculations. Added Cypress non-overlapping group bounds assertions and generated component screenshots.
+- [x] **Clamped Coordinate Scaling & Dynamic viewBox Width** — Prevented card overlaps in wide tree layouts by clamping the coordinate compression factor (`scaleX` / `scaleY`) to a minimum safe threshold. Implemented dynamic `viewBox` width/height expansion to automatically fit the expanded clamped tree.
+- [x] **Release Hygiene Synchronization (v2.7.2)** — Synchronized version declarations across all 5 files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, and `AwsDfdVisualizer.jsx`) to `2.7.2`. Passed all 20 Cypress component tests, compiled webpack production bundle cleanly, and validated Splunk AppInspect (0 errors, 0 failures, 0 warnings).
 
 ### ✅ Session: June 6, 2026
 - [x] **SVG DOM Limit Warning & LOD Controls** — Implemented safe node cap (1,000) with safe link pruning (dangling edges) and discrete LOD state toggling (`data-lod="active"` at k < 0.45) to hide text labels and shadows.

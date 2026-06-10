@@ -365,8 +365,8 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Verify orthogonal link paths (stepBefore / stepAfter is used in blueprint links)
         cy.get('g.link-group path').first().should('have.attr', 'stroke');
 
-        // Verify viewBox height is 1400
-        cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
+        // Verify viewBox height is 1400 and width is dynamic
+        cy.get('svg').should('have.attr', 'viewBox').and('match', /^0 0 \d+ 1400$/);
 
         // Capture screenshot of the component
         cy.screenshot('blueprint_mode_layout');

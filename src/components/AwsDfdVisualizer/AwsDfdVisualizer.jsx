@@ -1060,7 +1060,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutPara
 
 const exportToDrawio = (nodes, links, isZeroTrust, config) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.7.1" type="device">\n`;
+    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.7.2" type="device">\n`;
     xml += `  <diagram id="aws-dfd-diagram" name="AWS DFD Diagram">\n`;
     xml += `    <mxGraphModel dx="1200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">\n`;
     xml += `      <root>\n`;
@@ -1415,7 +1415,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         globalEdgeAssets, 
         isZeroTrust,
         groupBounds,
-        originalNodesCount
+        originalNodesCount,
+        viewBoxWidth,
+        viewBoxHeight
     } = useMemo(() => {
         const activeData = localData || data;
         const parsed = parseSplunkData(activeData);
@@ -1465,7 +1467,25 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
         if (isStaticBlueprint && parsed.nodes.length > 0) {
             const parentsMap = new Map();
-            parsed.links.forEach(l => {
+            // Sort links: same-group links first to prioritize vertical chains within groups
+            const sortedLinks = [...parsed.links].sort((a, b) => {
+                const aSrcId = typeof a.source === 'object' ? a.source.id : a.source;
+                const aTgtId = typeof a.target === 'object' ? a.target.id : a.target;
+                const bSrcId = typeof b.source === 'object' ? b.source.id : b.source;
+                const bTgtId = typeof b.target === 'object' ? b.target.id : b.target;
+
+                const aSrcGrp = parsed.nodes.find(n => n.id === aSrcId)?.group;
+                const aTgtGrp = parsed.nodes.find(n => n.id === aTgtId)?.group;
+                const bSrcGrp = parsed.nodes.find(n => n.id === bSrcId)?.group;
+                const bTgtGrp = parsed.nodes.find(n => n.id === bTgtId)?.group;
+
+                const aSame = (aSrcGrp && aTgtGrp && aSrcGrp === aTgtGrp) ? 1 : 0;
+                const bSame = (bSrcGrp && bTgtGrp && bSrcGrp === bTgtGrp) ? 1 : 0;
+
+                return bSame - aSame;
+            });
+
+            sortedLinks.forEach(l => {
                 const srcId = typeof l.source === 'object' ? l.source.id : l.source;
                 const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
                 if (srcId && tgtId && srcId !== tgtId) {
@@ -1570,22 +1590,62 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             treeLayout(hierarchy);
 
             const descendants = hierarchy.descendants();
-            const xs = descendants.map(d => d.x);
-            const ys = descendants.map(d => d.y);
+            let xs = descendants.map(d => d.x);
+            let ys = descendants.map(d => d.y);
 
-            const minX = Math.min(...xs);
-            const maxX = Math.max(...xs);
-            const minY = Math.min(...ys);
-            const maxY = Math.max(...ys);
+            let minX = Math.min(...xs);
+            let maxX = Math.max(...xs);
+            let minY = Math.min(...ys);
+            let maxY = Math.max(...ys);
+
+            const padX = 180;
+            const padY = 90;
+
+            let dynamicW = W;
+            let dynamicH = H;
+
+            if (hierarchyDir === 'Left to Right') {
+                const treeHeight = (maxX - minX) + 2 * padY;
+                const targetHeight = H - 100;
+                if (treeHeight > targetHeight) {
+                    const minScaleY = (layoutParams.nodeHeight + 20) / spacingY;
+                    const scaleY = Math.max(targetHeight / treeHeight, minScaleY);
+                    descendants.forEach(d => {
+                        d.x = d.x * scaleY;
+                    });
+                    xs = descendants.map(d => d.x);
+                    minX = Math.min(...xs);
+                    maxX = Math.max(...xs);
+                }
+                const currentTreeHeight = (maxX - minX) + 2 * padY;
+                dynamicH = Math.max(H, Math.ceil(currentTreeHeight));
+                dynamicW = Math.max(W, Math.ceil(200 + (maxY - minY) + padX));
+            } else {
+                const treeWidth = (maxX - minX) + 2 * padX;
+                const targetWidth = W - 100;
+                if (treeWidth > targetWidth) {
+                    const minScaleX = (layoutParams.nodeWidth + 40) / spacingX;
+                    const scaleX = Math.max(targetWidth / treeWidth, minScaleX);
+                    descendants.forEach(d => {
+                        d.x = d.x * scaleX;
+                    });
+                    xs = descendants.map(d => d.x);
+                    minX = Math.min(...xs);
+                    maxX = Math.max(...xs);
+                }
+                const currentTreeWidth = (maxX - minX) + 2 * padX;
+                dynamicW = Math.max(W, Math.ceil(currentTreeWidth));
+                dynamicH = Math.max(H, Math.ceil(150 + (maxY - minY) + padY));
+            }
 
             let shiftX = 0;
             let shiftY = 0;
 
             if (hierarchyDir === 'Left to Right') {
                 shiftX = 200 - minY;
-                shiftY = (H / 2) - ((minX + maxX) / 2);
+                shiftY = (dynamicH / 2) - ((minX + maxX) / 2);
             } else {
-                shiftX = (W / 2) - ((minX + maxX) / 2);
+                shiftX = (dynamicW / 2) - ((minX + maxX) / 2);
                 shiftY = 150 - minY;
             }
 
@@ -1664,7 +1724,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 globalEdgeAssets: [],
                 isZeroTrust: false,
                 groupBounds: calculatedBounds,
-                originalNodesCount
+                originalNodesCount,
+                viewBoxWidth: dynamicW,
+                viewBoxHeight: dynamicH
             };
         }
 
@@ -1747,7 +1809,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 globalEdgeAssets,
                 isZeroTrust: true,
                 groupBounds: [],
-                originalNodesCount
+                originalNodesCount,
+                viewBoxWidth: 1200,
+                viewBoxHeight: 1400
             };
         }
         
@@ -1761,7 +1825,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             globalEdgeAssets: [],
             isZeroTrust: false,
             groupBounds: [],
-            originalNodesCount
+            originalNodesCount,
+            viewBoxWidth: 1200,
+            viewBoxHeight: 1000
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
@@ -2108,7 +2174,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.7.1 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.7.2 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
@@ -2294,7 +2360,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 </div>
             )}
 
-            <svg ref={svgRef} className="svg-canvas" data-lod={lodActive ? "active" : "inactive"} width="100%" height="100%" viewBox={isZeroTrust || isStaticBlueprint ? "0 0 1200 1400" : "0 0 1200 1000"} style={{ backgroundColor: 'transparent' }}>
+            <svg ref={svgRef} className="svg-canvas" data-lod={lodActive ? "active" : "inactive"} width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth || 1200} ${viewBoxHeight || 1000}`} style={{ backgroundColor: 'transparent' }}>
                 <defs>
                     <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#879196" />

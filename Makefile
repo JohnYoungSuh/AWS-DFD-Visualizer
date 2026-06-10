@@ -1,5 +1,5 @@
 APP_NAME = AWS-DFD-Visualizer
-VERSION  = 2.7.1
+VERSION  = 2.7.2
 SPL_FILE = $(APP_NAME)-$(VERSION).spl
 CONTAINER = splunk-emass
 
