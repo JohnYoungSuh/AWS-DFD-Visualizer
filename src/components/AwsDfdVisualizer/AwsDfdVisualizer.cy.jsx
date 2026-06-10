@@ -341,17 +341,35 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').should('have.length', 8);
         cy.get('g.link-group').should('have.length', 7);
 
-        // Verify Blueprint Bounding Boxes exist
+        // Verify Blueprint Bounding Boxes exist and do not overlap
         cy.get('g.blueprint-boundary').should('have.length', 3); // Data Plane, Control Plane, Support Plane
         cy.get('g.blueprint-boundary').contains('CONTROL PLANE').should('exist');
         cy.get('g.blueprint-boundary').contains('DATA PLANE').should('exist');
         cy.get('g.blueprint-boundary').contains('SUPPORT PLANE').should('exist');
+
+        // Extract and verify rect bounds do not overlap
+        const bounds = [];
+        cy.get('g.blueprint-boundary rect').each(($rect) => {
+            const x = parseFloat($rect.attr('x'));
+            const width = parseFloat($rect.attr('width'));
+            bounds.push({ x, width });
+        }).then(() => {
+            // Sort by x coordinate
+            bounds.sort((a, b) => a.x - b.x);
+            // Assert no overlap
+            for (let i = 0; i < bounds.length - 1; i++) {
+                expect(bounds[i].x + bounds[i].width).to.be.lessThan(bounds[i+1].x);
+            }
+        });
 
         // Verify orthogonal link paths (stepBefore / stepAfter is used in blueprint links)
         cy.get('g.link-group path').first().should('have.attr', 'stroke');
 
         // Verify viewBox height is 1400
         cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
+
+        // Capture screenshot of the component
+        cy.screenshot('blueprint_mode_layout');
     });
 
     it('successfully handles multivalue fields (Array types) without throwing', () => {

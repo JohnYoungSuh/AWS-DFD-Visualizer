@@ -1559,22 +1559,44 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
 
             const treeLayout = d3.tree();
+            const spacingX = layoutParams.nodeWidth + layoutParams.gapX;
+            const spacingY = layoutParams.nodeHeight + layoutParams.gapY;
             if (hierarchyDir === 'Left to Right') {
-                treeLayout.size([H - 200, W - 200]);
+                treeLayout.nodeSize([spacingY, spacingX]);
             } else {
-                treeLayout.size([W - 200, H - 200]);
+                treeLayout.nodeSize([spacingX, spacingY]);
             }
 
             treeLayout(hierarchy);
 
-            hierarchy.descendants().forEach(d => {
+            const descendants = hierarchy.descendants();
+            const xs = descendants.map(d => d.x);
+            const ys = descendants.map(d => d.y);
+
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+
+            let shiftX = 0;
+            let shiftY = 0;
+
+            if (hierarchyDir === 'Left to Right') {
+                shiftX = 200 - minY;
+                shiftY = (H / 2) - ((minX + maxX) / 2);
+            } else {
+                shiftX = (W / 2) - ((minX + maxX) / 2);
+                shiftY = 150 - minY;
+            }
+
+            descendants.forEach(d => {
                 let finalX, finalY;
                 if (hierarchyDir === 'Left to Right') {
-                    finalX = d.y + 100;
-                    finalY = d.x + 100;
+                    finalX = d.y + shiftX;
+                    finalY = d.x + shiftY;
                 } else {
-                    finalX = d.x + 100;
-                    finalY = d.y + 100;
+                    finalX = d.x + shiftX;
+                    finalY = d.y + shiftY;
                 }
                 
                 if (d.data.data) {
@@ -1590,6 +1612,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 if (hNode) {
                     n.x = hNode.x;
                     n.y = hNode.y;
+                    console.log(`HIERARCHY NODE: ${n.id} (${n.label}) -> x: ${n.x}, y: ${n.y}`);
                 }
                 return n;
             });
