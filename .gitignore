@@ -35,3 +35,4 @@ click_feedback*
 *.webp
 /tmp/
 node_modules
+/cypress/screenshots/

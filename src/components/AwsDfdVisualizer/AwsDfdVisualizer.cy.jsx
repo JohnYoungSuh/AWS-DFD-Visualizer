@@ -103,6 +103,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         
         // 5. Ensure the viewBox is properly initialized for auto-scaling
         cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1000');
+        cy.screenshot('classic_force_layout');
     });
 
     it('successfully renders NIST 800-207 Zero-Trust Architecture (ZTA) logical components and boundaries', () => {
@@ -156,6 +157,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
             .should('have.attr', 'href').and('contain', 'Arch_Amazon-Verified-Permissions_64.svg');
         cy.get('g.node-card').contains('Policy Enforcement Point (PEP)').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('contain', 'Arch_AWS-WAF_64.svg');
+        cy.screenshot('zta_force_layout');
     });
 
     it('successfully renders Zero-Trust Deterministic Layout with nested enclosures and compliance envelopes', () => {
@@ -189,6 +191,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         
         // Ensure viewBox has height 1400
         cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
+        cy.screenshot('zta_deterministic_layout');
     });
 
     it('verifies mid-flight security group compliance routing and concentric envelopes', () => {
@@ -219,6 +222,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Verify link is colored red and dashed (SSH/22 violation)
         cy.get('g.link-group path[stroke="#FF0000"]').should('exist');
         cy.get('g.link-group path[stroke-dasharray="4,4"]').should('exist');
+        cy.screenshot('compliance_routing_and_envelopes');
     });
 
     it('verifies dashboard layout optimization settings (compact mode)', () => {
@@ -240,6 +244,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Verify the node cards render with width 220 and height 80
         cy.get('g.node-card rect').first().should('have.attr', 'width', '220');
         cy.get('g.node-card rect').first().should('have.attr', 'height', '80');
+        cy.screenshot('compact_mode_layout');
     });
 
     it('verifies CSV live feed console paste and apply mechanism', () => {
@@ -278,6 +283,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.contains('Nodes: 5').should('be.visible');
         cy.get('g.node-card').should('have.length', 3);
         cy.get('g.node-card').contains('Node A').should('exist');
+        cy.screenshot('csv_console_import');
     });
 
     it('verifies Export to Draw.io button click trigger', () => {
@@ -525,6 +531,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', '#0f172a');
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#0f172a');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#1e293b');
+        cy.screenshot('light_theme_text_colors');
 
         mount(
             <div style={{ width: 1200, height: 800 }}>
@@ -536,6 +543,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', '#cbd5e1');
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#cbd5e1');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#cbd5e1');
+        cy.screenshot('dark_theme_text_colors');
     });
 
     it('verifies client-side SVG download and print style elements existence', () => {
@@ -565,6 +573,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         });
         cy.get('#btn-export-svg').click();
         cy.wrap(downloadStub).should('have.been.calledWith', Cypress.sinon.match.string, Cypress.sinon.match.string);
+        cy.screenshot('svg_export_button');
     });
 
     it('verifies resource lifecycle strikethrough and staleness italic text styling', () => {
@@ -594,6 +603,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Stale node should have italic styling and reduced opacity
         cy.get('g.node-card').contains('Stale Instance').parents('foreignObject').find('div')
             .should('have.css', 'font-style', 'italic');
+        cy.screenshot('resource_lifecycle_decorations');
     });
 
     it('verifies threat status maps to pulsing border and skull icon overrides', () => {
@@ -624,6 +634,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').contains('Incident Instance').parents('g.node-card').find('rect').first()
             .should('have.class', 'pulsing-red');
         cy.get('g.node-card').contains('🚨 Incident Instance').should('exist');
+        cy.screenshot('threat_overlay_pulsing_and_skull');
     });
 
     it('verifies link and enclosure compliance indicators inside zero-trust layout', () => {
@@ -652,6 +663,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.vpc-container text').contains('VPC (vpc-1) (1 Violation)').should('exist');
         cy.get('g.subnet-container text').contains('Subnet (subnet-1) (1 Violation)').should('exist');
         cy.get('g.vpc-container rect').first().should('have.attr', 'stroke', '#FF0000');
+        cy.screenshot('link_and_enclosure_violations');
     });
 
     it('verifies GLOBAL_ROOT fallback refinement is mapped correctly', () => {

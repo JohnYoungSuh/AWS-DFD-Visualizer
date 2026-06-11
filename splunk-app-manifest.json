@@ -15,7 +15,7 @@
       }
     ],
     "releaseDate": null,
-    "description": "AWS DFD Visualizer using D3.js and AWS Application Composer styles.",
+    "description": "Interactive AWS Data Flow Diagrams (DFD) for Splunk. Visualizes AWS Config topologies, nested VPCs/Subnets, and Zero-Trust compliance highlights.",
     "classification": {
       "intendedAudience": null,
       "categories": [],

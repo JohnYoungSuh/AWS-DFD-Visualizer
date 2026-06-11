@@ -1,7 +1,7 @@
 {
   "name": "aws-dfd-visualizer",
   "version": "2.7.2",
-  "description": "React-based DFD Visualizer for Splunk, AWS Security Data Flows (Hardened IL5 Baseline)",
+  "description": "Interactive AWS Data Flow Diagrams (DFD) for Splunk. Visualizes AWS Config topologies, nested VPCs/Subnets, and Zero-Trust compliance highlights.",
   "main": "src/visualization_source.js",
   "engines": {
     "node": ">=22"
