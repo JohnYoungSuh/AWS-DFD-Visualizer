@@ -15,6 +15,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Gap Analysis Optimizations** — Replaced monolithic D3 imports with submodules (`d3-array`, `d3-selection`, `d3-zoom`, `d3-drag`, `d3-polygon`, `d3-shape`, `d3-hierarchy`, `d3-force`) linked through a namespace bridge object in `AwsDfdVisualizer.jsx` and the template project to improve tree-shaking and reduce bundle weight. Added root `.cursorrules` files to guide other AI coding assistants working in the directories.
 - [x] **Gemini Rules Synchronization** — Synchronized prompt rules to `.agents/rules/ide-rules.md` in both main and template projects to ensure auto-injection in Gemini/Antigravity mode.
 - [x] **Commercial Licensing Enforcement Layer** — Integrated a self-contained, air-gap compatible commercial license parser validating Base64 encoded JSON keys (expiration, client, subscription tiers). Exceeded node limits trigger a blocking overlay displaying recommended pricing tiers. Added "Licensing" section option to Splunk Format Menu.
+- [x] **Workflow Policy Integration** — Added Git-Note Hybrid Tracking rules to `.agents/rules/workflow.md` in both main and template repositories to enforce conventional commits as technical authority and keep backlogs clean.
 
 
 
