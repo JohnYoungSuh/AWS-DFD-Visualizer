@@ -8,7 +8,7 @@
         <div class="user-guide-welcome" style="padding: 15px; background-color: #1e2832; border-radius: 6px; border: 1px solid #2d3e50; margin-bottom: 20px;">
           <h1 style="color: #FF9900; margin-top: 0; font-weight: 500; font-size: 28px;">AWS Security Data Flow Diagram (DFD) Visualizer</h1>
           <p style="font-size: 15px; line-height: 1.6; color: #dcdcdc;">
-            Welcome to the <strong>AWS-DFD-Visualizer</strong>, a React-based custom visualization for Splunk built to render complex AWS Config relationships as dynamic, interactive AWS Application Composer-style Data Flow Diagrams. This app is architected with DoD Impact Level 5 (IL5) environments, Risk Management Framework (RMF) audits, and Zero-Trust architecture (ZTA) in mind.
+            Welcome to the <strong>AWS-DFD-Visualizer</strong>, a React-based custom visualization for Splunk built to render complex multi-cloud relationships (supporting **AWS**, **Microsoft Azure**, and **Google Cloud Platform**) as dynamic, interactive Data Flow Diagrams. This app is architected with DoD Impact Level 5 (IL5) environments, Risk Management Framework (RMF) audits, and Zero-Trust architecture (ZTA) in mind.
           </p>
         </div>
       </html>
@@ -341,6 +341,7 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
             <li><strong>Clustering</strong> (<code>clusterBy</code>): Render security envelopes by group by selecting <em>Group</em>.</li>
             <li><strong>Draggability and Zoom</strong> (<code>draggableNodes</code> / <code>canZoom</code>): Toggles interactivity for static audit exports.</li>
             <li><strong>Edge Styling</strong> (<code>smoothEdges</code>): Toggle curved SVG paths versus straight vector lines to maximize link legibility.</li>
+            <li><strong>Multi-Cloud Stencil Set</strong> (<code>cspStencilSet</code>): Toggle between <em>Auto (Detect)</em>, <em>AWS</em>, <em>Azure</em>, and <em>GCP</em> to control stencil/icon theme parsing.</li>
           </ul>
         </div>
       </html>
