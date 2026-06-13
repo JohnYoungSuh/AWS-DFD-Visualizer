@@ -5,6 +5,12 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: June 13, 2026 (v2.8.0 Release)
+- [x] **Multi-CSP Extension & Adaptations** — Decoupled stencils into provider configs under `stencils/` registry. Implemented dynamic provider auto-detection via global dataset voting and manual visual options override (`cspStencilSet`). Generalised Zero-Trust coordinate layout and container rendering to be fully provider-agnostic.
+- [x] **Optimizations & Safety Safeguards** — Implemented custom rectangular collision force (`rectCollide`) preventing card overlaps. Added a "Zero-Latency" layout bypass ticking force simulation 300 times synchronously for graphs <100 nodes. Implemented batched calculation (30 ticks/frame) via `requestAnimationFrame` with a glassmorphic loader overlay for graphs >=150 nodes.
+- [x] **Memory Leak Prevention** — Bound simulations to React `simulationRef` lifecycle, cleanup stopping active forces.
+- [x] **Release Hygiene Version Bump (v2.8.0)** — Synchronized manifest, configs, Makefile, and header versions to `2.8.0`. Wrote 3 Cypress Multi-CSP integration spec test cases (23/23 passing) and validated AppInspect clean (0 errors, 0 warnings).
+
 ### ✅ Session: June 10, 2026
 - [x] **Static Grouped Layout Spacing and Centering Fix** — Resolved visual overlaps in the static grouped hierarchy layout ("Blueprint Mode") by replacing the fixed-size `treeLayout.size` with dynamic `treeLayout.nodeSize` coordinates mapping. Added coordinate shifting/centering bounds calculations. Added Cypress non-overlapping group bounds assertions and generated component screenshots.
 - [x] **Clamped Coordinate Scaling & Dynamic viewBox Width** — Prevented card overlaps in wide tree layouts by clamping the coordinate compression factor (`scaleX` / `scaleY`) to a minimum safe threshold. Implemented dynamic `viewBox` width/height expansion to automatically fit the expanded clamped tree.
@@ -94,36 +100,34 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🏛️ Epic: Multi-Cloud Service Provider (CSP) Extension (AWS, Azure, GCP)
 
-*This epic details the implementation tasks for extending the AWS-DFD-Visualizer to fully support hybrid and multi-cloud environments (Azure, GCP, and AWS) in accordance with the [csp_extension_plan.md](file:///home/suhlabs/.gemini/antigravity-ide/brain/85bbddb3-a83d-40c4-a908-c7e1d8aa6794/csp_extension_plan.md) artifact.*
-
-- [ ] **Dynamic CSP Auto-Detection & Global Voting**
-    - *Action*: Implement dataset-wide scanner counting cloud platform indicators (`AWS::`, `Azure::`, `GCP::`, ARNs, Azure subscriptions, GCP project IDs) to dynamically select the global layout adapter.
-- [ ] **Per-Node Stencil Adapters & Hybrid Split-Brain Resolution**
-    - *Action*: Update icon resolver and node card drawing to allow individual nodes to resolve their provider-specific stencils (AWS, Azure, or GCP maps). This allows true hybrid-cloud rendering side-by-side.
-- [ ] **Dynamic URL Subpath Resolution**
-    - *Action*: Replace hardcoded `/en-US/` URL paths in `ICON_BASE` with dynamic path resolution using `window.Splunk.util.make_full_url` to support custom Splunk web mount locations.
-- [ ] **Recursive Multi-Tier Layout Containment**
-    - *Action*: Refactor the two-pass coordinate engine to process arbitrary nesting depth dynamically (e.g. Subscription > Resource Group > VNet > Subnet) using recursive post-order/pre-order traversal instead of the hardcoded 2-level VPC/Subnet structure.
-- [ ] **Batched Layout Engine (requestAnimationFrame)**
-    - *Action*: Prevent browser thread locking during the 300-tick layout math calculations on large topologies (>=150 nodes) by chunking calculations into 30-tick blocks scheduled via requestAnimationFrame loops.
-- [ ] **Splunk UI Options Panel Integration**
-    - *Action*: Update `formatter.html` and `visualizations.conf` to expose a dropdown selector for manual CSP overrides (`cspStencilSet` with values `auto`, `aws`, `azure`, `gcp`).
-- [ ] **Azure & GCP SVG Asset Deployment**
-    - *Action*: Import Azure and GCP SVG stencil files into the `appserver/static/icons/` subdirectories and maintain strict `755`/`644` file permissions.
-- [ ] **Cypress Multi-CSP Integration Testing**
-    - *Action*: Write component test cases in `AwsDfdVisualizer.cy.jsx` targeting hybrid AWS-Azure-GCP datasets and verifying correct container nesting labels (VNets, subnets) and icon file lookups.
+*This epic details the implementation tasks for extending the AWS-DFD-Visualizer to fully support hybrid and multi-cloud environments (Azure, GCP, and AWS) in accordance with the [csp_extension_plan.md](file:///hom- [x] **Dynamic CSP Auto-Detection & Global Voting**
+    - *Action*: Implement dataset-wide scanner counting cloud platform indicators (`AWS::`, `Azure::`, `GCP::`, ARNs, Azure subscriptions, GCP project IDs) to dynamically select the global layout adapter. (Fixed June 13, 2026)
+- [x] **Per-Node Stencil Adapters & Hybrid Split-Brain Resolution**
+    - *Action*: Update icon resolver and node card drawing to allow individual nodes to resolve their provider-specific stencils (AWS, Azure, or GCP maps). This allows true hybrid-cloud rendering side-by-side. (Fixed June 13, 2026)
+- [x] **Dynamic URL Subpath Resolution**
+    - *Action*: Replace hardcoded `/en-US/` URL paths in `ICON_BASE` with dynamic path resolution using `window.Splunk.util.make_full_url` to support custom Splunk web mount locations. (Fixed June 13, 2026)
+- [x] **Recursive Multi-Tier Layout Containment**
+    - *Action*: Refactor the two-pass coordinate engine to process arbitrary nesting depth dynamically (e.g. Subscription > Resource Group > VNet > Subnet) using recursive post-order/pre-order traversal instead of the hardcoded 2-level VPC/Subnet structure. (Fixed June 13, 2026)
+- [x] **Batched Layout Engine (requestAnimationFrame)**
+    - *Action*: Prevent browser thread locking during the 300-tick layout math calculations on large topologies (>=150 nodes) by chunking calculations into 30-tick blocks scheduled via requestAnimationFrame loops. (Fixed June 13, 2026)
+- [x] **Splunk UI Options Panel Integration**
+    - *Action*: Update `formatter.html` and `visualizations.conf` to expose a dropdown selector for manual CSP overrides (`cspStencilSet` with values `auto`, `aws`, `azure`, `gcp`). (Fixed June 13, 2026)
+- [x] **Azure & GCP SVG Asset Deployment**
+    - *Action*: Import Azure and GCP SVG stencil files into the `appserver/static/icons/` subdirectories and maintain strict `755`/`644` file permissions. (Fixed June 13, 2026)
+- [x] **Cypress Multi-CSP Integration Testing**
+    - *Action*: Write component test cases in `AwsDfdVisualizer.cy.jsx` targeting hybrid AWS-Azure-GCP datasets and verifying correct container nesting labels (VNets, subnets) and icon file lookups. (Fixed June 13, 2026)
 
 ## 🟡 High (Degrades Usability & Core Splunk Features)
 
-- [ ] **Data Normalization Layer ("Messy Data" Resilience)**
+- [x] **Data Normalization Layer ("Messy Data" Resilience)**
     - *Context*: Users ingestion queries can supply standard flow log and connection aliases instead of strict `from` and `to` column names, breaking renders on unmapped fields.
-    - *Action*: Update `parseSplunkData` to automatically normalize incoming column aliases: `src`, `src_ip`, `source`, `calling_service` -> `from`; `dest`, `dest_ip`, `destination`, `target_service` -> `to`.
-- [ ] **Automatic "Zero-Latency" Layout Bypass**
+    - *Action*: Update `parseSplunkData` to automatically normalize incoming column aliases: `src`, `src_ip`, `source`, `calling_service` -> `from`; `dest`, `dest_ip`, `destination`, `target_service` -> `to`. (Fixed June 13, 2026)
+- [x] **Automatic "Zero-Latency" Layout Bypass**
     - *Context*: Running force-directed animations on page refresh is distracting in operational briefings; small graphs should render settled.
-    - *Action*: Implement dynamic auto-bypass configuration. If node count is <100 nodes, run 300 simulation ticks synchronously pre-render to show a fully settled, static map immediately.
-- [ ] **Dynamic Card Dimension Collision Force**
+    - *Action*: Implement dynamic auto-bypass configuration. If node count is <100 nodes, run 300 simulation ticks synchronously pre-render to show a fully settled, static map immediately. (Fixed June 13, 2026)
+- [x] **Dynamic Card Dimension Collision Force**
     - *Context*: The circular `forceCollide` causes rectangular node cards ($280\text{px} \times 100\text{px}$) to overlap horizontally or have excessive gaps vertically.
-    - *Action*: Replace static collide radius with custom D3 force logic accounting for card rectangular bounds to prevent text and card overlays.
+    - *Action*: Replace static collide radius with custom D3 force logic accounting for card rectangular bounds to prevent text and card overlays. (Fixed June 13, 2026)collide radius with custom D3 force logic accounting for card rectangular bounds to prevent text and card overlays.
 
 - [x] **Developer Cookbook Ingestion Guidelines (Labels & Edges)** ✅ *Fixed June 11, 2026*
     - *Context*: Enforce standard layout and labeling practices for dashboard SPL queries to optimize leadership readability and eliminate ghost arrows in Tier 1 and Tier 2 views.
