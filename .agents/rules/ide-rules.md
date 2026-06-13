@@ -6,6 +6,11 @@ trigger: always_on
 
 These rules are loaded by the agent to maintain configuration parameters, coding guidelines, and directory structures across any assistant interface.
 
+> [!IMPORTANT]
+> **IDE-Agnostic Support / Rule Mirroring Rule**:
+> - The root `.cursorrules` file should be left as it is for now.
+> - However, if any major changes are made to the core architectural, security, testing, or release rules in `.agents/rules/ide-rules.md` (or other rule files in `.agents/rules/`), those changes **MUST** be mirrored to `.cursorrules` in the root of the repository to keep it IDE-agnostic for other developers using Cursor/Windsurf/Copilot.
+
 ---
 
 ## 🏛️ Key Architectural Decisions
