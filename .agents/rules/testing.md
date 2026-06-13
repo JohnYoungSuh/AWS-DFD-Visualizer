@@ -106,6 +106,8 @@ beforeEach(() => {
 | Node with no edges (isolated node) | Should render without NaN collapse in `forceCollide` |
 | `data.results` format (Dashboard Studio) | Must parse correctly without needing `data.rows` |
 | Unknown stencil/icon type | Must fall back to `generic.svg` without throwing |
+| License Capacity Exceeded (>50 nodes without key) | Must block rendering and display the premium "License Capacity Exceeded" overlay |
+| Valid Enterprise/Sovereign License Key | Must decode successfully, allow datasets beyond 50 nodes, and display licensed status on HUD |
 
 ---
 

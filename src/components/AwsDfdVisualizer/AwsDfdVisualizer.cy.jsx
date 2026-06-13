@@ -793,6 +793,64 @@ describe('AwsDfdVisualizer Component Tests', () => {
         
         cy.screenshot('hybrid_multi_csp_layout');
     });
+
+    it('verifies that Free Developer Edition blocks rendering and displays the capacity overlay if node count > 50', () => {
+        const largeNodes = [];
+        for (let i = 1; i <= 60; i++) {
+            largeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
+        }
+        const largeData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
+            ],
+            rows: largeNodes
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={largeData} config={{ layoutMode: 'force', licenseKey: '' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+
+        cy.contains('License Capacity Exceeded').should('be.visible');
+        cy.contains('Free Developer Edition').should('be.visible');
+        cy.contains('capped at 50 nodes').should('be.visible');
+        cy.get('g.node-card').should('have.length', 0); // No nodes should render visually on canvas
+    });
+
+    it('verifies that a valid Enterprise license key decodes successfully, overrides limits, and shows correct HUD status', () => {
+        const largeNodes = [];
+        for (let i = 1; i <= 60; i++) {
+            largeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
+        }
+        const largeData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
+            ],
+            rows: largeNodes
+        };
+
+        // Valid test license key: { "customer": "TestCorp", "tier": "enterprise", "nodeLimit": 1000, "expiration": "2030-12-31", "signature": "dfd-visualizer-valid-sig-12345" }
+        const validKey = btoa(JSON.stringify({
+            customer: "TestCorp",
+            tier: "enterprise",
+            nodeLimit: 1000,
+            expiration: "2030-12-31",
+            signature: "dfd-visualizer-valid-sig-12345"
+        }));
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={largeData} config={{ layoutMode: 'force', licenseKey: validKey }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+
+        // HUD should output licensed state
+        cy.contains('ENTERPRISE (Licensed to: TestCorp)').should('be.visible');
+        // It should bypass the block overlay and draw the nodes
+        cy.contains('License Capacity Exceeded').should('not.exist');
+        cy.get('g.node-card').should('have.length', 60);
+    });
 });
 
 
