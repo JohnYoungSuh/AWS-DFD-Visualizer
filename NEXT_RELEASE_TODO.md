@@ -297,5 +297,41 @@ This list is based on failure analysis against mock config and standard D3 force
         1. Read `showLegend` from visual options (e.g., `<option name="showLegend">true</option>`).
         2. Parse active stencils/resource types rendered in the nodes dataset, map to icons via `ICON_MAP_RAW`, and draw a floating, translucent glassmorphic Legend panel in the bottom-left corner of the canvas.
 
+## 🏛️ Epic: Multi-Cloud Translation & IaC Architect Mode (v3.0.0 Roadmap)
+
+*This epic captures the proposed engineering roadmap to transition the visualizer from a logs-viewer to an interactive Multi-Cloud design and Infrastructure-as-Code (IaC) generation tool.*
+
+### Phase 1: Core Architecture (The Grouping Engine)
+- [x] **Implement the CSP Adapter Registry** — Created the modular `src/components/AwsDfdVisualizer/stencils/` registry scaffolding and extracted AWS/Azure/GCP adapters. *(Completed June 13, 2026)*
+- [ ] **Develop the "Metanode" Aggregator**
+    - *Context*: Large environments (e.g. 10k servers) create visual "hairballs" that break dashboard readability.
+    - *Action*: Build a data-aggregation utility that groups Splunk results dynamically by type, subnet, and tags, rendering $\ge10,000$ servers as $<100$ collapsed Metanodes.
+- [x] **Add the Synchronous Layout Bypass** — Implemented pre-ticking of 300 force simulation loops synchronously in the background to show fully settled diagrams instantly. *(Completed June 13, 2026)*
+
+### Phase 2: The Designer UI (The "Architect Mode")
+- [ ] **Implement `isArchitectMode` State Toggle**
+    - *Action*: Expose a switch in the Splunk Formatter options panel (`display.visualizations.custom.AWS-DFD-Visualizer.isArchitectMode`) to enable interactive modification features.
+- [ ] **Build the Migration Side-Drawer**
+    - *Action*: Render a sliding React panel component on node card selection that shows resource attributes.
+- [ ] **Feature: Display "Observed Metadata"** — Render read-only metadata fields retrieved from live Splunk logs in the side-drawer.
+- [ ] **Feature: Display "Target Metadata"** — Expose editable input forms inside the side-drawer to allow architects to define desired target specifications.
+- [ ] **Add "Target CSP" Translation Dropdown**
+    - *Action*: Support selecting "Target: Azure" or "Target: GCP" to dynamically swap AWS node card stencils for target provider stencils in real-time.
+
+### Phase 3: The IaC Service (The "Generator")
+- [ ] **Define the `toHCL` Method inside `CspAdapter`** — Add a standard HCL generation interface to the stencil adapters.
+- [ ] **HCL Translation Logic**
+    - *Action*: Implement mappings translating node attributes (e.g., `AWS::EC2::Instance` $\rightarrow$ `azurerm_linux_virtual_machine` or `google_compute_instance`) and D3 links (edges $\rightarrow$ Security Group or Firewall Rules).
+- [ ] **Create the "Global Generator Service"**
+    - *Action*: Write a compiler utility that traverses the active canvas nodes/edges, generates individual resource HCL blocks, and aggregates them.
+- [ ] **Add the "Export Code" Button**
+    - *Action*: Place a primary export action in the side-drawer allowing the user to copy or download a compiled `main.tf` Terraform file representing the canvas design.
+
+### Phase 4: Contest & Sales Polish (The "Wow" Factor)
+- [ ] **Finalize the "NOC Edition" Pure Black Mode**
+    - *Action*: Add option for pure black backgrounds (`#000000`) with high-contrast glowing borders and vibrant connection overlays to fit operations center displays.
+- [x] **Implement Drilldown Actions** — Hook node clicks to parameterized JIT searches targeting raw log records with SQL injection sanitization. *(Completed June 6, 2026)*
+- [ ] **Update README & Documentation** — Write the "Migration Architect" use case in Splunkbase app descriptions.
+
 
 
