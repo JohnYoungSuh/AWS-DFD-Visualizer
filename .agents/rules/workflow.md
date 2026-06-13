@@ -66,3 +66,9 @@ If any task (build, inspect, push, test, sync) fails or loops **3 consecutive ti
 - **Do NOT delete `package-lock.json`** unless it is provably corrupt
 - Drive all upgrades through `package.json` manifest changes
 - Run `npm install` after manifest changes, commit the updated lockfile
+
+## Git-Note Hybrid Tracking Rules
+- **Backlog Scope**: Use [NEXT_RELEASE_TODO.md](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/NEXT_RELEASE_TODO.md) strictly as a future backlog and task planning board. Do not treat it as a detailed transaction journal.
+- **Terse Session Logs**: When resolving backlog items, check off completed tasks `[x]` and log a brief, one-line summary under `## 📍 Session Log`.
+- **Commit Rationale Authority**: Rely on **Conventional Commits** (`feat:`, `fix:`, `perf:`, `docs:`, `chore:`) to convey detailed engineering decisions, architectural context, and fixes. This establishes Git as the ultimate technical source of truth and allows automated changelog generation.
+
