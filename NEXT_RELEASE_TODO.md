@@ -11,7 +11,8 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Memory Leak Prevention** — Bound simulations to React `simulationRef` lifecycle, cleanup stopping active forces.
 - [x] **Release Hygiene Version Bump (v2.8.0)** — Synchronized manifest, configs, Makefile, and header versions to `2.8.0`. Wrote 3 Cypress Multi-CSP integration spec test cases (23/23 passing) and validated AppInspect clean (0 errors, 0 warnings).
 - [x] **Test Engine & Use Case Validation** — Updated test deployment harness `test-drilldown.py` to target a hybrid Multi-CSP dashboard topology (AWS, Azure, GCP). Validated test engine script execution and verified that all 23 Cypress component tests pass successfully.
-- [x] **Agent Checklist Automation** — Created the `.agent` configuration profile at the workspace root to enforce automatic synchronization and validation of documentation (README, SECURITY, User Guide) and test scripts upon any goal execution.
+- [x] **Agent Checklist Automation** — Created the `.agents/rules/post-goal-validation.md` configuration profile to enforce automatic synchronization and validation of documentation (README, SECURITY, User Guide) and test scripts upon any goal execution.
+- [x] **Gap Analysis Optimizations** — Replaced monolithic D3 imports with submodules (`d3-array`, `d3-selection`, `d3-zoom`, `d3-drag`, `d3-polygon`, `d3-shape`, `d3-hierarchy`, `d3-force`) linked through a namespace bridge object in `AwsDfdVisualizer.jsx` and the template project to improve tree-shaking and reduce bundle weight. Added root `.cursorrules` files to guide other AI coding assistants working in the directories.
 
 
 
