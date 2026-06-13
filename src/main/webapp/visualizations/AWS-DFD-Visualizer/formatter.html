@@ -9,4 +9,13 @@
             <span class="help-block">Manual mode locks icons where you drop them.</span>
         </div>
     </div>
+
+    <splunk-control-group label="Cloud Service Provider (CSP)" help="Select the icon & naming stencil set, or auto-detect based on node schema.">
+        <splunk-select name="{{VIZ_NAMESPACE}}.cspStencilSet" value="auto">
+            <option value="auto">Auto Detect (Dynamic)</option>
+            <option value="aws">AWS (Amazon Web Services)</option>
+            <option value="azure">Microsoft Azure</option>
+            <option value="gcp">Google Cloud Platform (GCP)</option>
+        </splunk-select>
+    </splunk-control-group>
 </form>

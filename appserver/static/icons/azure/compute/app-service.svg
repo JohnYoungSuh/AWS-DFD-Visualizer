@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="60" height="60" x="2" y="2" rx="8" fill="#0078d4" fill-opacity="0.1" stroke="#0078d4" stroke-width="2" />
+  <circle cx="32" cy="24" r="12" fill="#0078d4" />
+  <text x="32" y="50" font-family="sans-serif" font-size="7" font-weight="bold" fill="#cbd5e1" text-anchor="middle">APP-SERVICE</text>
+</svg>

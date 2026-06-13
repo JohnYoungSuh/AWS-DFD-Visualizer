@@ -63,6 +63,15 @@
         </splunk-select>
     </splunk-control-group>
 
+    <splunk-control-group label="Cloud Service Provider (CSP)" help="Select the icon & naming stencil set, or auto-detect based on node schema.">
+        <splunk-select name="{{VIZ_NAMESPACE}}.cspStencilSet" value="auto">
+            <option value="auto">Auto Detect (Dynamic)</option>
+            <option value="aws">AWS (Amazon Web Services)</option>
+            <option value="azure">Microsoft Azure</option>
+            <option value="gcp">Google Cloud Platform (GCP)</option>
+        </splunk-select>
+    </splunk-control-group>
+
     <splunk-control-group label="Clustering" help=" ">
         <splunk-radio-input name="{{VIZ_NAMESPACE}}.clusterBy" value="none">
             <option value="none">None</option>

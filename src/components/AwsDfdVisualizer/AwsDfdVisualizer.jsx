@@ -1,82 +1,56 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
+import { detectProvider, CSP_REGISTRY, genericAdapter } from './stencils';
 
-// SECTION: ICON_CONSTANTS — Base URL prefixes for icon paths (RequireJS absolute paths required)
-const ICON_BASE = '/en-US/static/app/AWS-DFD-Visualizer/icons/';
-const ARCH_SVC  = 'Architecture-Service-Icons_01302026/';
-
-// SECTION: ICON_MAP_RAW — AWS resource type → icon filename (NEVER remove entries — breaks existing deployments)
-const ICON_MAP_RAW = {
-    'SKULL':            'skull.svg',
-    'LAMBDA':           'lambda.svg',
-    'WAFV2':            ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-WAF_64.svg',
-    'WAF':              ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-WAF_64.svg',
-    'WEBACL':           ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-WAF_64.svg',
-    'RDS':              ARCH_SVC + 'Arch_Databases/64/Arch_Amazon-RDS_64.svg',
-    'AURORA':           ARCH_SVC + 'Arch_Databases/64/Arch_Amazon-Aurora_64.svg',
-    'DBCLUSTER':        ARCH_SVC + 'Arch_Databases/64/Arch_Amazon-Aurora_64.svg',
-    'DBINSTANCE':       ARCH_SVC + 'Arch_Databases/64/Arch_Amazon-RDS_64.svg',
-    'EC2':              ARCH_SVC + 'Arch_Compute/64/Arch_Amazon-EC2_64.svg',
-    'ASG':              ARCH_SVC + 'Arch_Compute/64/Arch_Amazon-EC2-Auto-Scaling_64.svg',
-    'AUTOSCALINGGROUP': ARCH_SVC + 'Arch_Compute/64/Arch_Amazon-EC2-Auto-Scaling_64.svg',
-    'S3':               ARCH_SVC + 'Arch_Storage/64/Arch_Amazon-Simple-Storage-Service_64.svg',
-    'BUCKET':           ARCH_SVC + 'Arch_Storage/64/Arch_Amazon-Simple-Storage-Service_64.svg',
-    'CLOUDFRONT':       ARCH_SVC + 'Arch_Networking-Content-Delivery/64/Arch_Amazon-CloudFront_64.svg',
-    'DISTRIBUTION':     ARCH_SVC + 'Arch_Networking-Content-Delivery/64/Arch_Amazon-CloudFront_64.svg',
-    'ALB':              ARCH_SVC + 'Arch_Networking-Content-Delivery/64/Arch_Elastic-Load-Balancing_64.svg',
-    'ELB':              ARCH_SVC + 'Arch_Networking-Content-Delivery/64/Arch_Elastic-Load-Balancing_64.svg',
-    'LOADBALANCER':     ARCH_SVC + 'Arch_Networking-Content-Delivery/64/Arch_Elastic-Load-Balancing_64.svg',
-    'ELASTICLOADBALANCINGV2': ARCH_SVC + 'Arch_Networking-Content-Delivery/64/Arch_Elastic-Load-Balancing_64.svg',
-    'KINESIS':          ARCH_SVC + 'Arch_Analytics/64/Arch_Amazon-Kinesis-Data-Streams_64.svg',
-    'STREAM':           ARCH_SVC + 'Arch_Analytics/64/Arch_Amazon-Kinesis-Data-Streams_64.svg',
-    'FIREHOSE':         ARCH_SVC + 'Arch_Analytics/64/Arch_Amazon-Kinesis-Data-Firehose_64.svg',
-    'DELIVERYSTREAM':   ARCH_SVC + 'Arch_Analytics/64/Arch_Amazon-Kinesis-Data-Firehose_64.svg',
-    'ELASTICACHE':      ARCH_SVC + 'Arch_Databases/64/Arch_Amazon-ElastiCache_64.svg',
-    'CLUSTER':          ARCH_SVC + 'Arch_Databases/64/Arch_Amazon-ElastiCache_64.svg',
-    'IAM':              ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-Identity-and-Access-Management_64.svg',
-    'ROLE':             ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-Identity-and-Access-Management_64.svg',
-    'ADMIN':            ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-Identity-and-Access-Management_64.svg',
-    'ISSO':             ARCH_SVC + 'Arch_Security-Identity/64/Arch_AWS-Identity-and-Access-Management_64.svg',
-    'CLOUDTRAIL':       ARCH_SVC + 'Arch_Management-Tools/64/Arch_AWS-CloudTrail_64.svg',
-    'TRAIL':            ARCH_SVC + 'Arch_Management-Tools/64/Arch_AWS-CloudTrail_64.svg',
-    'CLOUDWATCH':       ARCH_SVC + 'Arch_Management-Tools/64/Arch_Amazon-CloudWatch_64.svg',
-    'ALARM':            ARCH_SVC + 'Arch_Management-Tools/64/Arch_Amazon-CloudWatch_64.svg',
-    'PDP':              ARCH_SVC + 'Arch_Security-Identity/64/Arch_Amazon-Verified-Permissions_64@5x.png',
-    'ENGINE':           ARCH_SVC + 'Arch_Security-Identity/64/Arch_Amazon-Verified-Permissions_64@5x.png',
-    'F5 BIG-IP':        'f5-big-ip.svg',
-    'DEVICE':           'user.svg',
-    'FORESCOUT':        'generic.svg',
-    'POLICYENGINE':     ARCH_SVC + 'Arch_Security-Identity/64/Arch_Amazon-Verified-Permissions_64.svg',
-    'RESOURCE':         'generic.svg',
+// SECTION: PATH_RESOLUTION — Dynamically resolve app base URL to support custom Splunk web mount locations
+const getAppStaticUrl = (pathWithinApp) => {
+    const defaultPath = `/en-US/static/app/AWS-DFD-Visualizer/${pathWithinApp}`;
+    if (window.Splunk && window.Splunk.util && typeof window.Splunk.util.make_full_url === 'function') {
+        return window.Splunk.util.make_full_url(`/static/app/AWS-DFD-Visualizer/${pathWithinApp}`);
+    }
+    return defaultPath;
 };
 
-const ICON_MAP = new Map(Object.entries(ICON_MAP_RAW));
+const ICON_BASE = getAppStaticUrl('icons/');
 
-// SECTION: ICON_RESOLUTION — Priority: explicit icon/stencil → type → id → label → generic fallback
-const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/generic.svg') => {
+// SECTION: ICON_RESOLUTION — Dynamic icon resolution supporting Multi-CSP stencils and generic fallbacks
+const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     const status = String(node.status || '').toUpperCase().trim();
     if (status === 'CRITICAL' || status === 'INCIDENT') {
         return ICON_BASE + 'skull.svg';
     }
 
     const explicitIcon = (node.icon || node.stencil || '').toUpperCase();
-    if (explicitIcon && ICON_MAP.has(explicitIcon)) {
-        return ICON_BASE + ICON_MAP.get(explicitIcon);
+    
+    // 1. Check direct adapter stencils
+    if (explicitIcon && adapter.stencils[explicitIcon]) {
+        return ICON_BASE + (adapter.id === 'generic' ? '' : adapter.id + '/') + adapter.stencils[explicitIcon];
+    }
+    
+    // 2. Check generic stencils
+    if (explicitIcon && genericAdapter.stencils[explicitIcon]) {
+        return ICON_BASE + genericAdapter.stencils[explicitIcon];
     }
 
     const type  = (node.type || '').toUpperCase();
     const id    = (node.arn || node.id || '').toUpperCase();
     const label = (node.label || '').toUpperCase();
     
-    const parts   = type.split('::');
-    const service = parts[parts.length - 1] || '';
-    const domain  = parts[1] || '';
+    // Clean type prefix (e.g. AWS:: or Azure:: or GCP::)
+    const cleanType = type.replace(adapter.typePrefix.toUpperCase(), '');
     
-    let iconFile = ICON_MAP.get(service) || ICON_MAP.get(domain);
+    let iconFile = adapter.stencils[cleanType];
+    
+    if (!iconFile) {
+        const parts = type.split('::');
+        const service = parts[parts.length - 1] || '';
+        const domain = parts[1] || '';
+        iconFile = adapter.stencils[service] || adapter.stencils[domain];
+    }
 
-    // Semantic Fallback
+    // Semantic Fallback on active adapter
     if (!iconFile || type.indexOf('RESOURCE') !== -1) {
-        for (const [key, value] of ICON_MAP.entries()) {
+        for (const [key, value] of Object.entries(adapter.stencils)) {
             if (id.indexOf(key) !== -1 || label.indexOf(key) !== -1) {
                 iconFile = value;
                 break;
@@ -84,7 +58,18 @@ const getIconPath = (node, fallbackUrl = '/static/app/AWS-DFD-Visualizer/icons/g
         }
     }
     
-    if (iconFile) return ICON_BASE + iconFile;
+    // Semantic Fallback on Generic adapter
+    if (!iconFile) {
+        for (const [key, value] of Object.entries(genericAdapter.stencils)) {
+            if (id.indexOf(key) !== -1 || label.indexOf(key) !== -1 || explicitIcon.indexOf(key) !== -1) {
+                return ICON_BASE + value;
+            }
+        }
+    }
+    
+    if (iconFile) {
+        return ICON_BASE + (adapter.id === 'generic' ? '' : adapter.id + '/') + iconFile;
+    }
     return fallbackUrl;
 };
 
@@ -120,8 +105,20 @@ const parseSplunkData = (data) => {
     const fieldsRaw = data.fields || [];
     const fields = fieldsRaw.map(f => (typeof f === 'string' ? f : (f.name || f.label || '')).toLowerCase().trim());
 
-    let idxFrom = Math.max(fields.indexOf('from'), fields.indexOf('source'));
-    let idxTo = Math.max(fields.indexOf('to'), fields.indexOf('destination'));
+    const fromAliases = ['from', 'source', 'src', 'src_ip', 'calling_service'];
+    const toAliases = ['to', 'destination', 'dest', 'dest_ip', 'target_service'];
+    
+    let idxFrom = -1;
+    for (const alias of fromAliases) {
+        idxFrom = fields.indexOf(alias);
+        if (idxFrom > -1) break;
+    }
+    
+    let idxTo = -1;
+    for (const alias of toAliases) {
+        idxTo = fields.indexOf(alias);
+        if (idxTo > -1) break;
+    }
 
     const nodesMap = new Map();
     const rawLinks = [];
@@ -131,8 +128,8 @@ const parseSplunkData = (data) => {
         let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown;
         
         if (isObjectMode) {
-            rawFrom  = row.from || row.source;
-            rawTo    = row.to || row.destination;
+            rawFrom  = row.from || row.source || row.src || row.src_ip || row.calling_service;
+            rawTo    = row.to || row.destination || row.dest || row.dest_ip || row.target_service;
             rawType  = row.type || 'AWS::Resource';
             rawLabel = row.node_label || row.label;
             rawEdge  = row.edge_label || row.link_text;
@@ -543,7 +540,7 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
 };
 
 // SECTION: NODE_CARD — SVG node card (AWS icon, label, type badge). React renders DOM, D3 handles math.
-const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, isZeroTrust }) => {
+const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, isZeroTrust, globalAdapter }) => {
     if (!node.x) return null;
 
     const [isHovered, setIsHovered] = React.useState(false);
@@ -559,13 +556,22 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
         return null;
     };
 
+    const nodeAdapter = React.useMemo(() => {
+        const type = String(node.type || '').toUpperCase();
+        const id = String(node.arn || node.id || '').toUpperCase();
+        if (type.startsWith('AWS::') || id.startsWith('ARN:AWS:')) return CSP_REGISTRY.aws;
+        if (type.startsWith('AZURE::') || id.includes('SUBSCRIPTIONS/')) return CSP_REGISTRY.azure;
+        if (type.startsWith('GCP::') || id.startsWith('PROJECTS/')) return CSP_REGISTRY.gcp;
+        return globalAdapter;
+    }, [node, globalAdapter]);
+
     const highlight = getStatusHighlight(node.status);
     const prefix = highlight ? highlight.labelPrefix : '';
     const baseLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
     const displayLabel = prefix + baseLabel;
-    const typeLabel = (node.type || 'AWS::Resource').replace('AWS::', '');
-    const fallbackUrl = config?.missingImageURL || '/static/app/AWS-DFD-Visualizer/icons/generic.svg';
-    const iconPath = getIconPath(node, fallbackUrl);
+    const typeLabel = (node.type || `${nodeAdapter.typePrefix}Resource`).replace(nodeAdapter.typePrefix, '');
+    const fallbackUrl = config?.missingImageURL || getAppStaticUrl('icons/generic.svg');
+    const iconPath = getIconPath(node, nodeAdapter, globalAdapter, fallbackUrl);
     const wrapText = String(config?.wrapNodeText || 'true') === 'true';
 
     const designLayout = config?.designLayoutDashboard || 'default';
@@ -658,7 +664,7 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
                 const yEnv = -(hEnvCore / 2) - (i * 6);
                 const strokeColor = (sg.is_compliant === false || String(sg.is_compliant) === 'false') ? '#FF0000' : '#00FF00';
                 return (
-                    <rect
+                     <rect
                         key={`sg-env-${i}`}
                         className="concentric-ring"
                         x={xEnv}
@@ -787,7 +793,7 @@ const Zone = ({ groupName, nodes, isDarkTheme }) => {
 };
 
 // SECTION: ZERO_TRUST_LAYOUT_ENGINE — Deterministic two-pass container and tree positioning
-const resolveHierarchy = (nodes) => {
+const resolveHierarchy = (nodes, adapter) => {
     const nodeMap = new Map();
     nodes.forEach(n => {
         nodeMap.set(n.id, { ...n });
@@ -801,14 +807,14 @@ const resolveHierarchy = (nodes) => {
 
     nodeMap.forEach(node => {
         const type = (node.type || '').toUpperCase();
-        if (type.includes('WAF') || type.includes('CLOUDFRONT') || node.isGlobalEdge) {
+        if (adapter.isGlobalEdge(type) || node.isGlobalEdge) {
             node.isGlobalEdge = true;
             globalEdgeAssets.push(node);
-        } else if (type.includes('IAM') || type.includes('ROLE') || type.includes('USER') || type.includes('POLICY')) {
+        } else if (adapter.isIdentity(type)) {
             unassociatedNodes.push(node);
-        } else if (type.includes('VPC')) {
+        } else if (adapter.isNetworkContainer(type)) {
             vpcs.push(node);
-        } else if (type.includes('SUBNET')) {
+        } else if (adapter.isSubnetworkContainer(type)) {
             subnets.push(node);
         } else {
             computes.push(node);
@@ -823,8 +829,8 @@ const resolveHierarchy = (nodes) => {
             if (!nodeMap.has(safeSubnetId)) {
                 const newSub = {
                     id: safeSubnetId,
-                    label: `Subnet (${node.subnetId})`,
-                    type: 'AWS::EC2::Subnet',
+                    label: `${adapter.subnetworkContainerName} (${node.subnetId})`,
+                    type: adapter.subnetworkContainerType || `${adapter.typePrefix}EC2::Subnet`,
                     group: node.group || 'Default',
                     vpcId: node.vpcId || null
                 };
@@ -841,8 +847,8 @@ const resolveHierarchy = (nodes) => {
             if (!nodeMap.has(safeVpcId)) {
                 const newVpc = {
                     id: safeVpcId,
-                    label: `VPC (${sub.vpcId})`,
-                    type: 'AWS::EC2::VPC',
+                    label: `${adapter.networkContainerName} (${sub.vpcId})`,
+                    type: adapter.networkContainerType || `${adapter.typePrefix}EC2::VPC`,
                     group: sub.group || 'Default'
                 };
                 nodeMap.set(safeVpcId, newVpc);
@@ -855,14 +861,14 @@ const resolveHierarchy = (nodes) => {
     if (computes.length > 0 && vpcs.length === 0 && subnets.length === 0) {
         const defaultVpc = {
             id: 'default-vpc',
-            label: 'Default VPC',
-            type: 'AWS::EC2::VPC',
+            label: `Default ${adapter.networkContainerName}`,
+            type: adapter.networkContainerType || `${adapter.typePrefix}EC2::VPC`,
             group: 'Default'
         };
         const defaultSubnet = {
             id: 'default-subnet',
-            label: 'Default Subnet',
-            type: 'AWS::EC2::Subnet',
+            label: `Default ${adapter.subnetworkContainerName}`,
+            type: adapter.subnetworkContainerType || `${adapter.typePrefix}EC2::Subnet`,
             group: 'Default',
             vpcId: 'default-vpc'
         };
@@ -913,10 +919,10 @@ const resolveHierarchy = (nodes) => {
     };
 };
 
-const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
+const computeDimensions = (node, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
     const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     if (node.children && node.children.length > 0) {
-        node.children.forEach(child => computeDimensions(child, layoutParams));
+        node.children.forEach(child => computeDimensions(child, adapter, layoutParams));
 
         if (node.id === 'GLOBAL_ROOT') {
             node.width = 1200;
@@ -927,7 +933,7 @@ const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 10
         const m = node.children.length;
         const type = (node.data.type || '').toUpperCase();
 
-        if (type.includes('VPC') || type === 'CLOUD_REGION' || node.data.id === 'aws-global-root') {
+        if (adapter.isNetworkContainer(type) || type === 'CLOUD_REGION' || node.data.id === 'aws-global-root') {
             const P = padding;
             const dx = gapX;
             node.width = 2 * P + node.children.reduce((sum, c) => sum + c.width, 0) + (m - 1) * dx;
@@ -958,7 +964,7 @@ const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 10
         }
     } else {
         const type = (node.data.type || '').toUpperCase();
-        if (type.includes('VPC') || type.includes('SUBNET')) {
+        if (adapter.isNetworkContainer(type) || adapter.isSubnetworkContainer(type)) {
             node.width = nodeWidth * 1.3;
             node.height = nodeHeight * 1.8;
         } else {
@@ -968,7 +974,7 @@ const computeDimensions = (node, layoutParams = { nodeWidth: 280, nodeHeight: 10
     }
 };
 
-const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
+const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
     const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     unassociatedNodes.forEach((node, idx) => {
         node.x = (nodeWidth / 2) + 150 + idx * (nodeWidth + 150);
@@ -996,7 +1002,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutPara
         const X_TL = p.x - p.width / 2;
         const Y_TL = p.y - p.height / 2 + 15;
         
-        if (type.includes('VPC') || type === 'CLOUD_REGION' || p.data.id === 'aws-global-root') {
+        if (adapter.isNetworkContainer(type) || type === 'CLOUD_REGION' || p.data.id === 'aws-global-root') {
             const P = padding;
             const dx = gapX;
             let currentX = X_TL + P;
@@ -1058,9 +1064,9 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, layoutPara
     });
 };
 
-const exportToDrawio = (nodes, links, isZeroTrust, config) => {
+const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.7.2" type="device">\n`;
+    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.8.0" type="device">\n`;
     xml += `  <diagram id="aws-dfd-diagram" name="AWS DFD Diagram">\n`;
     xml += `    <mxGraphModel dx="1200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">\n`;
     xml += `      <root>\n`;
@@ -1104,11 +1110,11 @@ const exportToDrawio = (nodes, links, isZeroTrust, config) => {
 
     nodes.forEach(node => {
         const type = (node.type || '').toUpperCase();
-        const isContainer = type.includes('VPC') || type.includes('SUBNET') || type === 'CLOUD_REGION';
+        const isContainer = globalAdapter.isNetworkContainer(type) || globalAdapter.isSubnetworkContainer(type) || type === 'CLOUD_REGION';
         if (isZeroTrust && isContainer) {
             const parentId = "zt-plane-infra";
             const val = escapeXml(node.label || node.id);
-            const style = type.includes('VPC')
+            const style = globalAdapter.isNetworkContainer(type)
                 ? "swimlane;horizontal=1;startSize=30;fillColor=#e2e8f0;strokeColor=#94a3b8;strokeWidth=2;rounded=1;arcSize=12;"
                 : "swimlane;horizontal=1;startSize=25;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;dashed=1;rounded=1;arcSize=12;";
             
@@ -1124,14 +1130,22 @@ const exportToDrawio = (nodes, links, isZeroTrust, config) => {
         }
 
         const label = escapeXml(node.label || node.id);
-        const typeLabel = escapeXml((node.type || 'AWS::Resource').replace('AWS::', ''));
+        const nodeAdapter = (() => {
+            const t = String(node.type || '').toUpperCase();
+            const id = String(node.arn || node.id || '').toUpperCase();
+            if (t.startsWith('AWS::') || id.startsWith('ARN:AWS:')) return CSP_REGISTRY.aws;
+            if (t.startsWith('AZURE::') || id.includes('SUBSCRIPTIONS/')) return CSP_REGISTRY.azure;
+            if (t.startsWith('GCP::') || id.startsWith('PROJECTS/')) return CSP_REGISTRY.gcp;
+            return globalAdapter;
+        })();
+        const typeLabel = escapeXml((node.type || `${nodeAdapter.typePrefix}Resource`).replace(nodeAdapter.typePrefix, ''));
         const htmlVal = `<b>${label}</b><br/>${typeLabel}`;
         
         let parent = "1";
         if (isZeroTrust) {
             const t = (node.type || '').toUpperCase();
             if (node.isGlobalEdge) parent = "zt-plane-control";
-            else if (t.includes('IAM') || t.includes('ROLE') || t.includes('USER') || t.includes('POLICY')) parent = "zt-plane-identity";
+            else if (nodeAdapter.isIdentity(t)) parent = "zt-plane-identity";
             else parent = node.parentId && node.parentId !== 'GLOBAL_ROOT' ? escapeXml(node.parentId) : "zt-plane-infra";
         }
 
@@ -1212,6 +1226,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     
     const [tickUpdate, setTickUpdate] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const [isCalculating, setIsCalculating] = useState(false);
+    const simulationRef = useRef(null);
     const clickTimeoutRef = useRef(null);
 
     const [showCsvConsole, setShowCsvConsole] = useState(false);
@@ -1417,10 +1433,12 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         groupBounds,
         originalNodesCount,
         viewBoxWidth,
-        viewBoxHeight
+        viewBoxHeight,
+        globalAdapter
     } = useMemo(() => {
         const activeData = localData || data;
         const parsed = parseSplunkData(activeData);
+        const globalAdapter = detectProvider(parsed.nodes, config?.cspStencilSet || 'auto');
 
         // SVG DOM Limit Safety Cap & Isolated Link Pruning
         const originalNodesCount = parsed.nodes.length;
@@ -1726,20 +1744,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 groupBounds: calculatedBounds,
                 originalNodesCount,
                 viewBoxWidth: dynamicW,
-                viewBoxHeight: dynamicH
+                viewBoxHeight: dynamicH,
+                globalAdapter
             };
         }
 
         if (isZeroTrustLayout && parsed.nodes.length > 0) {
-            const { stratifiedNodes, unassociatedNodes, globalEdgeAssets, vpcs, subnets, computes } = resolveHierarchy(parsed.nodes);
+            const { stratifiedNodes, unassociatedNodes, globalEdgeAssets, vpcs, subnets, computes } = resolveHierarchy(parsed.nodes, globalAdapter);
             
             const stratify = d3.stratify()
                 .id(d => d.id)
                 .parentId(d => d.parentId);
             
             const hierarchy = stratify(stratifiedNodes);
-            computeDimensions(hierarchy, layoutParams);
-            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, layoutParams);
+            computeDimensions(hierarchy, globalAdapter, layoutParams);
+            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, globalAdapter, layoutParams);
             
             const resolvedNodes = [];
             const vpcContainers = [];
@@ -1749,9 +1768,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 if (d.id !== 'GLOBAL_ROOT') {
                     resolvedNodes.push(d.data);
                     const type = (d.data.type || '').toUpperCase();
-                    if (type.includes('VPC') || d.data.type === 'CLOUD_REGION') {
+                    if (globalAdapter.isNetworkContainer(type) || d.data.type === 'CLOUD_REGION') {
                         vpcContainers.push(d);
-                    } else if (type.includes('SUBNET')) {
+                    } else if (globalAdapter.isSubnetworkContainer(type)) {
                         subnetContainers.push(d);
                     }
                 }
@@ -1811,7 +1830,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 groupBounds: [],
                 originalNodesCount,
                 viewBoxWidth: 1200,
-                viewBoxHeight: 1400
+                viewBoxHeight: 1400,
+                globalAdapter
             };
         }
         
@@ -1827,7 +1847,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             groupBounds: [],
             originalNodesCount,
             viewBoxWidth: 1200,
-            viewBoxHeight: 1000
+            viewBoxHeight: 1000,
+            globalAdapter
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
@@ -1917,25 +1938,78 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
         let linkDistance = 220;
         let chargeStrength = -1800;
-        let collideRadius = 150;
 
         if (designLayout === 'compact') {
             linkDistance = 160;
             chargeStrength = -1200;
-            collideRadius = 110;
         } else if (designLayout === 'expanded') {
             linkDistance = 300;
             chargeStrength = -2500;
-            collideRadius = 190;
+        }
+
+        const rectCollide = () => {
+            let localNodes = [];
+            const paddingX = 40;
+            const paddingY = 30;
+            
+            const force = (alpha) => {
+                const n = localNodes.length;
+                for (let i = 0; i < n; i++) {
+                    const a = localNodes[i];
+                    const wA = (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280) / 2;
+                    const hA = (designLayout === 'compact' ? 80 : designLayout === 'expanded' ? 120 : 100) / 2;
+                    
+                    for (let j = i + 1; j < n; j++) {
+                        const b = localNodes[j];
+                        const wB = (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280) / 2;
+                        const hB = (designLayout === 'compact' ? 80 : designLayout === 'expanded' ? 120 : 100) / 2;
+                        
+                        const dx = a.x - b.x;
+                        const dy = a.y - b.y;
+                        const absDx = Math.abs(dx);
+                        const absDy = Math.abs(dy);
+                        
+                        const minDx = wA + wB + paddingX;
+                        const minDy = hA + hB + paddingY;
+                        
+                        if (absDx < minDx && absDy < minDy) {
+                            const overlapX = minDx - absDx;
+                            const overlapY = minDy - absDy;
+                            
+                            if (overlapX < overlapY) {
+                                const pushX = overlapX * (dx > 0 ? 0.5 : -0.5) * alpha;
+                                a.vx += pushX;
+                                b.vx -= pushX;
+                            } else {
+                                const pushY = overlapY * (dy > 0 ? 0.5 : -0.5) * alpha;
+                                a.vy += pushY;
+                                b.vy -= pushY;
+                            }
+                        }
+                    }
+                }
+            };
+            
+            force.initialize = (initNodes) => {
+                localNodes = initNodes;
+            };
+            
+            return force;
+        };
+
+        if (simulationRef.current) {
+            simulationRef.current.stop();
         }
 
         const simulation = d3.forceSimulation(nodes)
             .force('link', d3.forceLink(links).id(d => d.id).distance(linkDistance))
             .force('charge', d3.forceManyBody().strength(chargeStrength))
             .force('center', d3.forceCenter(W / 2, H / 2))
-            .force('collision', d3.forceCollide().radius(collideRadius))
+            .force('collision', rectCollide())
             .force('x-isolated', d3.forceX(W / 2).strength(d => d.degree === 0 ? 0.05 : 0))
             .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
+
+        simulationRef.current = simulation;
 
         if (pModel === 'cluster') {
             const numGroups = groupNames.length || 1;
@@ -2026,15 +2100,47 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             }).strength(0.7));
         }
 
-        if (!enablePhysics) {
-            simulation.stop();
-            for (let i = 0, n = 300; i < n; ++i) {
+        let active = true;
+        if (enablePhysics && nodes.length < 100) {
+            // "Zero-Latency" Layout Bypass for small graphs
+            for (let i = 0; i < 300; ++i) {
                 simulation.tick();
             }
             setTickUpdate(Date.now());
+            simulation.on('tick', () => {
+                if (active) setTickUpdate(Date.now());
+            });
+        } else if (!enablePhysics) {
+            simulation.stop();
+            const totalTicks = 300;
+            if (nodes.length < 150) {
+                for (let i = 0; i < totalTicks; ++i) {
+                    simulation.tick();
+                }
+                setTickUpdate(Date.now());
+            } else {
+                let currentTick = 0;
+                const batchSize = 30;
+                setIsCalculating(true);
+                const step = () => {
+                    if (!active) return;
+                    const limit = Math.min(currentTick + batchSize, totalTicks);
+                    for (let i = currentTick; i < limit; i++) {
+                        simulation.tick();
+                    }
+                    currentTick = limit;
+                    if (currentTick < totalTicks) {
+                        requestAnimationFrame(step);
+                    } else {
+                        setIsCalculating(false);
+                        setTickUpdate(Date.now());
+                    }
+                };
+                requestAnimationFrame(step);
+            }
         } else {
             simulation.on('tick', () => {
-                setTickUpdate(Date.now());
+                if (active) setTickUpdate(Date.now());
             });
         }
 
@@ -2086,11 +2192,15 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         }, 100);
 
         return () => {
+            active = false;
             simulation.stop();
+            if (simulationRef.current === simulation) {
+                simulationRef.current = null;
+            }
             clearTimeout(attachDrag);
             svg.on('.zoom', null);
         };
-    }, [nodes, links, width, height, config, isZeroTrust]);
+    }, [nodes, links, width, height, config, isZeroTrust, globalAdapter]);
 
     const exportToSvg = (svgElement) => {
         if (!svgElement) return;
@@ -2126,8 +2236,46 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     return (
         <div style={{ width: '100%', height: '100%', minHeight: '400px', overflow: 'hidden', background: 'transparent', position: 'relative' }}>
+            {isCalculating && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: isDarkTheme ? 'rgba(30, 40, 50, 0.8)' : 'rgba(248, 250, 252, 0.8)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 100,
+                    transition: 'all 0.3s ease'
+                }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        border: '3px solid #3b82f6',
+                        borderTopColor: 'transparent',
+                        animation: 'spin 1s linear infinite'
+                    }} />
+                    <span style={{
+                        marginTop: '16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: isDarkTheme ? '#cbd5e1' : '#475569',
+                        fontFamily: 'Inter, sans-serif'
+                    }}>
+                        Computing Topology Layout...
+                    </span>
+                </div>
+            )}
             <style>
                 {`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
                 @keyframes drift-fade {
                     0% { opacity: var(--base-opacity, 1); }
                     50% { opacity: calc(var(--base-opacity, 1) * 0.4); }
@@ -2174,7 +2322,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.7.2 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.8.0 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
@@ -2210,7 +2358,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     </button>
                     <button 
                         id="btn-export-drawio"
-                        onClick={() => exportToDrawio(nodes, links, isZeroTrust, config)}
+                        onClick={() => exportToDrawio(nodes, links, isZeroTrust, config, globalAdapter)}
                         style={{
                             padding: '6px 12px',
                             background: '#FF9900',
@@ -2523,7 +2671,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                         {nodes.map(node => {
                             if (isZeroTrust) {
                                 const type = (node.type || '').toUpperCase();
-                                if (type.includes('VPC') || type.includes('SUBNET') || type === 'CLOUD_REGION') {
+                                if (globalAdapter.isNetworkContainer(type) || globalAdapter.isSubnetworkContainer(type) || type === 'CLOUD_REGION') {
                                     return null;
                                 }
                             }
@@ -2536,6 +2684,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     onNodeDoubleClick={handleNodeDoubleClick}
                                     config={config}
                                     isZeroTrust={isZeroTrust}
+                                    globalAdapter={globalAdapter}
                                 />
                             );
                         })}

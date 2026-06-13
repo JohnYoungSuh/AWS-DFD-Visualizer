@@ -689,6 +689,110 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.subnet-container').should('exist');
         cy.get('g.node-card').should('have.length', 1);
     });
+
+    it('successfully detects Microsoft Azure provider and resolves its stencils and containers', () => {
+        const azureData = {
+            results: [
+                { from: 'vm-1', type: 'Azure::Compute::VirtualMachine', vpcId: 'vnet-prod', subnetId: 'sub-web', node_label: 'Web VM' }
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={azureData} 
+                    config={{
+                        layoutMode: 'zero-trust',
+                        cspStencilSet: 'azure'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.wait(500);
+        cy.contains('Nodes: 3').should('be.visible'); // vm-1 + 1 VNet container + 1 subnet container
+        cy.get('g.vpc-container').should('exist');
+        cy.get('g.vpc-container text').first().should('contain.text', 'VNet (vnet-prod)');
+        cy.get('g.subnet-container text').first().should('contain.text', 'Subnet (sub-web)');
+        
+        cy.get('g.node-card').contains('Web VM').parents('g.node-card').find('image')
+            .should('have.attr', 'href').and('contain', 'azure/compute/virtual-machine.svg');
+        cy.screenshot('azure_provider_layout');
+    });
+
+    it('successfully detects Google Cloud Platform provider and resolves its stencils and containers', () => {
+        const gcpData = {
+            results: [
+                { from: 'gce-1', type: 'GCP::Compute::Instance', vpcId: 'vpc-net-prod', subnetId: 'subnet-web', node_label: 'Web VM GCP' }
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={gcpData} 
+                    config={{
+                        layoutMode: 'zero-trust',
+                        cspStencilSet: 'gcp'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.wait(500);
+        cy.contains('Nodes: 3').should('be.visible');
+        cy.get('g.vpc-container').should('exist');
+        cy.get('g.vpc-container text').first().should('contain.text', 'VPC Network (vpc-net-prod)');
+        cy.get('g.subnet-container text').first().should('contain.text', 'Subnet (subnet-web)');
+
+        cy.get('g.node-card').contains('Web VM GCP').parents('g.node-card').find('image')
+            .should('have.attr', 'href').and('contain', 'gcp/compute/compute-engine.svg');
+        cy.screenshot('gcp_provider_layout');
+    });
+
+    it('successfully performs dataset-wide CSP auto-detection based on node type signatures', () => {
+        const mixedData = {
+            results: [
+                { from: 'vm-azure', type: 'Azure::Compute::VirtualMachine', vpcId: 'vnet-1', subnetId: 'sub-1', node_label: 'Azure VM' },
+                { from: 'gce-gcp', type: 'GCP::Compute::Instance', vpcId: 'vpc-2', subnetId: 'sub-2', node_label: 'GCP VM' }
+            ]
+        };
+
+        mixedData.results.push(
+            { from: 'vm-azure-2', type: 'Azure::Compute::VirtualMachine', vpcId: 'vnet-1', subnetId: 'sub-1', node_label: 'Azure VM 2' }
+        );
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={mixedData} 
+                    config={{
+                        layoutMode: 'zero-trust',
+                        cspStencilSet: 'auto'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.wait(500);
+        cy.get('g.vpc-container text').first().should('contain.text', 'VNet (vnet-1)');
+        
+        cy.get('g.node-card').contains('Azure VM').parents('g.node-card').find('image')
+            .should('have.attr', 'href').and('contain', 'azure/compute/virtual-machine.svg');
+        cy.get('g.node-card').contains('GCP VM').parents('g.node-card').find('image')
+            .should('have.attr', 'href').and('contain', 'gcp/compute/compute-engine.svg');
+        
+        cy.screenshot('hybrid_multi_csp_layout');
+    });
 });
 
 
