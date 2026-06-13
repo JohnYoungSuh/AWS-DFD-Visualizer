@@ -11,6 +11,8 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Memory Leak Prevention** — Bound simulations to React `simulationRef` lifecycle, cleanup stopping active forces.
 - [x] **Release Hygiene Version Bump (v2.8.0)** — Synchronized manifest, configs, Makefile, and header versions to `2.8.0`. Wrote 3 Cypress Multi-CSP integration spec test cases (23/23 passing) and validated AppInspect clean (0 errors, 0 warnings).
 - [x] **Test Engine & Use Case Validation** — Updated test deployment harness `test-drilldown.py` to target a hybrid Multi-CSP dashboard topology (AWS, Azure, GCP). Validated test engine script execution and verified that all 23 Cypress component tests pass successfully.
+- [x] **Agent Checklist Automation** — Created the `.agent` configuration profile at the workspace root to enforce automatic synchronization and validation of documentation (README, SECURITY, User Guide) and test scripts upon any goal execution.
+
 
 
 ### ✅ Session: June 10, 2026
