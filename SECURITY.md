@@ -20,7 +20,7 @@ Only the latest release on the `master` branch is supported for security updates
 If you discover a security vulnerability within this project, please report it privately. This project is designed for high-security environments (Impact Level 5 / DoD), and responsible disclosure is mandatory.
 
 ### Process
-1. Email the security team at `security-report@example.com` (Placeholder).
+1. Email the security team at `security-report@suhlabs.com` (Placeholder).
 2. Include a detailed description of the vulnerability, scope, and impact.
 3. Provide a step-by-step Proof of Concept (PoC) to reproduce the issue.
 

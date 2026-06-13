@@ -1,6 +1,35 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import * as d3 from 'd3';
+import { ascending } from 'd3-array';
+import { select, selectAll } from 'd3-selection';
+import { zoom, zoomIdentity } from 'd3-zoom';
+import { drag } from 'd3-drag';
+import { polygonHull } from 'd3-polygon';
+import { line, curveStepAfter, curveStepBefore, curveCatmullRomClosed } from 'd3-shape';
+import { stratify, tree } from 'd3-hierarchy';
+import { forceSimulation, forceLink, forceManyBody, forceCenter, forceX, forceY } from 'd3-force';
 import { detectProvider, CSP_REGISTRY, genericAdapter } from './stencils';
+
+const d3 = {
+    ascending,
+    select,
+    selectAll,
+    zoom,
+    zoomIdentity,
+    drag,
+    polygonHull,
+    line,
+    curveStepAfter,
+    curveStepBefore,
+    curveCatmullRomClosed,
+    stratify,
+    tree,
+    forceSimulation,
+    forceLink,
+    forceManyBody,
+    forceCenter,
+    forceX,
+    forceY
+};
 
 // SECTION: PATH_RESOLUTION — Dynamically resolve app base URL to support custom Splunk web mount locations
 const getAppStaticUrl = (pathWithinApp) => {
