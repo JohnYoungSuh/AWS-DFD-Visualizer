@@ -20,6 +20,7 @@ Thumbs.db
 *.log
 *.tmp
 # AI Assistant Metadata (Antigravity)
+.agents/
 tasks*
 media_*
 walkthrough*

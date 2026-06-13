@@ -131,13 +131,13 @@
               <tr style="background-color: #252a30;">
                 <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">node_label / label</td>
                 <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
-                <td style="padding: 10px; border: 1px solid #444;">Human-readable label shown inside the node card. Falls back to extracting the short name from the ARN.</td>
+                <td style="padding: 10px; border: 1px solid #444;">Human-readable label shown inside the node card. To ensure readability by leadership, use coalesced fields and never output raw IDs unless for Tier 3 troubleshooting (e.g., <code>eval node_label = coalesce(Name, Role, resourceId)</code>).</td>
                 <td style="padding: 10px; border: 1px solid #444;">Order Processor API</td>
               </tr>
               <tr>
                 <td style="padding: 10px; border: 1px solid #444; font-family: monospace;">edge_label / link_text</td>
                 <td style="padding: 10px; border: 1px solid #444; color: #a9b1ba;">Optional</td>
-                <td style="padding: 10px; border: 1px solid #444;">Relationship descriptor text overlaying the link curve, enclosed in a clean background halo.</td>
+                <td style="padding: 10px; border: 1px solid #444;">Relationship descriptor text overlaying the link curve. Prohibited from being empty ("ghost arrows") in Tier 1 &amp; 2 views. Use "Contained In" for hierarchical/containment links.</td>
                 <td style="padding: 10px; border: 1px solid #444;">HTTPS / 443</td>
               </tr>
               <tr style="background-color: #252a30;">
@@ -177,6 +177,8 @@
             <li><strong>Mandatory Group Boundaries:</strong> Nesting structures correctly requires formatting the <code>group</code> field inline: <code>| eval group = case(isnotnull(vpcId) AND isnotnull(subnetId), vpcId . "/" . subnetId, isnotnull(vpcId), vpcId, 1=1, "GLOBAL_ROOT")</code>.</li>
             <li><strong>JSON Escaping inside SPL:</strong> When hardcoding mock nodes (e.g. via <code>| makeresults</code>), all quote characters inside the JSON strings (such as <code>securityGroups</code>) MUST be escaped with a backslash: <code>\"</code>.</li>
             <li><strong>Tabular Schema Padding:</strong> If using <code>append</code> combinations, initialize empty attributes (e.g. <code>subnetId="" vpcId="" securityGroups=""</code>) on non-infrastructure layers to prevent schema mismatch rendering failures.</li>
+            <li><strong>Audience-Centric Labels:</strong> Never output raw AWS IDs in the <code>node_label</code> unless explicitly required for a Tier 3 Troubleshooting view. Always use the <code>coalesce</code> pattern to ensure readability by leadership: <code>| eval node_label = coalesce(Name, Role, resourceId)</code>.</li>
+            <li><strong>Explicit Edge Typing:</strong> Unlabeled links ("ghost arrows") are prohibited in Tier 1 and Tier 2 views. Always populate <code>edge_label</code>. If the link represents structure or containment (e.g., EC2 instance inside a Subnet), use: <code>| eval edge_label = "Contained In"</code>.</li>
           </ul>
         </div>
       </html>
