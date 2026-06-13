@@ -10,6 +10,8 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **Optimizations & Safety Safeguards** — Implemented custom rectangular collision force (`rectCollide`) preventing card overlaps. Added a "Zero-Latency" layout bypass ticking force simulation 300 times synchronously for graphs <100 nodes. Implemented batched calculation (30 ticks/frame) via `requestAnimationFrame` with a glassmorphic loader overlay for graphs >=150 nodes.
 - [x] **Memory Leak Prevention** — Bound simulations to React `simulationRef` lifecycle, cleanup stopping active forces.
 - [x] **Release Hygiene Version Bump (v2.8.0)** — Synchronized manifest, configs, Makefile, and header versions to `2.8.0`. Wrote 3 Cypress Multi-CSP integration spec test cases (23/23 passing) and validated AppInspect clean (0 errors, 0 warnings).
+- [x] **Test Engine & Use Case Validation** — Updated test deployment harness `test-drilldown.py` to target a hybrid Multi-CSP dashboard topology (AWS, Azure, GCP). Validated test engine script execution and verified that all 23 Cypress component tests pass successfully.
+
 
 ### ✅ Session: June 10, 2026
 - [x] **Static Grouped Layout Spacing and Centering Fix** — Resolved visual overlaps in the static grouped hierarchy layout ("Blueprint Mode") by replacing the fixed-size `treeLayout.size` with dynamic `treeLayout.nodeSize` coordinates mapping. Added coordinate shifting/centering bounds calculations. Added Cypress non-overlapping group bounds assertions and generated component screenshots.
