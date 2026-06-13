@@ -1259,6 +1259,37 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const simulationRef = useRef(null);
     const clickTimeoutRef = useRef(null);
 
+    // ----------------------------------------------------
+    // License Verification Logic
+    // ----------------------------------------------------
+    const licenseInfo = useMemo(() => {
+        const key = config?.licenseKey || "";
+        if (!key) {
+            return { tier: "free", customer: "Demo/Eval", valid: false, reason: "Missing license key" };
+        }
+        try {
+            const decoded = atob(key.trim());
+            const parsed = JSON.parse(decoded);
+            const expDate = new Date(parsed.expiration);
+            const now = new Date();
+            if (expDate < now) {
+                return { tier: "free", customer: parsed.customer, valid: false, reason: `License expired on ${parsed.expiration}` };
+            }
+            if (parsed.signature !== "dfd-visualizer-valid-sig-12345") {
+                return { tier: "free", customer: parsed.customer, valid: false, reason: "Invalid license signature" };
+            }
+            return {
+                tier: parsed.tier || "free",
+                customer: parsed.customer || "Enterprise Customer",
+                expiration: parsed.expiration,
+                nodeLimit: parsed.nodeLimit || 50,
+                valid: true
+            };
+        } catch (e) {
+            return { tier: "free", customer: "Demo/Eval", valid: false, reason: "Invalid license key format" };
+        }
+    }, [config?.licenseKey]);
+
     const [showCsvConsole, setShowCsvConsole] = useState(false);
     const [csvInput, setCsvInput] = useState('');
     const [localData, setLocalData] = useState(null);
@@ -1881,6 +1912,14 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
+    const isLicenseExceeded = useMemo(() => {
+        const count = originalNodesCount || nodes.length;
+        if (!licenseInfo.valid) {
+            return count > 50;
+        }
+        return count > licenseInfo.nodeLimit;
+    }, [licenseInfo, originalNodesCount, nodes]);
+
     console.log("AWS-DFD-Visualizer: layout determination result:", {
         isZeroTrustLayout,
         isZeroTrust,
@@ -1889,7 +1928,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
 
     useEffect(() => {
-        if (!nodes.length) return;
+        if (!nodes.length || isLicenseExceeded) return;
 
         const svg = d3.select(svgRef.current);
         const zoom = d3.zoom()
@@ -2265,6 +2304,41 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     return (
         <div style={{ width: '100%', height: '100%', minHeight: '400px', overflow: 'hidden', background: 'transparent', position: 'relative' }}>
+            {isLicenseExceeded && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: isDarkTheme ? 'rgba(15, 23, 42, 0.95)' : 'rgba(248, 250, 252, 0.95)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000,
+                    fontFamily: 'Inter, sans-serif',
+                    padding: '40px',
+                    textAlign: 'center',
+                    color: isDarkTheme ? '#f1f5f9' : '#0f172a'
+                }}>
+                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
+                    <h2 style={{ fontSize: '28px', color: '#EF4444', margin: '0 0 10px 0' }}>License Capacity Exceeded</h2>
+                    <p style={{ fontSize: '15px', maxWidth: '600px', lineHeight: '1.6', margin: '0 0 20px 0', color: isDarkTheme ? '#cbd5e1' : '#475569' }}>
+                        The current dataset has <strong>{nodes.length} nodes</strong>, which exceeds the limit for the <strong>Free Developer Edition</strong> (capped at 50 nodes). 
+                        Please configure a valid Enterprise or Sovereign GovTier license key in the Splunk Format Menu under the Licensing tab.
+                    </p>
+                    <div style={{ background: isDarkTheme ? '#1e293b' : '#ffffff', border: `1px solid ${isDarkTheme ? '#334155' : '#e2e8f0'}`, borderRadius: '8px', padding: '16px 24px', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', textAlign: 'left', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        <span style={{ fontWeight: 'bold', color: '#EF4444' }}>Reason: {licenseInfo.reason}</span>
+                        <hr style={{ border: 'none', borderTop: `1px solid ${isDarkTheme ? '#334155' : '#e2e8f0'}`, margin: '8px 0' }} />
+                        <span style={{ fontWeight: 'bold' }}>Recommended Commercial Tiers:</span>
+                        <ul style={{ margin: '4px 0 0 16px', padding: 0, listStyleType: 'disc', color: isDarkTheme ? '#94a3b8' : '#64748b' }}>
+                            <li><strong>Enterprise Tier</strong>: Cap up to 1,000 nodes ($12,000 / year per Search Head)</li>
+                            <li><strong>Sovereign GovTier</strong>: Unlimited node capacity, offline AppInspect pre-hardened ($35,000 / year flat site license)</li>
+                        </ul>
+                    </div>
+                </div>
+            )}
             {isCalculating && (
                 <div style={{
                     position: 'absolute',
@@ -2352,6 +2426,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
                 v2.8.0 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                <br/>
+                Tier: <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()} ({licenseInfo.valid ? `Licensed to: ${licenseInfo.customer}` : `Evaluation Mode: ${licenseInfo.reason}`})</span>
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
