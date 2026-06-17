@@ -45,3 +45,4 @@ Auto-refreshing dashboards running on operation center displays can easily lock 
 - **No Asset Inlining**: All SVG stencils are stored outside `visualization.js` and loaded dynamically via client-side HTTP requests, mitigating script/base64 payload injections.
 - **Dynamic URL Resolution**: Absolute app-relative path mapping using `window.Splunk.util.make_full_url` prevents cross-origin RequireJS resource lookup exploits.
 - **Automated Validation**: Automated scans for secrets (TruffleHog), SAST vulnerabilities (Bandit), and licensing (CycloneDX SBOM) run on every release branch commit.
+- **Hardened GitHub Actions**: CI/CD pipelines enforce explicit least-privilege repository permissions (`contents: read`) at the workflow level to prevent token elevation exploits and secure the build pipeline.

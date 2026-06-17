@@ -6,6 +6,7 @@ This list is based on failure analysis against mock config and standard D3 force
 ## 📍 Session Log
 
 ### ✅ Session: June 16, 2026
+- [x] **CI/CD Hardening: Explicit Workflow Permissions** — Added explicit read-only (`contents: read`) permissions block to `.github/workflows/splunk-ci.yml` to resolve CodeQL alerts #1, #2, and #3.
 - [x] **Bug Fix: Uncaught TypeError: toLowerCase() Crash on Missing Fields** — Resolved string manipulation crash where omitting optional attributes like `vpcId` or `subnetId` from the SPL table command led to `replace()` or `toLowerCase()` calls on null/undefined properties inside the ZTA Layout Engine. Applied robust type-casting (`String(...)`), optional chaining (`row?.`), and array schema validation on `securityGroups` to ensure data resilience. Added a Cypress component test verifying crash-free operation with missing optional attributes.
 - [x] **Dependency Security Remediations & CI/CD Hardening** — Upgraded `shell-quote` to `1.8.4` (CVE-2024-w7jw-789q-3m8p) and `form-data` to `4.0.6` (GHSA-hmw2-7cc7-3qxx). Added package overrides for `uuid` to `11.1.1` to resolve moderate vulnerability (GHSA-w5hq-g745-h8pq). Hardened the GitHub Actions workflow `splunk-ci.yml` by pinning the TruffleHog scanner to stable tag `v3.95.5` and synchronizing the environment build version parameter to the current `2.8.0` release. Verified all changes against the webpack compile process, Cypress component suite, and Splunk AppInspect CLI with zero errors.
 
