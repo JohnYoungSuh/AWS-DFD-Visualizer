@@ -130,6 +130,10 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🟡 High (Degrades Usability & Core Splunk Features)
 
+- [x] **Uncaught TypeError: toLowerCase() Crash on Missing Fields** ✅ *Fixed June 16, 2026*
+    - *Context*: Omitting optional attributes like `vpcId` or `subnetId` from the SPL table command causes a string manipulation crash (`toLowerCase()` or `replace()` on null/undefined properties) in the ZTA layout engine.
+    - *Action*: Apply defensive type-casting (`String(...)`), optional chaining (`row?.`), and array validation on security groups to ensure data resilience.
+
 - [x] **Data Normalization Layer ("Messy Data" Resilience)**
     - *Context*: Users ingestion queries can supply standard flow log and connection aliases instead of strict `from` and `to` column names, breaking renders on unmapped fields.
     - *Action*: Update `parseSplunkData` to automatically normalize incoming column aliases: `src`, `src_ip`, `source`, `calling_service` -> `from`; `dest`, `dest_ip`, `destination`, `target_service` -> `to`. (Fixed June 13, 2026)
