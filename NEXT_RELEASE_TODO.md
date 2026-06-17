@@ -5,6 +5,9 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: June 16, 2026
+- [x] **Bug Fix: Uncaught TypeError: toLowerCase() Crash on Missing Fields** — Resolved string manipulation crash where omitting optional attributes like `vpcId` or `subnetId` from the SPL table command led to `replace()` or `toLowerCase()` calls on null/undefined properties inside the ZTA Layout Engine. Applied robust type-casting (`String(...)`), optional chaining (`row?.`), and array schema validation on `securityGroups` to ensure data resilience. Added a Cypress component test verifying crash-free operation with missing optional attributes.
+
 ### ✅ Session: June 13, 2026 (v2.8.0 Release)
 - [x] **Multi-CSP Extension & Adaptations** — Decoupled stencils into provider configs under `stencils/` registry. Implemented dynamic provider auto-detection via global dataset voting and manual visual options override (`cspStencilSet`). Generalised Zero-Trust coordinate layout and container rendering to be fully provider-agnostic.
 - [x] **Optimizations & Safety Safeguards** — Implemented custom rectangular collision force (`rectCollide`) preventing card overlaps. Added a "Zero-Latency" layout bypass ticking force simulation 300 times synchronously for graphs <100 nodes. Implemented batched calculation (30 ticks/frame) via `requestAnimationFrame` with a glassmorphic loader overlay for graphs >=150 nodes.
