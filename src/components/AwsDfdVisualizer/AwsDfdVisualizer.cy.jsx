@@ -851,6 +851,39 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.contains('License Capacity Exceeded').should('not.exist');
         cy.get('g.node-card').should('have.length', 60);
     });
+
+    it('does not crash with toLowerCase() when optional fields (vpcId, subnetId, securityGroups) are omitted from data', () => {
+        const omittedMockData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}
+            ],
+            rows: [
+                ["user-dev", "audit-role", "AWS::IAM::User", "Developer User", "Assumes Role", "Default"],
+                ["audit-role", null, "AWS::IAM::Role", "Audit Administrator Role", null, "Default"],
+                ["edge-waf", "cf-cdn", "AWS::WAFV2::WebACL", "Edge WAF WebACL", "Protects CDN", "Default"],
+                ["cf-cdn", "bastion-host", "AWS::CloudFront::Distribution", "CloudFront CDN", "Routes Traffic", "Default"],
+                ["bastion-host", "web-server", "AWS::EC2::Instance", "Bastion Host", "HTTPS/443", "Default"],
+                ["web-server", "db-server", "AWS::EC2::Instance", "Web Server", "SSH/22", "Default"],
+                ["db-server", null, "AWS::RDS::DBInstance", "DB Server", null, "Default"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={omittedMockData} 
+                    config={{ 
+                        layoutMode: 'zero-trust'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+        cy.wait(500);
+        cy.get('g.node-card').should('have.length', 7);
+    });
 });
 
 

@@ -157,47 +157,47 @@ const parseSplunkData = (data) => {
         let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown;
         
         if (isObjectMode) {
-            rawFrom  = row.from || row.source || row.src || row.src_ip || row.calling_service;
-            rawTo    = row.to || row.destination || row.dest || row.dest_ip || row.target_service;
-            rawType  = row.type || 'AWS::Resource';
-            rawLabel = row.node_label || row.label;
-            rawEdge  = row.edge_label || row.link_text;
-            rawGroup = row.group || 'Default';
-            rawIcon  = row.icon || row.stencil;
-            rawStatus = row.configurationItemStatus || row.status;
-            suppConfig = row.supplementaryConfiguration;
-            captureTime = row.configurationItemCaptureTime || row.captureTime || null;
-            rawVpcId = row.vpcId || row.vpc_id;
-            rawSubnetId = row.subnetId || row.subnet_id;
-            securityGroups = row.securityGroups || row.security_groups || null;
-            rawNodeDrilldown = row.node_drilldown || null;
-            rawLinkDrilldown = row.link_drilldown || null;
+            rawFrom  = row?.from || row?.source || row?.src || row?.src_ip || row?.calling_service;
+            rawTo    = row?.to || row?.destination || row?.dest || row?.dest_ip || row?.target_service;
+            rawType  = row?.type || 'AWS::Resource';
+            rawLabel = row?.node_label || row?.label;
+            rawEdge  = row?.edge_label || row?.link_text;
+            rawGroup = row?.group || 'Default';
+            rawIcon  = row?.icon || row?.stencil;
+            rawStatus = row?.configurationItemStatus || row?.status;
+            suppConfig = row?.supplementaryConfiguration;
+            captureTime = row?.configurationItemCaptureTime || row?.captureTime || null;
+            rawVpcId = row?.vpcId || row?.vpc_id;
+            rawSubnetId = row?.subnetId || row?.subnet_id;
+            securityGroups = row?.securityGroups || row?.security_groups || null;
+            rawNodeDrilldown = row?.node_drilldown || null;
+            rawLinkDrilldown = row?.link_drilldown || null;
         } else {
-            rawFrom  = idxFrom > -1 ? row[idxFrom] : row[0];
-            rawTo    = idxTo > -1 ? row[idxTo] : row[1];
-            rawType  = fields.indexOf('type') > -1 ? row[fields.indexOf('type')] : (row[2] || 'AWS::Resource');
-            rawLabel = fields.indexOf('node_label') > -1 ? row[fields.indexOf('node_label')] : null;
-            rawEdge  = fields.indexOf('edge_label') > -1 ? row[fields.indexOf('edge_label')] : '';
-            rawGroup = fields.indexOf('group') > -1 ? row[fields.indexOf('group')] : 'Default';
+            rawFrom  = (row && idxFrom > -1) ? row[idxFrom] : (row ? row[0] : null);
+            rawTo    = (row && idxTo > -1) ? row[idxTo] : (row ? row[1] : null);
+            rawType  = (row && fields.indexOf('type') > -1) ? row[fields.indexOf('type')] : (row ? (row[2] || 'AWS::Resource') : 'AWS::Resource');
+            rawLabel = (row && fields.indexOf('node_label') > -1) ? row[fields.indexOf('node_label')] : null;
+            rawEdge  = (row && fields.indexOf('edge_label') > -1) ? row[fields.indexOf('edge_label')] : '';
+            rawGroup = (row && fields.indexOf('group') > -1) ? row[fields.indexOf('group')] : 'Default';
             let iIcon = Math.max(fields.indexOf('icon'), fields.indexOf('stencil'));
-            rawIcon  = iIcon > -1 ? row[iIcon] : '';
+            rawIcon  = (row && iIcon > -1) ? row[iIcon] : '';
             let iStatus = Math.max(fields.indexOf('configurationitemstatus'), fields.indexOf('status'));
-            rawStatus = iStatus > -1 ? row[iStatus] : '';
+            rawStatus = (row && iStatus > -1) ? row[iStatus] : '';
             let iSupp = fields.indexOf('supplementaryconfiguration');
-            suppConfig = iSupp > -1 ? row[iSupp] : null;
+            suppConfig = (row && iSupp > -1) ? row[iSupp] : null;
             let iCapTime = Math.max(fields.indexOf('configurationitemcapturetime'), fields.indexOf('capturetime'));
-            captureTime = iCapTime > -1 ? row[iCapTime] : null;
+            captureTime = (row && iCapTime > -1) ? row[iCapTime] : null;
             
             let iVpc = Math.max(fields.indexOf('vpcid'), fields.indexOf('vpc_id'));
-            rawVpcId = iVpc > -1 ? row[iVpc] : null;
+            rawVpcId = (row && iVpc > -1) ? row[iVpc] : null;
             let iSubnet = Math.max(fields.indexOf('subnetid'), fields.indexOf('subnet_id'));
-            rawSubnetId = iSubnet > -1 ? row[iSubnet] : null;
+            rawSubnetId = (row && iSubnet > -1) ? row[iSubnet] : null;
             let iSg = Math.max(fields.indexOf('securitygroups'), fields.indexOf('security_groups'));
-            securityGroups = iSg > -1 ? row[iSg] : null;
+            securityGroups = (row && iSg > -1) ? row[iSg] : null;
             let iNodeDrilldown = fields.indexOf('node_drilldown');
-            rawNodeDrilldown = iNodeDrilldown > -1 ? row[iNodeDrilldown] : null;
+            rawNodeDrilldown = (row && iNodeDrilldown > -1) ? row[iNodeDrilldown] : null;
             let iLinkDrilldown = fields.indexOf('link_drilldown');
-            rawLinkDrilldown = iLinkDrilldown > -1 ? row[iLinkDrilldown] : null;
+            rawLinkDrilldown = (row && iLinkDrilldown > -1) ? row[iLinkDrilldown] : null;
         }
 
         const from  = ensureString(rawFrom);
@@ -242,6 +242,11 @@ const parseSplunkData = (data) => {
                     }
                 }
             }
+        }
+        if (Array.isArray(parsedSGs)) {
+            parsedSGs = parsedSGs.filter(sg => sg !== null && typeof sg === 'object');
+        } else {
+            parsedSGs = [];
         }
 
         if (!from || from === 'null' || from.trim() === '') return;
@@ -854,14 +859,14 @@ const resolveHierarchy = (nodes, adapter) => {
     
     computes.forEach(node => {
         if (node.subnetId) {
-            const safeSubnetId = node.subnetId.replace(/[/:]/g, '-').toLowerCase();
+            const safeSubnetId = String(node.subnetId).replace(/[/:]/g, '-').toLowerCase();
             if (!nodeMap.has(safeSubnetId)) {
                 const newSub = {
                     id: safeSubnetId,
                     label: `${adapter.subnetworkContainerName} (${node.subnetId})`,
                     type: adapter.subnetworkContainerType || `${adapter.typePrefix}EC2::Subnet`,
                     group: node.group || 'Default',
-                    vpcId: node.vpcId || null
+                    vpcId: node.vpcId || ""
                 };
                 nodeMap.set(safeSubnetId, newSub);
                 subnets.push(newSub);
@@ -872,7 +877,7 @@ const resolveHierarchy = (nodes, adapter) => {
     
     subnets.forEach(sub => {
         if (sub.vpcId) {
-            const safeVpcId = sub.vpcId.replace(/[/:]/g, '-').toLowerCase();
+            const safeVpcId = String(sub.vpcId).replace(/[/:]/g, '-').toLowerCase();
             if (!nodeMap.has(safeVpcId)) {
                 const newVpc = {
                     id: safeVpcId,
@@ -919,7 +924,7 @@ const resolveHierarchy = (nodes, adapter) => {
 
     subnets.forEach(sub => {
         const parentId = sub.vpcId 
-            ? sub.vpcId.replace(/[/:]/g, '-').toLowerCase() 
+            ? String(sub.vpcId).replace(/[/:]/g, '-').toLowerCase() 
             : (vpcs[0] ? vpcs[0].id : "GLOBAL_ROOT");
         sub.parentId = nodeMap.has(parentId) ? parentId : "GLOBAL_ROOT";
         stratifiedNodes.push(sub);
@@ -927,7 +932,7 @@ const resolveHierarchy = (nodes, adapter) => {
 
     computes.forEach(node => {
         const parentId = node.subnetId 
-            ? node.subnetId.replace(/[/:]/g, '-').toLowerCase() 
+            ? String(node.subnetId).replace(/[/:]/g, '-').toLowerCase() 
             : (subnets[0] ? subnets[0].id : (vpcs[0] ? vpcs[0].id : "GLOBAL_ROOT"));
         node.parentId = nodeMap.has(parentId) ? parentId : "GLOBAL_ROOT";
         stratifiedNodes.push(node);
