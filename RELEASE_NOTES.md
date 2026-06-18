@@ -1,3 +1,118 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.0
+
+**Release Date:** June 18, 2026
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture
+
+---
+
+## Overview
+
+Version 2.8.0 is a **major feature release** delivering five pillars of advancement: Multi-Cloud Service Provider (CSP) rendering for hybrid AWS/Azure/GCP environments, a fully hardened Zero-Trust Static Blueprint Layout Engine for IL5 RMF audit compliance, commercial license enforcement, advanced security hardening (STIG/NIST), and a complete suite of rendering quality, performance, and UX polish fixes. This release encompasses work from 7 engineering sessions (June 2 – June 18, 2026).
+
+---
+
+## 🌐 Feature: Multi-Cloud Service Provider (CSP) Extension
+
+AWS-DFD-Visualizer now renders hybrid and multi-cloud architectures — AWS, Microsoft Azure, and Google Cloud Platform — on a single canvas.
+
+- **Dynamic CSP Auto-Detection:** A dataset-wide voting algorithm scans all incoming resource IDs and types to automatically select the dominant cloud provider (`aws`, `azure`, `gcp`). Manual override available via the `cspStencilSet` formatter option.
+- **Per-Node Stencil Resolution:** Individual node cards resolve their own provider stencils independently, enabling true hybrid rendering where AWS EC2 instances, Azure Virtual Machines, and GCP Compute Engines appear side-by-side with accurate vendor icons.
+- **Recursive Multi-Tier Container Layout:** The layout engine now processes arbitrary container nesting depth (e.g., Subscription → Resource Group → VNet → Subnet) using recursive post-order/pre-order traversal, replacing the previous 2-level hardcoded VPC/Subnet structure.
+- **Azure & GCP SVG Asset Library:** Azure and GCP architecture SVG stencils are deployed to `appserver/static/icons/azure/` and `appserver/static/icons/gcp/` respectively, maintaining strict `755`/`644` AppInspect-compliant permissions.
+- **Dynamic URL Subpath Resolution:** Icon base paths now resolve dynamically via `window.Splunk.util.make_full_url` to support non-default Splunk web mount locations (e.g., `/splunk/` prefix environments).
+
+---
+
+## 🏛️ Feature: Zero-Trust Static Blueprint Engine (IL5 RMF Audit Mode)
+
+A fully deterministic, physics-free layout engine for producing reproducible, audit-ready network topology diagrams.
+
+- **Three-Plane Swimlane Architecture:** Resources are automatically sorted into Identity Plane (top), Policy & Control Plane (middle), and Infrastructure / Data Plane (bottom) using resource type classification. Empty planes display annotated placeholder banners rather than blank space.
+- **Nested VPC/Subnet Enclosures:** VPC and Subnet containers are rendered as labeled nested bounding boxes with deterministic coordinate assignment — no physics jitter, no variation between renders.
+- **Orthogonal Manhattan Routing:** All inter-node connections use clamped-radius rounded orthogonal paths (`Q` Bezier arcs), giving diagrams a clean, formal blueprint appearance suitable for DoD briefings.
+- **SSH/22 Compliance Interception:** Links targeting nodes with non-compliant security groups or `status=violation` are automatically routed in Vibrant Red (`#FF0000`) with dashed line styling (`stroke-dasharray: 4,4`), providing an instant visual audit signal for open SSH ingress violations.
+- **Concentric Security Group Envelopes:** Security group compliance state is rendered as concentric ring overlays around compute node cards (Green = compliant, Red = non-compliant).
+- **Static Blueprint Group Layout:** The `clusterBy=group` + `layoutMode=Hierarchy` combination now routes through a fully static deterministic layout engine, bypassing the Splunk Dashboard Engine rendering bug that previously ignored `clusterBy`.
+- **Dynamic viewBox Height:** Canvas height auto-expands to fit actual VPC container heights, eliminating the vertical clipping and extreme bottom whitespace seen in prior releases.
+- **Reversed Arrow Correction:** Fixed a D3 link aggregation bug where bidirectional edge deduplication reversed arrowhead direction. Primary flow direction is now preserved.
+- **Two-Pass Link Rendering:** Link paths and link label capsules are rendered in separate SVG passes, guaranteeing that white label backgrounds always occlude the lines beneath them — fixing the "label behind line" visual artifact.
+
+---
+
+## 🔒 Feature: STIG Hardening & Security Compliance
+
+- **Text-Only DOM Rendering Policy:** Formally documented and enforced a strict `dangerouslySetInnerHTML` and D3 `.html()` ban. All dynamic strings are set via React standard string interpolation to prevent DOM-Based XSS (CWE-79).
+- **SPL Injection Sanitization:** `sanitizeSplunkToken` now applies a strict regex allow-list query check (rather than blocklist), hardening drilldown token interpolation against SPL injection payloads.
+- **DoS Circuit Breaker:** A client-side guard blocks rendering and displays a full-screen warning if raw row count exceeds 5,000 records, preventing browser thread exhaustion from adversarial or misconfigured queries.
+- **SVG & Draw.io Export Scanning:** Exported SVG and Draw.io XML files are scanned for embedded `<script>` tags before download. Any file containing dynamic script injection is blocked and triggers a Splunk audit log event via `Splunk.util.trackEvent()`.
+- **Dependency Remediations:** Upgraded `shell-quote` to `1.8.4` (CVE patch), `form-data` to `4.0.6` (GHSA-hmw2-7cc7-3qxx), and added `uuid` override to `11.1.1`. All packages pass `npm audit` clean.
+- **CI/CD Hardening:** Pinned TruffleHog to `v3.95.5` stable tag; added explicit `contents: read` permissions to GitHub Actions workflow to resolve CodeQL workflow permission alerts.
+
+---
+
+## 🔑 Feature: Commercial License Enforcement
+
+- **Free / Developer Tier:** Unlicensed instances cap rendering at 50 nodes. Datasets exceeding this threshold display a glassmorphic "License Capacity Exceeded" overlay with tier upgrade call-to-action.
+- **Enterprise / Sovereign License Parsing:** Base64-encoded license keys are validated entirely client-side (no network calls) — supporting air-gapped DoD IL5 environments. Validation checks signature, tier, client, expiration date, and node capacity.
+- **License HUD Indicator:** Licensed instances display tier status (`Enterprise` / `Sovereign`) in the debug HUD.
+- **Formatter Panel Integration:** A "Licensing" section is exposed in the Splunk Format panel (`formatter.html`) allowing administrators to enter license keys without editing XML.
+
+---
+
+## ⚡ Feature: Performance & Physics Engine Upgrades
+
+- **Zero-Latency Layout Bypass:** Graphs with fewer than 100 nodes now pre-tick 300 physics simulation cycles synchronously before first render — eliminating the visible "settling" animation in operational briefings.
+- **Batched requestAnimationFrame Layout:** Graphs with 150+ nodes process physics in 30-tick batches via `requestAnimationFrame`, with a glassmorphic loading overlay, preventing UI thread blocking on large topologies.
+- **Rectangular Collision Force (`rectCollide`):** Replaced the circular `forceCollide` radius with a custom D3 force that accounts for actual card rectangular bounds (`280×100`px default), eliminating horizontal card overlaps and excessive vertical gaps.
+- **D3 Submodule Tree-Shaking:** Replaced monolithic `import * as d3` with explicit submodule imports (`d3-array`, `d3-selection`, `d3-zoom`, `d3-drag`, `d3-polygon`, `d3-shape`, `d3-hierarchy`, `d3-force`) linked via a namespace bridge, reducing unused module weight.
+
+---
+
+## 🎨 Feature: Rendering Quality & UX Polish
+
+- **Dynamic Edge Label Pill Width:** Edge label background capsules now auto-size to fit their text content using `Math.max(80, chars × fontSize × 0.58 + 24)px`. Fixes truncated long labels (e.g., "Core PDP/PEP Data Access Path", "Multi-Source PIP Query Engine") and violation labels with emoji prefixes.
+- **Violation Label Sizing Fixed:** `⚠️ SSH/22` labels now compute pill width from the *full display string* (including the warning prefix), matching the HTTPS/443 capsule sizing behavior.
+- **Cross-Link Routing for Same-Level Nodes:** In Blueprint Mode, links between horizontally adjacent same-row nodes now route side-to-side rather than wrapping through the midpoint elbow — producing cleaner, less tangled diagrams.
+- **Arrowhead Clearance Padding:** Added 12px target offset to orthogonal path endpoints so arrowheads clear the type badge below node cards without overlapping.
+- **Increased Grid Spacing:** Column gap increased 60px and row gap increased 30px across all layout presets to give link labels breathing room and eliminate label collisions (e.g., "Assume Role").
+- **SSH/22 Label Float:** On same-row horizontal Zero-Trust links, the label midpoint is offset −22px above the line so the ⚠️ capsule floats clearly above the arrow.
+- **Hover State Enhancements:** Node cards and edge labels scale to 115% on hover with text-shadow halos for improved legibility over dense diagrams.
+- **Compliance Violation Indicators:** Container labels (VPCs, Subnets) append a live violation count (e.g., `Default VPC (1 Violation)`) in red when non-compliant security groups exist within them.
+- **Resource Lifecycle Styling:** Deleted resources (`ResourceDeleted`) render with dashed borders and 60% opacity; stale config nodes drift with a CSS keyframe animation.
+- **App Icon Corrected:** `appIcon.png` and `appIcon_2x.png` updated to Splunk-required `36×36` and `72×72` pixel dimensions respectively, with new navy/orange DFD graph branding. Deployed to both `appserver/static/` and `static/` (Classic XML path).
+
+---
+
+## 🧪 Testing & Quality
+
+- **27 Cypress Component Tests Passing:** Test suite covers node count, link count, `viewBox` integrity, edge stroke attributes, ARN normalization, empty state handling, license gate trigger, and license key validation.
+- **Splunk AppInspect:** `0 errors, 0 failures, 0 warnings` — maintained across all sessions.
+- **Webpack Build:** `webpack compiled with 3 warnings` (known bundle-size advisory only, no errors).
+- **CI/CD Pipeline:** 2-stage GitHub Actions pipeline (TruffleHog → Bandit → AppInspect → Node 22 Build → CycloneDX SBOM) passes green on `master`.
+
+---
+
+## 📦 Delivery Artifacts
+
+| Artifact | Description |
+|---|---|
+| `AWS-DFD-Visualizer-2.8.0.spl` | Splunk app package — deploy via Splunk Web or `make deploy` |
+| `bom.json` | CycloneDX SBOM (generated by CI via Syft) |
+| `LESSONS_LEARNED.md` | New institutional memory doc for recurring bug patterns |
+| `IMPLEMENTATION_PLAN.md` | Zero-Trust layout engine design specification |
+
+---
+
+## 🔄 Upgrade Notes
+
+- **No breaking changes** to existing SPL query schemas — all existing `from`, `to`, `node_label`, `edge_label`, `vpcId`, `subnetId`, `securityGroups`, `stencil`, `status` columns are backward compatible.
+- **New optional columns:** `cspStencilSet`, `node_drilldown`, `link_drilldown` — safely ignored if absent.
+- **License key required** only for datasets > 50 nodes. Contact your account manager for Enterprise or Sovereign tier keys.
+- **Formatter panel** (`format` button in Splunk) now exposes: CSP selector, License key input, Link text size, Node text size, Design layout density, Hierarchy direction.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.7.0
 
 **Release Date:** June 1, 2026
@@ -5,6 +120,7 @@
 
 ## Overview
 Version 2.7.0 introduces four major advanced visualizer capabilities to improve diagram portability, dense dashboard integration, visual stabilization, and client-side testing:
+
 
 ## Major Features & Enhancements
 
