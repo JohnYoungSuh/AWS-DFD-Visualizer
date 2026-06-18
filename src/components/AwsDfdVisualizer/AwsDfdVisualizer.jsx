@@ -552,6 +552,9 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
 
         if (isVertical) {
             d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+            // For vertical links, midpoint stays centered on the line
+            midX = (xStart + xEnd) / 2;
+            midY = (yStart + yEnd) / 2;
         } else {
             const Mx = (xStart + xEnd) / 2;
             const sx = Math.sign(xEnd - xStart);
@@ -559,12 +562,23 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
             const R = 8;
             const R_hat = Math.min(R, Math.abs(xEnd - xStart) / 2, Math.abs(yEnd - yStart) / 2);
 
-            d = `M ${xStart} ${yStart} ` +
-                `L ${Mx - sx * R_hat} ${yStart} ` +
-                `Q ${Mx} ${yStart} ${Mx} ${yStart + sy * R_hat} ` +
-                `L ${Mx} ${yEnd - sy * R_hat} ` +
-                `Q ${Mx} ${yEnd} ${Mx + sx * R_hat} ${yEnd} ` +
-                `L ${xEnd} ${yEnd}`;
+            const isSameRow = Math.abs(yEnd - yStart) < 5;
+            if (isSameRow) {
+                // Straight horizontal link — draw flat and float label 22px above the line
+                d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+                midX = Mx;
+                midY = yStart - 22;
+            } else {
+                d = `M ${xStart} ${yStart} ` +
+                    `L ${Mx - sx * R_hat} ${yStart} ` +
+                    `Q ${Mx} ${yStart} ${Mx} ${yStart + sy * R_hat} ` +
+                    `L ${Mx} ${yEnd - sy * R_hat} ` +
+                    `Q ${Mx} ${yEnd} ${Mx + sx * R_hat} ${yEnd} ` +
+                    `L ${xEnd} ${yEnd}`;
+                // Place label on the vertical segment
+                midX = Mx;
+                midY = (yStart + yEnd) / 2;
+            }
         }
     } else {
         const dx = target.x - source.x;
@@ -1433,11 +1447,14 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const isDatasetTooLarge = rawRowCount > 5000;
 
     const layoutParams = useMemo(() => {
+        // gapX must be >= link-label capsule width to prevent overlap with adjacent node cards.
+        // Default label capsule is 150px wide; compact is 110px; expanded is 190px.
+        // Add ~10px breathing room on each side: default→160, compact→130, expanded→210.
         let params = {
             nodeWidth: 280,
             nodeHeight: 100,
             padding: 40,
-            gapX: 100,
+            gapX: 160,
             gapY: 80,
             fontScale: 1.0,
             canvasWidth: 1200,
@@ -1449,7 +1466,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 nodeWidth: 220,
                 nodeHeight: 80,
                 padding: 25,
-                gapX: 80,
+                gapX: 130,
                 gapY: 70,
                 fontScale: 0.8,
                 canvasWidth: 1200,
@@ -1460,7 +1477,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 nodeWidth: 340,
                 nodeHeight: 120,
                 padding: 50,
-                gapX: 150,
+                gapX: 210,
                 gapY: 130,
                 fontScale: 1.2,
                 canvasWidth: 1200,
