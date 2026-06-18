@@ -2577,6 +2577,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 .svg-canvas[data-lod="active"] .concentric-ring { display: none; }
                 .svg-canvas[data-lod="active"] .link-label-group { display: none; }
                 .svg-canvas[data-lod="active"] .node-card rect { filter: none !important; }
+                .link-label-group rect {
+                    fill: #ffffff !important;
+                }
                 @keyframes pulsing-red-border {
                     0% { stroke: #FF0000; stroke-width: 3px; filter: drop-shadow(0 0 2px rgba(255,0,0,0.5)); }
                     50% { stroke: #FF3333; stroke-width: 5px; filter: drop-shadow(0 0 10px rgba(255,0,0,0.8)); }
