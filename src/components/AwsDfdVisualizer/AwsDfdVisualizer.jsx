@@ -1,3 +1,13 @@
+/**
+ * AWS-DFD-Visualizer Custom Splunk Visualization
+ *
+ * SECURITY AUDIT COMPLIANCE POLICY (STIG / NIST 800-53 Hardened):
+ * - Enforces "Text-Only" DOM insertion rendering.
+ * - EXPLICITLY BANNED: React's "dangerouslySetInnerHTML" and D3's ".html()".
+ * - All node labels, tooltips, and dynamic strings must be set using React standard
+ *   string interpolation or text node properties to guarantee automatic escaping
+ *   and prevent DOM-Based Cross-Site Scripting (XSS).
+ */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ascending } from 'd3-array';
 import { select, selectAll } from 'd3-selection';
@@ -52,8 +62,15 @@ const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     const explicitIcon = (node.icon || node.stencil || '').toUpperCase();
     
     // 1. Check direct adapter stencils
+    const adapterId = String(adapter.id || '').toLowerCase().trim();
+    const getPrefix = (id) => {
+        const idLower = String(id || '').toLowerCase().trim();
+        if (idLower === 'generic' || idLower === 'aws') return '';
+        return id + '/';
+    };
+    const prefix = getPrefix(adapter.id);
     if (explicitIcon && adapter.stencils[explicitIcon]) {
-        return ICON_BASE + (adapter.id === 'generic' ? '' : adapter.id + '/') + adapter.stencils[explicitIcon];
+        return ICON_BASE + prefix + adapter.stencils[explicitIcon];
     }
     
     // 2. Check generic stencils
@@ -97,7 +114,7 @@ const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     }
     
     if (iconFile) {
-        return ICON_BASE + (adapter.id === 'generic' ? '' : adapter.id + '/') + iconFile;
+        return ICON_BASE + prefix + iconFile;
     }
     return fallbackUrl;
 };
@@ -434,13 +451,43 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
             const yStart = source.y;
             const xEnd = target.x - cardHalfWidth;
             const yEnd = target.y;
-            d = d3.line().curve(d3.curveStepAfter)([[xStart, yStart], [xEnd, yEnd]]);
+            
+            const xMid = (xStart + xEnd) / 2;
+            const sy = Math.sign(yEnd - yStart);
+            const R = 8;
+            const R_hat = Math.min(R, Math.abs(xMid - xStart), Math.abs(yEnd - yStart) / 2);
+
+            if (Math.abs(yEnd - yStart) < 5) {
+                d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+            } else {
+                d = `M ${xStart} ${yStart} ` +
+                    `L ${xMid - R_hat} ${yStart} ` +
+                    `Q ${xMid} ${yStart} ${xMid} ${yStart + sy * R_hat} ` +
+                    `L ${xMid} ${yEnd - sy * R_hat} ` +
+                    `Q ${xMid} ${yEnd} ${xMid + Math.sign(xEnd - xMid) * R_hat} ${yEnd} ` +
+                    `L ${xEnd} ${yEnd}`;
+            }
         } else {
             const xStart = source.x;
             const yStart = source.y + cardHalfHeight;
             const xEnd = target.x;
             const yEnd = target.y - cardHalfHeight;
-            d = d3.line().curve(d3.curveStepBefore)([[xStart, yStart], [xEnd, yEnd]]);
+            
+            const yMid = (yStart + yEnd) / 2;
+            const sx = Math.sign(xEnd - xStart);
+            const R = 8;
+            const R_hat = Math.min(R, Math.abs(xEnd - xStart) / 2, Math.abs(yMid - yStart));
+
+            if (Math.abs(xEnd - xStart) < 5) {
+                d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+            } else {
+                d = `M ${xStart} ${yStart} ` +
+                    `L ${xStart} ${yMid - R_hat} ` +
+                    `Q ${xStart} ${yMid} ${xStart + sx * R_hat} ${yMid} ` +
+                    `L ${xEnd - sx * R_hat} ${yMid} ` +
+                    `Q ${xEnd} ${yMid} ${xEnd} ${yMid + R_hat} ` +
+                    `L ${xEnd} ${yEnd}`;
+            }
         }
     } else if (isZeroTrust) {
         const xA = source.x;
@@ -521,8 +568,45 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
             : `M${source.x},${source.y} L${tX},${tY}`;
     }
     
-    const midX = (source.x + target.x) / 2;
-    const midY = (source.y + target.y) / 2;
+    let midX = (source.x + target.x) / 2;
+    let midY = (source.y + target.y) / 2;
+
+    if (isStaticBlueprint) {
+        const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
+        if (hierarchyDir === 'Left to Right') {
+            const xStart = source.x + cardHalfWidth;
+            const yStart = source.y;
+            const xEnd = target.x - cardHalfWidth;
+            const yEnd = target.y;
+            const xMid = (xStart + xEnd) / 2;
+            
+            const dx = Math.abs(xEnd - xStart);
+            const dy = Math.abs(yEnd - yStart);
+            if (dy > dx) {
+                midX = xMid;
+                midY = (yStart + yEnd) / 2;
+            } else {
+                midX = (xStart + xEnd) / 2;
+                midY = yEnd;
+            }
+        } else {
+            const xStart = source.x;
+            const yStart = source.y + cardHalfHeight;
+            const xEnd = target.x;
+            const yEnd = target.y - cardHalfHeight;
+            const yMid = (yStart + yEnd) / 2;
+            
+            const dx = Math.abs(xEnd - xStart);
+            const dy = Math.abs(yEnd - yStart);
+            if (dy > dx) {
+                midX = xStart;
+                midY = (yStart + yMid) / 2;
+            } else {
+                midX = (xStart + xEnd) / 2;
+                midY = yMid;
+            }
+        }
+    }
 
     const sizeConf = config?.linkTextSize || 'medium';
     let fontSize = 14;
@@ -1008,7 +1092,7 @@ const computeDimensions = (node, adapter, layoutParams = { nodeWidth: 280, nodeH
     }
 };
 
-const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
+const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }, centerX = 600, centerY = 900) => {
     const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     unassociatedNodes.forEach((node, idx) => {
         node.x = (nodeWidth / 2) + 150 + idx * (nodeWidth + 150);
@@ -1017,7 +1101,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, l
 
     const M = globalEdgeAssets.length;
     globalEdgeAssets.forEach((node, idx) => {
-        node.x = 600 - ((M - 1) * (nodeWidth + 200)) / 2 + idx * (nodeWidth + 200);
+        node.x = centerX - ((M - 1) * (nodeWidth + 200)) / 2 + idx * (nodeWidth + 200);
         node.y = 300;
         
         const hNode = root.descendants().find(d => d.id === node.id);
@@ -1076,17 +1160,17 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, l
     };
 
     if (infraRoots.length === 1) {
-        infraRoots[0].x = 600;
-        infraRoots[0].y = 900;
+        infraRoots[0].x = centerX;
+        infraRoots[0].y = centerY;
         positionChildren(infraRoots[0]);
     } else if (infraRoots.length > 1) {
         const dx = gapX;
         const totalWidth = infraRoots.reduce((sum, c) => sum + c.width, 0) + (infraRoots.length - 1) * dx;
-        let currentX = 600 - totalWidth / 2;
+        let currentX = centerX - totalWidth / 2;
         
         infraRoots.forEach(c => {
             c.x = currentX + c.width / 2;
-            c.y = 900;
+            c.y = centerY;
             positionChildren(c);
             currentX += c.width + dx;
         });
@@ -1241,6 +1325,22 @@ const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter) => {
     xml += `  </diagram>\n`;
     xml += `</mxfile>\n`;
 
+    // STIG Hardening: Ensure exported Draw.io XML doesn't contain embedded <script> tags
+    if (xml.includes('<script')) {
+        console.error("AWS-DFD-Visualizer: Draw.io export blocked due to unauthorized script elements.");
+        return;
+    }
+
+    // Splunk Audit Logging
+    if (window.Splunk && window.Splunk.util && typeof window.Splunk.util.trackEvent === 'function') {
+        window.Splunk.util.trackEvent({
+            type: 'aws_dfd_visualizer_export',
+            action: 'download_drawio',
+            nodeCount: nodes.length,
+            timestamp: Date.now()
+        });
+    }
+
     const blob = new Blob([xml], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1302,7 +1402,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     const sanitizeSplunkToken = (rawToken) => {
         if (typeof rawToken !== 'string') return '';
-        return rawToken.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        // STIG Hardening: strict regex allow-listing of alphanumeric, hyphens, underscores, colons, slashes, periods, and spaces.
+        // All other characters (e.g. quotes, semicolons, pipe characters) are neutralized to underscores to prevent SPL injection.
+        return rawToken.replace(/[^a-zA-Z0-9\-_:/. ]/g, '_');
     };
 
     const drilldownClick = config?.drilldownClick || 'singleOrDouble';
@@ -1315,13 +1417,17 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const hideEdgesOnDrag = String(config?.hideEdgesOnDrag || 'false') === 'true';
 
     const designLayout = config?.designLayoutDashboard || 'default';
+    const activeData = localData || data;
+    const rawRowCount = (activeData?.results?.length) || (activeData?.rows?.length) || (Array.isArray(activeData) ? activeData.length : 0);
+    const isDatasetTooLarge = rawRowCount > 5000;
+
     const layoutParams = useMemo(() => {
         let params = {
             nodeWidth: 280,
             nodeHeight: 100,
             padding: 40,
-            gapX: 120,
-            gapY: 100,
+            gapX: 100,
+            gapY: 80,
             fontScale: 1.0,
             canvasWidth: 1200,
             canvasHeight: 1400
@@ -1501,6 +1607,23 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         viewBoxHeight,
         globalAdapter
     } = useMemo(() => {
+        if (isDatasetTooLarge) {
+            return {
+                nodes: [],
+                links: [],
+                groupNames: [],
+                vpcContainers: [],
+                subnetContainers: [],
+                unassociatedNodes: [],
+                globalEdgeAssets: [],
+                isZeroTrust: false,
+                groupBounds: new Map(),
+                originalNodesCount: 0,
+                viewBoxWidth: 1200,
+                viewBoxHeight: 1400,
+                globalAdapter: CSP_REGISTRY.aws
+            };
+        }
         const activeData = localData || data;
         const parsed = parseSplunkData(activeData);
         const globalAdapter = detectProvider(parsed.nodes, config?.cspStencilSet || 'auto');
@@ -1589,28 +1712,18 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 }
             });
 
-            let rootId = 'root-node';
-            if (!parsed.nodes.some(n => n.id === rootId)) {
-                const candidates = parsed.nodes.filter(n => !parentsMap.has(n.id));
-                if (candidates.length > 0) {
-                    rootId = candidates[0].id;
-                } else if (parsed.nodes.length > 0) {
-                    rootId = parsed.nodes[0].id;
-                }
-            }
-
+            const rootId = 'virtual-tree-root';
             const stratNodes = [];
-            const rootNode = parsed.nodes.find(n => n.id === rootId) || { id: rootId, label: 'Root', type: 'AWS::Resource', group: 'System' };
             stratNodes.push({
-                id: rootNode.id,
+                id: rootId,
                 parentId: null,
-                label: rootNode.label,
-                type: rootNode.type,
-                group: rootNode.group,
-                data: rootNode
+                label: 'Virtual Root',
+                type: 'VIRTUAL_ROOT',
+                group: 'System',
+                isVirtualRoot: true
             });
 
-            const groups = Array.from(new Set(parsed.nodes.filter(n => n.id !== rootId).map(n => n.group)));
+            const groups = Array.from(new Set(parsed.nodes.map(n => n.group)));
             groups.forEach(grp => {
                 const vgId = `virtual-group-${grp.replace(/\s+/g, '-').toLowerCase()}`;
                 stratNodes.push({
@@ -1624,12 +1737,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             });
 
             parsed.nodes.forEach(node => {
-                if (node.id === rootId) return;
-                
                 let parentId = parentsMap.get(node.id);
                 const parentNode = parentId ? parsed.nodes.find(n => n.id === parentId) : null;
                 
-                if (parentNode && parentNode.group === node.group && parentId !== rootId) {
+                if (parentNode && parentNode.group === node.group) {
                     // Keep parent
                 } else {
                     parentId = `virtual-group-${node.group.replace(/\s+/g, '-').toLowerCase()}`;
@@ -1673,8 +1784,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             treeLayout(hierarchy);
 
             const descendants = hierarchy.descendants();
-            let xs = descendants.map(d => d.x);
-            let ys = descendants.map(d => d.y);
+            const actualDescendants = descendants.filter(d => d.id !== rootId && !d.data.isVirtualGroup);
+            let xs = actualDescendants.map(d => d.x);
+            let ys = actualDescendants.map(d => d.y);
 
             let minX = Math.min(...xs);
             let maxX = Math.max(...xs);
@@ -1696,7 +1808,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     descendants.forEach(d => {
                         d.x = d.x * scaleY;
                     });
-                    xs = descendants.map(d => d.x);
+                    xs = actualDescendants.map(d => d.x);
                     minX = Math.min(...xs);
                     maxX = Math.max(...xs);
                 }
@@ -1712,7 +1824,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     descendants.forEach(d => {
                         d.x = d.x * scaleX;
                     });
-                    xs = descendants.map(d => d.x);
+                    xs = actualDescendants.map(d => d.x);
                     minX = Math.min(...xs);
                     maxX = Math.max(...xs);
                 }
@@ -1823,7 +1935,29 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             
             const hierarchy = stratify(stratifiedNodes);
             computeDimensions(hierarchy, globalAdapter, layoutParams);
-            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, globalAdapter, layoutParams);
+
+            const infraRoots = hierarchy.children ? hierarchy.children.filter(c => !c.data.isGlobalEdge) : [];
+            const totalWidth = infraRoots.reduce((sum, c) => sum + c.width, 0) + (infraRoots.length - 1) * layoutParams.gapX;
+            const maxVpcHeight = infraRoots.length > 0 ? Math.max(...infraRoots.map(c => c.height)) : 0;
+            
+            let dynamicW = 1200;
+            if (infraRoots.length > 0) {
+                dynamicW = Math.max(dynamicW, Math.ceil(totalWidth + 100));
+            }
+            if (unassociatedNodes.length > 0) {
+                const totalWidthU = unassociatedNodes.length * (layoutParams.nodeWidth + 150) + 150;
+                dynamicW = Math.max(dynamicW, Math.ceil(totalWidthU));
+            }
+            if (globalEdgeAssets.length > 0) {
+                const totalWidthG = globalEdgeAssets.length * (layoutParams.nodeWidth + 200);
+                dynamicW = Math.max(dynamicW, Math.ceil(totalWidthG));
+            }
+
+            const centerX = dynamicW / 2;
+            const dynamicH = Math.max(1400, Math.ceil(900 + maxVpcHeight / 2 + 100));
+            const centerY = (402 + dynamicH) / 2;
+
+            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, globalAdapter, layoutParams, centerX, centerY);
             
             const resolvedNodes = [];
             const vpcContainers = [];
@@ -1894,8 +2028,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 isZeroTrust: true,
                 groupBounds: [],
                 originalNodesCount,
-                viewBoxWidth: 1200,
-                viewBoxHeight: 1400,
+                viewBoxWidth: dynamicW,
+                viewBoxHeight: dynamicH,
                 globalAdapter
             };
         }
@@ -2283,6 +2417,24 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
             const serializer = new XMLSerializer();
             let svgString = serializer.serializeToString(clone);
+
+            // STIG Hardening: Ensure exported SVG doesn't contain embedded <script> tags
+            const hasScript = clone.getElementsByTagName('script').length > 0 || svgString.includes('<script');
+            if (hasScript) {
+                console.error("AWS-DFD-Visualizer: SVG export blocked due to unauthorized script elements.");
+                return;
+            }
+
+            // Splunk Audit Logging
+            if (window.Splunk && window.Splunk.util && typeof window.Splunk.util.trackEvent === 'function') {
+                window.Splunk.util.trackEvent({
+                    type: 'aws_dfd_visualizer_export',
+                    action: 'download_svg',
+                    nodeCount: nodes.length,
+                    timestamp: Date.now()
+                });
+            }
+
             const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2296,6 +2448,32 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             console.error("AWS-DFD-Visualizer: SVG export failed", err);
         }
     };
+
+    if (isDatasetTooLarge) {
+        return (
+            <div style={{
+                width: '100%',
+                height: '100%',
+                minHeight: '400px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: isDarkTheme ? '#0f172a' : '#f8fafc',
+                fontFamily: 'Inter, sans-serif',
+                padding: '40px',
+                textAlign: 'center',
+                color: isDarkTheme ? '#f1f5f9' : '#0f172a'
+            }}>
+                <div style={{ fontSize: '64px', marginBottom: '20px' }}>⚠️</div>
+                <h2 style={{ fontSize: '28px', color: '#EF4444', margin: '0 0 10px 0' }}>Dataset Too Large</h2>
+                <p style={{ fontSize: '15px', maxWidth: '600px', lineHeight: '1.6', margin: '0 0 20px 0', color: isDarkTheme ? '#cbd5e1' : '#475569' }}>
+                    The current search returned <strong>{rawRowCount} records</strong>, which exceeds the safety limit of 5000. 
+                    Please adjust your Splunk search query to restrict the data volume (e.g. filter by specific VPCs, regions, or subnets) to prevent browser instability.
+                </p>
+            </div>
+        );
+    }
 
     if (!nodes.length) {
         return (
@@ -2635,21 +2813,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     {isZeroTrust && (
                         <g className="zt-plane-decorations">
                             {/* Plane 1: Identity Plane */}
-                            <rect x={2} y={2} width={1196} height={196} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
+                            <rect x={2} y={2} width={viewBoxWidth - 4} height={196} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
                             <text x={20} y={30} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">IDENTITY PLANE</text>
                             {unassociatedNodes.length === 0 && (
-                                <text x={600} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Identity Plane Assets (e.g. IAM, Users, Roles)</text>
+                                <text x={viewBoxWidth / 2} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Identity Plane Assets (e.g. IAM, Users, Roles)</text>
                             )}
 
                             {/* Plane 2: Policy & Control Plane */}
-                            <rect x={2} y={202} width={1196} height={196} fill={isDarkTheme ? "#111827" : "#f1f5f9"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
+                            <rect x={2} y={202} width={viewBoxWidth - 4} height={196} fill={isDarkTheme ? "#111827" : "#f1f5f9"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
                             <text x={20} y={230} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">POLICY &amp; CONTROL PLANE</text>
                             {globalEdgeAssets.length === 0 && (
-                                <text x={600} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Policy &amp; Control Plane Assets (e.g. WAF, CloudFront)</text>
+                                <text x={viewBoxWidth / 2} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Policy &amp; Control Plane Assets (e.g. WAF, CloudFront)</text>
                             )}
 
                             {/* Plane 3: Infrastructure Plane */}
-                            <rect x={2} y={402} width={1196} height={996} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.08 : 0.2} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
+                            <rect x={2} y={402} width={viewBoxWidth - 4} height={viewBoxHeight - 404} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.08 : 0.2} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
                             <text x={20} y={430} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">INFRASTRUCTURE PLANE</text>
                         </g>
                     )}

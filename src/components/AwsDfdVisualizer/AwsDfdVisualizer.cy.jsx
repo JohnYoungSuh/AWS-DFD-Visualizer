@@ -190,7 +190,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.link-group path').first().should('have.attr', 'stroke');
         
         // Ensure viewBox has height 1400
-        cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1400');
+        cy.get('svg').should('have.attr', 'viewBox').and('match', /^0 0 \d+ 1400$/);
         cy.screenshot('zta_deterministic_layout');
     });
 
@@ -516,7 +516,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').first().click({ force: true });
         
         cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
-            clicked_drilldown_search: 'index=aws_config resourceId="evil-node\\" OR 1=1 --" label="Evil Node"'
+            clicked_drilldown_search: 'index=aws_config resourceId="evil-node_ OR 1_1 --" label="Evil Node"'
         }));
     });
 
@@ -883,6 +883,29 @@ describe('AwsDfdVisualizer Component Tests', () => {
         );
         cy.wait(500);
         cy.get('g.node-card').should('have.length', 7);
+    });
+
+    it('refuses to render and displays a warning when dataset size exceeds 5000 records (DoS protection)', () => {
+        const hugeNodes = [];
+        for (let i = 1; i <= 5001; i++) {
+            hugeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
+        }
+        const hugeData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
+            ],
+            rows: hugeNodes
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={hugeData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+
+        cy.contains('Dataset Too Large').should('be.visible');
+        cy.contains('exceeds the safety limit of 5000').should('be.visible');
+        cy.get('g.node-card').should('not.exist');
     });
 });
 

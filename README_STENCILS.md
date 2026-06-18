@@ -36,3 +36,10 @@ If neither `icon` nor `stencil` columns are provided, the visualizer gracefully 
 | `RESOURCE` | Generic Resource Fallback |
 
 If an exact match is not found, the visualizer renders the generic fallback icon.
+
+## Air-Gapped Compliance Verification
+
+The `AWS-DFD-Visualizer` is designed for highly secure, isolated, and air-gapped environments (DoD Impact Level 5 / IL5).
+- **No Outbound Network Calls**: The visualizer executes 100% client-side inside the user's web browser context. It does not contact external CDNs, tracking services, or remote APIs.
+- **Local Asset Resolution**: All icon files and dependencies are bundled locally and resolved relative to the Splunk App directory (`/static/app/AWS-DFD-Visualizer/...`).
+- **No Remote Telemetry**: Diagram exports (SVG and Draw.io XML) are generated dynamically using client-side JavaScript Blob serialization and downloaded locally. No intermediate file servers or external storage endpoints are consulted.

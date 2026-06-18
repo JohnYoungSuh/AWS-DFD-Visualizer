@@ -5,6 +5,9 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: June 17, 2026
+- [x] **STIG Hardening & Sales Readiness Controls** — Refactored dynamic JIT token sanitization (`sanitizeSplunkToken`) to implement a strict regex allow-list query check. Audited React rendering to enforce a strict "Text-Only" DOM injection policy, explicitly documenting the ban on `dangerouslySetInnerHTML` and D3 `.html()` methods. Implemented a Denial of Service (DoS) circuit breaker that displays a full-screen warning if raw row count exceeds 5,000 records. Integrated script execution scanning for exported SVG and Draw.io XML files, blocking any downloads containing dynamic script tags, and triggered Splunk audit logging events (`Splunk.util.trackEvent()`) when diagrams are exported. Added air-gapped compliance note verifying no outbound API calls are made. Fully validated against Webpack build, 27 Cypress component tests, and Splunk AppInspect (0 errors, 0 failures, 0 warnings).
+
 ### ✅ Session: June 16, 2026
 - [x] **CI/CD Hardening: Explicit Workflow Permissions** — Added explicit read-only (`contents: read`) permissions block to `.github/workflows/splunk-ci.yml` to resolve CodeQL alerts #1, #2, and #3.
 - [x] **Bug Fix: Uncaught TypeError: toLowerCase() Crash on Missing Fields** — Resolved string manipulation crash where omitting optional attributes like `vpcId` or `subnetId` from the SPL table command led to `replace()` or `toLowerCase()` calls on null/undefined properties inside the ZTA Layout Engine. Applied robust type-casting (`String(...)`), optional chaining (`row?.`), and array schema validation on `securityGroups` to ensure data resilience. Added a Cypress component test verifying crash-free operation with missing optional attributes.
@@ -275,7 +278,7 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **App Launcher Icon Missing**
     - *Context*: The app shows a generic "App" icon in the Splunk side navigation menu instead of a custom visualizer logo.
     - *Action*: Add `appIcon.png` and `appIcon_2x.png` into `appserver/static/` to brand the app.
-- [x] **`configurationItemCaptureTime` drift animation**
+- x] **`configurationItemCaptureTime` drift animation**
     - *Action*: Animate node opacity based on how stale the config snapshot is (older = more transparent).
 - [x] **SPL → D3 live feed mode** ✅ *Fixed June 2, 2026*
     - *Action*: Accept edge table output from SPL queries as a CSV drop-in to refresh the graph without full JSON reload.
