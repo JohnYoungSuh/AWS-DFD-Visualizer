@@ -443,50 +443,102 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
     }
 
     const isStaticBlueprint = (config?.layoutMode || '').toLowerCase() === 'hierarchy' && (config?.clusterBy || '').toLowerCase() === 'group';
+    let midX = (source.x + target.x) / 2;
+    let midY = (source.y + target.y) / 2;
 
     if (isStaticBlueprint) {
         const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
         if (hierarchyDir === 'Left to Right') {
-            const xStart = source.x + cardHalfWidth;
-            const yStart = source.y;
-            const xEnd = target.x - cardHalfWidth;
-            const yEnd = target.y;
-            
-            const xMid = (xStart + xEnd) / 2;
-            const sy = Math.sign(yEnd - yStart);
-            const R = 8;
-            const R_hat = Math.min(R, Math.abs(xMid - xStart), Math.abs(yEnd - yStart) / 2);
-
-            if (Math.abs(yEnd - yStart) < 5) {
+            const isSameLevel = Math.abs(target.x - source.x) < 10;
+            if (isSameLevel) {
+                const xStart = source.x;
+                const yStart = source.y + (target.y > source.y ? (cardHalfHeight + 4) : -(cardHalfHeight + 4));
+                const xEnd = target.x;
+                const yEnd = target.y + (target.y > source.y ? -(cardHalfHeight + 12) : (cardHalfHeight + 12));
+                
                 d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+                midX = xStart;
+                midY = (yStart + yEnd) / 2;
             } else {
-                d = `M ${xStart} ${yStart} ` +
-                    `L ${xMid - R_hat} ${yStart} ` +
-                    `Q ${xMid} ${yStart} ${xMid} ${yStart + sy * R_hat} ` +
-                    `L ${xMid} ${yEnd - sy * R_hat} ` +
-                    `Q ${xMid} ${yEnd} ${xMid + Math.sign(xEnd - xMid) * R_hat} ${yEnd} ` +
-                    `L ${xEnd} ${yEnd}`;
+                const xStart = source.x + (target.x > source.x ? (cardHalfWidth + 4) : -(cardHalfWidth + 4));
+                const yStart = source.y;
+                const xEnd = target.x + (target.x > source.x ? -(cardHalfWidth + 12) : (cardHalfWidth + 12));
+                const yEnd = target.y;
+                
+                const xMid = (xStart + xEnd) / 2;
+                const sx = Math.sign(xEnd - xStart);
+                const sy = Math.sign(yEnd - yStart);
+                const R = 8;
+                const R_hat = Math.min(R, Math.abs(xMid - xStart), Math.abs(yEnd - yStart) / 2);
+
+                if (Math.abs(yEnd - yStart) < 5) {
+                    d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+                    midX = (xStart + xEnd) / 2;
+                    midY = yEnd;
+                } else {
+                    d = `M ${xStart} ${yStart} ` +
+                        `L ${xMid - sx * R_hat} ${yStart} ` +
+                        `Q ${xMid} ${yStart} ${xMid} ${yStart + sy * R_hat} ` +
+                        `L ${xMid} ${yEnd - sy * R_hat} ` +
+                        `Q ${xMid} ${yEnd} ${xMid + sx * R_hat} ${yEnd} ` +
+                        `L ${xEnd} ${yEnd}`;
+                        
+                    const dx = Math.abs(xEnd - xStart);
+                    const dy = Math.abs(yEnd - yStart);
+                    if (dy > dx) {
+                        midX = xMid;
+                        midY = (yStart + yEnd) / 2;
+                    } else {
+                        midX = (xStart + xEnd) / 2;
+                        midY = yEnd;
+                    }
+                }
             }
         } else {
-            const xStart = source.x;
-            const yStart = source.y + cardHalfHeight;
-            const xEnd = target.x;
-            const yEnd = target.y - cardHalfHeight;
-            
-            const yMid = (yStart + yEnd) / 2;
-            const sx = Math.sign(xEnd - xStart);
-            const R = 8;
-            const R_hat = Math.min(R, Math.abs(xEnd - xStart) / 2, Math.abs(yMid - yStart));
-
-            if (Math.abs(xEnd - xStart) < 5) {
+            const isSameLevel = Math.abs(target.y - source.y) < 10;
+            if (isSameLevel) {
+                const xStart = source.x + (target.x > source.x ? (cardHalfWidth + 4) : -(cardHalfWidth + 4));
+                const yStart = source.y;
+                const xEnd = target.x + (target.x > source.x ? -(cardHalfWidth + 12) : (cardHalfWidth + 12));
+                const yEnd = target.y;
+                
                 d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+                midX = (xStart + xEnd) / 2;
+                midY = yStart;
             } else {
-                d = `M ${xStart} ${yStart} ` +
-                    `L ${xStart} ${yMid - R_hat} ` +
-                    `Q ${xStart} ${yMid} ${xStart + sx * R_hat} ${yMid} ` +
-                    `L ${xEnd - sx * R_hat} ${yMid} ` +
-                    `Q ${xEnd} ${yMid} ${xEnd} ${yMid + R_hat} ` +
-                    `L ${xEnd} ${yEnd}`;
+                const xStart = source.x;
+                const yStart = source.y + (target.y > source.y ? (cardHalfHeight + 4) : -(cardHalfHeight + 4));
+                const xEnd = target.x;
+                const yEnd = target.y + (target.y > source.y ? -(cardHalfHeight + 12) : (cardHalfHeight + 12));
+                
+                const yMid = (yStart + yEnd) / 2;
+                const sx = Math.sign(xEnd - xStart);
+                const sy = Math.sign(yEnd - yStart);
+                const R = 8;
+                const R_hat = Math.min(R, Math.abs(xEnd - xStart) / 2, Math.abs(yMid - yStart));
+
+                if (Math.abs(xEnd - xStart) < 5) {
+                    d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
+                    midX = xStart;
+                    midY = (yStart + yMid) / 2;
+                } else {
+                    d = `M ${xStart} ${yStart} ` +
+                        `L ${xStart} ${yMid - sy * R_hat} ` +
+                        `Q ${xStart} ${yMid} ${xStart + sx * R_hat} ${yMid} ` +
+                        `L ${xEnd - sx * R_hat} ${yMid} ` +
+                        `Q ${xEnd} ${yMid} ${xEnd} ${yMid + sy * R_hat} ` +
+                        `L ${xEnd} ${yEnd}`;
+                        
+                    const dx = Math.abs(xEnd - xStart);
+                    const dy = Math.abs(yEnd - yStart);
+                    if (dy > dx) {
+                        midX = xStart;
+                        midY = (yStart + yMid) / 2;
+                    } else {
+                        midX = (xStart + xEnd) / 2;
+                        midY = yMid;
+                    }
+                }
             }
         }
     } else if (isZeroTrust) {
@@ -566,46 +618,6 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
         d = smoothEdges 
             ? `M${source.x},${source.y}A${drNew},${drNew} 0 0,1 ${tX},${tY}`
             : `M${source.x},${source.y} L${tX},${tY}`;
-    }
-    
-    let midX = (source.x + target.x) / 2;
-    let midY = (source.y + target.y) / 2;
-
-    if (isStaticBlueprint) {
-        const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
-        if (hierarchyDir === 'Left to Right') {
-            const xStart = source.x + cardHalfWidth;
-            const yStart = source.y;
-            const xEnd = target.x - cardHalfWidth;
-            const yEnd = target.y;
-            const xMid = (xStart + xEnd) / 2;
-            
-            const dx = Math.abs(xEnd - xStart);
-            const dy = Math.abs(yEnd - yStart);
-            if (dy > dx) {
-                midX = xMid;
-                midY = (yStart + yEnd) / 2;
-            } else {
-                midX = (xStart + xEnd) / 2;
-                midY = yEnd;
-            }
-        } else {
-            const xStart = source.x;
-            const yStart = source.y + cardHalfHeight;
-            const xEnd = target.x;
-            const yEnd = target.y - cardHalfHeight;
-            const yMid = (yStart + yEnd) / 2;
-            
-            const dx = Math.abs(xEnd - xStart);
-            const dy = Math.abs(yEnd - yStart);
-            if (dy > dx) {
-                midX = xStart;
-                midY = (yStart + yMid) / 2;
-            } else {
-                midX = (xStart + xEnd) / 2;
-                midY = yMid;
-            }
-        }
     }
 
     const sizeConf = config?.linkTextSize || 'medium';
@@ -1773,8 +1785,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
 
             const treeLayout = d3.tree();
-            const spacingX = layoutParams.nodeWidth + layoutParams.gapX;
-            const spacingY = layoutParams.nodeHeight + layoutParams.gapY;
+            const spacingX = layoutParams.nodeWidth + layoutParams.gapX + 60;
+            const spacingY = layoutParams.nodeHeight + layoutParams.gapY + 30;
             if (hierarchyDir === 'Left to Right') {
                 treeLayout.nodeSize([spacingY, spacingX]);
             } else {
