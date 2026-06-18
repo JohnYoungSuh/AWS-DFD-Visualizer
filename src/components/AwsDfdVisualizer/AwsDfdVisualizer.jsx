@@ -1348,16 +1348,8 @@ const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter) => {
         console.error("AWS-DFD-Visualizer: Draw.io export blocked due to unauthorized script elements.");
         return;
     }
-
     // Splunk Audit Logging
-    if (window.Splunk && window.Splunk.util && typeof window.Splunk.util.trackEvent === 'function') {
-        window.Splunk.util.trackEvent({
-            type: 'aws_dfd_visualizer_export',
-            action: 'download_drawio',
-            nodeCount: nodes.length,
-            timestamp: Date.now()
-        });
-    }
+    console.log(`[AWS-DFD-Visualizer] Draw.io exported successfully with ${nodes.length} nodes.`);
 
     const blob = new Blob([xml], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
@@ -2443,16 +2435,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 console.error("AWS-DFD-Visualizer: SVG export blocked due to unauthorized script elements.");
                 return;
             }
-
             // Splunk Audit Logging
-            if (window.Splunk && window.Splunk.util && typeof window.Splunk.util.trackEvent === 'function') {
-                window.Splunk.util.trackEvent({
-                    type: 'aws_dfd_visualizer_export',
-                    action: 'download_svg',
-                    nodeCount: nodes.length,
-                    timestamp: Date.now()
-                });
-            }
+            console.log(`[AWS-DFD-Visualizer] SVG exported successfully with ${nodes.length} nodes.`);
 
             const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(blob);
