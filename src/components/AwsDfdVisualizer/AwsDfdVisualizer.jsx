@@ -653,13 +653,18 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
 
     const sizeConf = config?.linkTextSize || 'medium';
     let fontSize = 14;
-    let bgWidth = 150;
-    if (sizeConf === 'small') { fontSize = 10; bgWidth = 110; }
-    if (sizeConf === 'large') { fontSize = 18; bgWidth = 190; }
-    if (sizeConf === 'extraLarge') { fontSize = 22; bgWidth = 240; }
+    if (sizeConf === 'small') fontSize = 10;
+    if (sizeConf === 'large') fontSize = 18;
+    if (sizeConf === 'extraLarge') fontSize = 22;
+
+    // Dynamic width: ~0.58× char width per font-size px + 24px horizontal padding.
+    // The violation prefix "⚠️ " adds ~3 effective chars worth of width.
+    const displayLabel = isViolated ? `⚠️ ${label}` : label;
+    const charWidth = fontSize * 0.58;
+    const dynamicBgWidth = Math.max(80, Math.ceil(displayLabel.length * charWidth) + 24);
 
     const displayFontSize = isHovered ? Math.round(fontSize * 1.15) : fontSize;
-    const displayBgWidth = isHovered ? bgWidth * 1.15 : bgWidth;
+    const displayBgWidth = isHovered ? Math.ceil(dynamicBgWidth * 1.15) : dynamicBgWidth;
 
     return (
         <g className="link-label-group" transform={`translate(${midX},${midY})`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
@@ -683,7 +688,7 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
                     textShadow: isHovered ? '0 0 4px #fff' : 'none'
                 }}
             >
-                {isViolated ? `⚠️ ${label}` : label}
+                {displayLabel}
             </text>
         </g>
     );
