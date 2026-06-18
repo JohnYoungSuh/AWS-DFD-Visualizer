@@ -1447,14 +1447,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const isDatasetTooLarge = rawRowCount > 5000;
 
     const layoutParams = useMemo(() => {
-        // gapX must be >= link-label capsule width to prevent overlap with adjacent node cards.
-        // Default label capsule is 150px wide; compact is 110px; expanded is 190px.
-        // Add ~10px breathing room on each side: default→160, compact→130, expanded→210.
+        // --- Dynamic gapX calculation ---
+        // gapX must always be >= the link-label capsule width to prevent card collisions.
+        // Capsule widths per linkTextSize: small=110, medium=150, large=190, extraLarge=240.
+        // We add 20px total breathing room (10px per side) as a minimum safe margin.
+        const textSize = config?.linkTextSize || 'medium';
+        const capsuleWidthMap = { small: 110, medium: 150, large: 190, extraLarge: 240 };
+        const capsuleWidth = capsuleWidthMap[textSize] || 150;
+        const minGapX = capsuleWidth + 20;
+
+        // --- Base params per layout preset ---
         let params = {
             nodeWidth: 280,
             nodeHeight: 100,
             padding: 40,
-            gapX: 160,
+            gapX: Math.max(160, minGapX),   // default preset floor: 160px
             gapY: 80,
             fontScale: 1.0,
             canvasWidth: 1200,
@@ -1466,7 +1473,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 nodeWidth: 220,
                 nodeHeight: 80,
                 padding: 25,
-                gapX: 130,
+                gapX: Math.max(130, minGapX), // compact preset floor: 130px
                 gapY: 70,
                 fontScale: 0.8,
                 canvasWidth: 1200,
@@ -1477,7 +1484,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 nodeWidth: 340,
                 nodeHeight: 120,
                 padding: 50,
-                gapX: 210,
+                gapX: Math.max(210, minGapX), // expanded preset floor: 210px
                 gapY: 130,
                 fontScale: 1.2,
                 canvasWidth: 1200,
@@ -1485,7 +1492,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             };
         }
         return params;
-    }, [designLayout]);
+    }, [designLayout, config?.linkTextSize]);
 
     console.log("AWS-DFD-Visualizer: Config values read from props:", {
         config,
