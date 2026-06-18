@@ -365,8 +365,8 @@ const parseSplunkData = (data) => {
 
         if (!acc.has(deterministicKey)) {
             acc.set(deterministicKey, { 
-                source: sortedPair[0], 
-                target: sortedPair[1], 
+                source: currentEdge.source, 
+                target: currentEdge.target, 
                 link_drilldown: currentEdge.link_drilldown || null,
                 protocols: new Set(currentEdge.label ? [currentEdge.label] : []) 
             });
@@ -1954,7 +1954,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             }
 
             const centerX = dynamicW / 2;
-            const dynamicH = Math.max(1400, Math.ceil(900 + maxVpcHeight / 2 + 100));
+            const dynamicH = Math.max(800, Math.ceil(402 + maxVpcHeight + 100));
             const centerY = (402 + dynamicH) / 2;
 
             assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, globalAdapter, layoutParams, centerX, centerY);
