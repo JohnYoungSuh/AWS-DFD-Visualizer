@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0.0",
   "info": {
-    "title": "AWS-DFD-Visualizer",
+    "title": "AWS DFD Visualizer",
     "id": {
       "group": null,
       "name": "AWS-DFD-Visualizer",
@@ -9,21 +9,21 @@
     },
     "author": [
       {
-        "name": "Security Architect",
+        "name": "SUH Labs",
         "email": null,
-        "company": null
+        "company": "SUH Labs"
       }
     ],
-    "releaseDate": null,
-    "description": "Interactive AWS Data Flow Diagrams (DFD) for Splunk. Visualizes AWS Config topologies, nested VPCs/Subnets, and Zero-Trust compliance highlights.",
+    "releaseDate": "2026-06-18",
+    "description": "Multi-cloud interactive Data Flow Diagram (DFD) visualizer for Splunk. Renders AWS, Azure, and GCP Config topologies as Zero-Trust blueprint diagrams with nested VPC/Subnet enclosures, SSH/22 compliance violation paths, and commercial license enforcement. Designed for DoD IL5 / NIST 800-53 / Zero-Trust Architecture environments.",
     "classification": {
-      "intendedAudience": null,
-      "categories": [],
-      "developmentStatus": null
+      "intendedAudience": "IT Ops, Security, DevOps",
+      "categories": ["Security", "Visualization", "Cloud"],
+      "developmentStatus": "production"
     },
     "commonInformationModels": null,
     "license": {
-      "name": null,
+      "name": "Commercial",
       "text": null,
       "url": null
     },
@@ -33,9 +33,9 @@
       "url": null
     },
     "releaseNotes": {
-      "name": null,
+      "name": "v2.8.0 Release Notes",
       "text": null,
-      "url": null
+      "url": "https://github.com/JohnYoungSuh/AWS-DFD-Visualizer/blob/master/RELEASE_NOTES.md"
     }
   },
   "dependencies": null,

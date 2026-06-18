@@ -1,7 +1,7 @@
-# AWS-DFD-Visualizer
+# AWS DFD Visualizer — v2.8.0
 
 > [!IMPORTANT]
-> **Multi-CSP Interactive Security Data Flow Diagram (DFD)** - A high-performance, D3.js powered visualization engine for Splunk. It renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, compliant Zero-Trust topology views.
+> **Multi-Cloud Interactive Security Data Flow Diagram (DFD) for Splunk** — A high-performance, D3.js + React powered visualization engine. Renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, audit-ready Zero-Trust topology blueprints. Designed for **DoD Impact Level 5 (IL5)** and **NIST 800-53 / NIST 800-207** environments.
 
 ## Security & Compliance (NIST 800-53 / IL5 / Zero Trust)
 
@@ -16,28 +16,45 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 
 ---
 
-## Key Features (v2.6.0 → v2.8.0)
+## Key Features (v2.8.0)
 
 ### ☁️ Multi-Cloud Service Provider (CSP) Support
-- **Modular Stencils**: Mappings decoupled into modular stencil libraries (`index.js`, `aws.js`, `azure.js`, `gcp.js`, `generic.js`).
-- **CSP Auto-Detection**: Dataset voting count auto-detects the dominant provider (AWS vs. Azure vs. GCP) based on type signatures and resource identifiers, with manual options panel overrides.
+- **Modular Stencils**: Mappings decoupled into modular stencil libraries (`aws.js`, `azure.js`, `gcp.js`, `generic.js`).
+- **CSP Auto-Detection**: Dataset voting count auto-detects the dominant provider (AWS vs. Azure vs. GCP) based on type signatures and resource identifiers, with manual options panel overrides (`cspStencilSet`).
 - **JIT Node-Level Adapters**: Resolves specific stencils dynamically per card, allowing hybrid multi-cloud systems to render side-by-side on the same canvas.
+- **Recursive Container Nesting**: Processes arbitrary nesting depth (Subscription → Resource Group → VNet → Subnet) using recursive post-order/pre-order traversal.
 
 ### 🏛️ Zero-Trust Static Layout ("Blueprint Mode")
-- **Deterministic Enclosures**: Implements a recursive Bottom-Up dimension calculator and Top-Down coordinate assigner to draw nested VPCs/Subnets (AWS), VNets/Subnets (Azure), and VPC Networks/Subnets (GCP) with orthogonal Manhattan routing.
-- **NIST 800-207 Planes**: Group assets into Control Plane (WAF, CDN, Policy engines), Identity Plane (IAM, Users, Roles), and Infrastructure/Data Plane.
-- **Compliance Highlight Envelopes**: Draws green/red concentric rings around node cards to visually map assigned security groups and compliance status. Automatically flags connections (e.g. SSH Port 22 violations) as dashed red paths.
+- **Deterministic Enclosures**: Recursive Bottom-Up dimension calculator and Top-Down coordinate assigner draws nested VPCs/Subnets (AWS), VNets/Subnets (Azure), and VPC Networks/Subnets (GCP) with orthogonal Manhattan routing.
+- **NIST 800-207 Three-Plane Swimlanes**: Automatically sorts assets into Identity Plane (IAM, Users, Roles), Policy & Control Plane (WAF, CDN, Policy Engines), and Infrastructure/Data Plane (VPC, Compute, Database).
+- **SSH/22 Compliance Interception**: Automatically routes Port 22 connections to non-compliant nodes as dashed Vibrant Red paths — providing instant visual audit signals for open SSH ingress violations.
+- **Concentric Security Group Envelopes**: Draws green/red concentric rings around compute node cards to visually map assigned security group compliance state.
+- **Two-Pass SVG Rendering**: Link paths and label capsules render in separate SVG passes — label backgrounds always occlude lines beneath them.
+
+### 🔒 STIG Hardening & Security Compliance
+- **Text-Only DOM Policy**: `dangerouslySetInnerHTML` and D3 `.html()` are explicitly banned. All dynamic strings use React standard interpolation (CWE-79 / XSS prevention).
+- **SPL Injection Sanitization**: `sanitizeSplunkToken` applies a strict regex allow-list before interpolating drilldown tokens.
+- **DoS Circuit Breaker**: Blocks rendering and displays a warning if raw row count exceeds 5,000 records.
+- **Export Script Scanning**: SVG and Draw.io XML downloads are scanned for embedded `<script>` tags before export.
+- **Supply Chain**: TruffleHog secret scanning + Bandit SAST + CycloneDX SBOM on every build.
+
+### 🔑 Commercial License Enforcement
+- **Free Tier**: Renders up to 50 nodes; displays a glassmorphic "License Capacity Exceeded" overlay beyond that.
+- **Enterprise / Sovereign Tiers**: Base64-encoded license keys validated fully client-side — no network calls, air-gap safe.
+- **Format Panel Integration**: License key entry exposed directly in the Splunk Format panel.
 
 ### ⚡ Performance & Physics Optimization
-- **Rectangular Collision Force**: Replaced circular collision forces with a custom D3 rectangular force (`rectCollide`) mapped directly to node dimensions, preventing text overlaps and horizontal card stacking.
-- **"Zero-Latency" Layout Bypass**: Synchronously runs 300 physics ticks in the background on load for graphs with $<100$ nodes. The topology renders fully settled instantly without sliding animations.
-- **Batched calculating**: For topologies with $\ge 150$ nodes (physics disabled), calculations are run in 30-tick batches scheduled via `requestAnimationFrame` to prevent thread-locking. A glassmorphic topology loading spinner is displayed to the user.
-- **Level of Detail (LOD) Scaling**: Hides card labels and secondary SVG elements when zoomed out ($k < 0.45$), reducing browser DOM reflow overhead.
+- **Rectangular Collision Force (`rectCollide`)**: Custom D3 force mapped directly to card dimensions (`280×100`px) prevents text overlaps and horizontal stacking.
+- **Zero-Latency Layout Bypass**: Pre-ticks 300 physics cycles synchronously for graphs < 100 nodes — renders fully settled instantly.
+- **Batched `requestAnimationFrame` Layout**: Graphs ≥ 150 nodes process in 30-tick batches with a glassmorphic loader to prevent thread-locking.
+- **Level of Detail (LOD) Scaling**: Hides card labels and SVG shadows when zoomed out (k < 0.45) to reduce DOM reflow overhead.
 
-### 🎮 Advanced Dashboards & Integrations
-- **SPL → D3 Live Feed Mode**: Allows pasting CSV datasets directly into a client-side console panel overlay to preview layouts in real-time.
-- **Draw.io Exporter**: Exports the settled diagram coordinates and grouping structures into standard Draw.io XML for formal engineering documentation.
-- **JIT Drilldowns & Token Controls**: Supports dynamic query interpolation and custom target redirects while escaping variables via `sanitizeSplunkToken` to prevent SPL injection.
+### 🎨 Rendering Quality & UX Polish
+- **Dynamic Edge Label Pill Width**: Label capsules auto-size from actual text length — no more truncated long protocol labels.
+- **Violation Label Sizing**: `⚠️ SSH/22` pill width accounts for the full display string including emoji prefix.
+- **Draw.io Exporter**: Exports current diagram to standard Draw.io XML for formal engineering documentation.
+- **SPL → D3 Live Feed Mode**: Paste CSV edge tables directly into a client-side console overlay to preview layouts instantly.
+- **JIT Drilldowns & Token Controls**: Dynamic SPL query interpolation with `sanitizeSplunkToken` injection protection.
 
 ---
 
