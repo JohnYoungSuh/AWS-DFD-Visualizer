@@ -656,8 +656,8 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.wait(500);
 
         // Link with SSH/22 to a container with violation should be flagged
-        cy.get('g.link-group').contains('⚠️ SSH/22').should('exist');
-        cy.get('g.link-group text').should('have.attr', 'fill', '#FF0000');
+        cy.get('g.link-label-group').contains('⚠️ SSH/22').should('exist');
+        cy.get('g.link-label-group text').should('have.attr', 'fill', '#FF0000');
 
         // Enclosures should show violation count
         cy.get('g.vpc-container text').contains('VPC (vpc-1) (1 Violation)').should('exist');

@@ -54,9 +54,10 @@ const ICON_BASE = getAppStaticUrl('icons/');
 
 // SECTION: ICON_RESOLUTION — Dynamic icon resolution supporting Multi-CSP stencils and generic fallbacks
 const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
+    const base = ICON_BASE.endsWith('/') ? ICON_BASE : ICON_BASE + '/';
     const status = String(node.status || '').toUpperCase().trim();
     if (status === 'CRITICAL' || status === 'INCIDENT') {
-        return ICON_BASE + 'skull.svg';
+        return base + 'skull.svg';
     }
 
     const explicitIcon = (node.icon || node.stencil || '').toUpperCase();
@@ -70,12 +71,12 @@ const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     };
     const prefix = getPrefix(adapter.id);
     if (explicitIcon && adapter.stencils[explicitIcon]) {
-        return ICON_BASE + prefix + adapter.stencils[explicitIcon];
+        return base + prefix + adapter.stencils[explicitIcon];
     }
     
     // 2. Check generic stencils
     if (explicitIcon && genericAdapter.stencils[explicitIcon]) {
-        return ICON_BASE + genericAdapter.stencils[explicitIcon];
+        return base + genericAdapter.stencils[explicitIcon];
     }
 
     const type  = (node.type || '').toUpperCase();
@@ -108,13 +109,13 @@ const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     if (!iconFile) {
         for (const [key, value] of Object.entries(genericAdapter.stencils)) {
             if (id.indexOf(key) !== -1 || label.indexOf(key) !== -1 || explicitIcon.indexOf(key) !== -1) {
-                return ICON_BASE + value;
+                return base + value;
             }
         }
     }
     
     if (iconFile) {
-        return ICON_BASE + prefix + iconFile;
+        return base + prefix + iconFile;
     }
     return fallbackUrl;
 };
@@ -392,10 +393,8 @@ const parseSplunkData = (data) => {
     return { nodes: Array.from(nodesMap.values()), links: cleanEdges };
 };
 
-// SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line, edge label with halo)
-const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }) => {
-    const { useState } = React;
-    const [isHovered, setIsHovered] = useState(false);
+// SECTION: LINK_GEOMETRY_HELPER — Calculate SVG paths and label midpoints
+const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
     const { source, target, label } = link;
     if (!source.x || !target.x) return null;
 
@@ -404,8 +403,6 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
 
     const checkNodeViolation = (node) => {
         if (!node) return false;
-        
-        // Direct node status evaluation: status="violation", "incident", or "failing"
         const nodeStatus = String(node.status || '').toLowerCase().trim();
         const isNodeViolated = nodeStatus === 'violation' || nodeStatus === 'incident' || nodeStatus === 'failing';
         
@@ -450,21 +447,16 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
         const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
         if (hierarchyDir === 'Left to Right') {
             const isSameLevel = Math.abs(target.x - source.x) < 10;
+            const xStart = source.x + (isSameLevel ? 0 : (target.x > source.x ? (cardHalfWidth + 4) : -(cardHalfWidth + 4)));
+            const yStart = source.y + (isSameLevel ? (target.y > source.y ? (cardHalfHeight + 4) : -(cardHalfHeight + 4)) : 0);
+            const xEnd = target.x + (isSameLevel ? 0 : (target.x > source.x ? -(cardHalfWidth + 12) : (cardHalfWidth + 12)));
+            const yEnd = target.y + (isSameLevel ? (target.y > source.y ? -(cardHalfHeight + 12) : (cardHalfHeight + 12)) : 0);
+
             if (isSameLevel) {
-                const xStart = source.x;
-                const yStart = source.y + (target.y > source.y ? (cardHalfHeight + 4) : -(cardHalfHeight + 4));
-                const xEnd = target.x;
-                const yEnd = target.y + (target.y > source.y ? -(cardHalfHeight + 12) : (cardHalfHeight + 12));
-                
                 d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
                 midX = xStart;
                 midY = (yStart + yEnd) / 2;
             } else {
-                const xStart = source.x + (target.x > source.x ? (cardHalfWidth + 4) : -(cardHalfWidth + 4));
-                const yStart = source.y;
-                const xEnd = target.x + (target.x > source.x ? -(cardHalfWidth + 12) : (cardHalfWidth + 12));
-                const yEnd = target.y;
-                
                 const xMid = (xStart + xEnd) / 2;
                 const sx = Math.sign(xEnd - xStart);
                 const sy = Math.sign(yEnd - yStart);
@@ -496,21 +488,16 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
             }
         } else {
             const isSameLevel = Math.abs(target.y - source.y) < 10;
+            const xStart = source.x + (isSameLevel ? (target.x > source.x ? (cardHalfWidth + 4) : -(cardHalfWidth + 4)) : 0);
+            const yStart = source.y + (isSameLevel ? 0 : (target.y > source.y ? (cardHalfHeight + 4) : -(cardHalfHeight + 4)));
+            const xEnd = target.x + (isSameLevel ? (target.x > source.x ? -(cardHalfWidth + 12) : (cardHalfWidth + 12)) : 0);
+            const yEnd = target.y + (isSameLevel ? 0 : (target.y > source.y ? -(cardHalfHeight + 12) : (cardHalfHeight + 12)));
+
             if (isSameLevel) {
-                const xStart = source.x + (target.x > source.x ? (cardHalfWidth + 4) : -(cardHalfWidth + 4));
-                const yStart = source.y;
-                const xEnd = target.x + (target.x > source.x ? -(cardHalfWidth + 12) : (cardHalfWidth + 12));
-                const yEnd = target.y;
-                
                 d = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
                 midX = (xStart + xEnd) / 2;
                 midY = yStart;
             } else {
-                const xStart = source.x;
-                const yStart = source.y + (target.y > source.y ? (cardHalfHeight + 4) : -(cardHalfHeight + 4));
-                const xEnd = target.x;
-                const yEnd = target.y + (target.y > source.y ? -(cardHalfHeight + 12) : (cardHalfHeight + 12));
-                
                 const yMid = (yStart + yEnd) / 2;
                 const sx = Math.sign(xEnd - xStart);
                 const sy = Math.sign(yEnd - yStart);
@@ -620,6 +607,36 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
             : `M${source.x},${source.y} L${tX},${tY}`;
     }
 
+    const isZeroTrustColors = isZeroTrust || isStaticBlueprint;
+    const strokeColor = isZeroTrustColors ? (isViolated ? '#FF0000' : '#00FF00') : '#879196';
+    const strokeDash = isZeroTrustColors && isViolated ? '4,4' : 'none';
+    const markerEnd = isZeroTrustColors ? (isViolated ? 'url(#arrow-red)' : 'url(#arrow-green)') : 'url(#arrow)';
+
+    return { d, midX, midY, isViolated, strokeColor, strokeDash, markerEnd };
+};
+
+// SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line)
+const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode, isHovered, onMouseEnter, onMouseLeave }) => {
+    const geom = getLinkGeometry(link, config, isZeroTrust, targetNode, sourceNode);
+    if (!geom) return null;
+    const { d, strokeColor, strokeDash, markerEnd } = geom;
+
+    return (
+        <g className="link-group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
+            <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
+            <path d={d} stroke={strokeColor} fill="none" strokeWidth={3} strokeDasharray={strokeDash} markerEnd={markerEnd} />
+        </g>
+    );
+};
+
+// SECTION: LINK_LABEL — SVG edge label renderer (drawn in separate pass for layering)
+const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode, isHovered, onMouseEnter, onMouseLeave }) => {
+    const geom = getLinkGeometry(link, config, isZeroTrust, targetNode, sourceNode);
+    if (!geom) return null;
+    const { midX, midY, isViolated } = geom;
+    const { label } = link;
+    if (!label) return null;
+
     const sizeConf = config?.linkTextSize || 'medium';
     let fontSize = 14;
     let bgWidth = 150;
@@ -627,44 +644,33 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode }
     if (sizeConf === 'large') { fontSize = 18; bgWidth = 190; }
     if (sizeConf === 'extraLarge') { fontSize = 22; bgWidth = 240; }
 
-    const isZeroTrustColors = isZeroTrust || isStaticBlueprint;
-    const strokeColor = isZeroTrustColors ? (isViolated ? '#FF0000' : '#00FF00') : '#879196';
-    const strokeDash = isZeroTrustColors && isViolated ? '4,4' : 'none';
-    const markerEnd = isZeroTrustColors ? (isViolated ? 'url(#arrow-red)' : 'url(#arrow-green)') : 'url(#arrow)';
-
     const displayFontSize = isHovered ? Math.round(fontSize * 1.15) : fontSize;
     const displayBgWidth = isHovered ? bgWidth * 1.15 : bgWidth;
 
     return (
-        <g className="link-group" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
-            <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
-            <path d={d} stroke={strokeColor} fill="none" strokeWidth={3} strokeDasharray={strokeDash} markerEnd={markerEnd} />
-            {label && (
-                <g className="link-label-group" transform={`translate(${midX},${midY})`}>
-                    <rect 
-                        width={displayBgWidth} 
-                        height={displayFontSize + 16} 
-                        rx={15} 
-                        fill="white" 
-                        stroke={isViolated ? "#FF0000" : "#D5D7D8"} 
-                        strokeWidth={isViolated ? 2 : (isHovered ? 1.5 : 1)}
-                        x={-(displayBgWidth/2)} 
-                        y={-((displayFontSize + 16)/2)} 
-                    />
-                    <text 
-                        textAnchor="middle" 
-                        dy={displayFontSize/3} 
-                        fontSize={displayFontSize} 
-                        fontWeight={isViolated || isHovered ? "bold" : "normal"}
-                        fill={isViolated ? "#FF0000" : "#232F3E"}
-                        style={{
-                            textShadow: isHovered ? '0 0 4px #fff' : 'none'
-                        }}
-                    >
-                        {isViolated ? `⚠️ ${label}` : label}
-                    </text>
-                </g>
-            )}
+        <g className="link-label-group" transform={`translate(${midX},${midY})`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
+            <rect 
+                width={displayBgWidth} 
+                height={displayFontSize + 16} 
+                rx={15} 
+                style={{ fill: '#ffffff' }}
+                stroke={isViolated ? "#FF0000" : "#D5D7D8"} 
+                strokeWidth={isViolated ? 2 : (isHovered ? 1.5 : 1)}
+                x={-(displayBgWidth/2)} 
+                y={-((displayFontSize + 16)/2)} 
+            />
+            <text 
+                textAnchor="middle" 
+                dy={displayFontSize/3} 
+                fontSize={displayFontSize} 
+                fontWeight={isViolated || isHovered ? "bold" : "normal"}
+                fill={isViolated ? "#FF0000" : "#232F3E"}
+                style={{
+                    textShadow: isHovered ? '0 0 4px #fff' : 'none'
+                }}
+            >
+                {isViolated ? `⚠️ ${label}` : label}
+            </text>
         </g>
     );
 };
@@ -1373,6 +1379,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const [tickUpdate, setTickUpdate] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [isCalculating, setIsCalculating] = useState(false);
+    const [hoveredLinkIdx, setHoveredLinkIdx] = useState(null);
     const simulationRef = useRef(null);
     const clickTimeoutRef = useRef(null);
 
@@ -2947,6 +2954,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
                     {/* Render Links */}
                     <g className="links" style={{ opacity: isDragging ? 0 : 1, transition: 'opacity 0.2s' }}>
+                        {/* Pass 1: Render paths */}
                         {links.map((link, idx) => {
                             const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
                             const srcId = typeof link.source === 'object' ? link.source.id : link.source;
@@ -2954,13 +2962,37 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                             const sourceNode = nodes.find(n => n.id === srcId);
                             return (
                                 <Link 
-                                    key={`link-${idx}`} 
+                                    key={`link-path-${idx}`} 
                                     link={link} 
                                     config={config} 
                                     onLinkClick={handleLinkClick} 
                                     isZeroTrust={isZeroTrust}
                                     targetNode={targetNode}
                                     sourceNode={sourceNode}
+                                    isHovered={hoveredLinkIdx === idx}
+                                    onMouseEnter={() => setHoveredLinkIdx(idx)}
+                                    onMouseLeave={() => setHoveredLinkIdx(null)}
+                                />
+                            );
+                        })}
+                        {/* Pass 2: Render labels */}
+                        {links.map((link, idx) => {
+                            const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+                            const srcId = typeof link.source === 'object' ? link.source.id : link.source;
+                            const targetNode = nodes.find(n => n.id === tgtId);
+                            const sourceNode = nodes.find(n => n.id === srcId);
+                            return (
+                                <LinkLabel 
+                                    key={`link-label-${idx}`} 
+                                    link={link} 
+                                    config={config} 
+                                    onLinkClick={handleLinkClick} 
+                                    isZeroTrust={isZeroTrust}
+                                    targetNode={targetNode}
+                                    sourceNode={sourceNode}
+                                    isHovered={hoveredLinkIdx === idx}
+                                    onMouseEnter={() => setHoveredLinkIdx(idx)}
+                                    onMouseLeave={() => setHoveredLinkIdx(null)}
                                 />
                             );
                         })}
