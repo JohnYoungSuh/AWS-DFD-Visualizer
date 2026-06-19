@@ -4,6 +4,23 @@
 
 ---
 
+## 📌 LL-005 — License Key Not Saving in Formatting Panel
+
+**Date Resolved:** June 19, 2026
+**Symptom:** Entering a valid commercial license key in the Splunk Formatting panel did not persist or activate the license successfully.
+
+### Root Cause
+Two main issues were identified:
+1. **HTML Form Attribute Overwrite:** In `formatter.html`, the licensing input was defined with a static `value=""`. Splunk's HTML compiler/form parser interpreted this literally on subsequent page/formatter renders, resetting the user-provided input to blank and preventing it from binding/saving correctly to the dashboard configuration.
+2. **Case-Sensitive Prefix Stripping:** The React entrypoint wrapper stripped configuration key prefixes (e.g. `display.visualizations.custom.AWS-DFD-Visualizer.`) using exact case-sensitive string replacements. However, Splunk often normalizes these prefixes to lowercase (e.g. `display.visualizations.custom.aws-dfd-visualizer.`) depending on the execution context or version. This caused the option to retain its prefix inside `cleanConfig` (resulting in `undefined` checks).
+
+### Solution
+1. **Omit Static Empty Values:** Removed the `value=""` attribute entirely from the `<splunk-text-input>` element for `licenseKey`, allowing Splunk to bind to and persist the option value natively.
+2. **Case-Insensitive Prefix Matching:** Refactored the prefix replacement to use case-insensitive regular expressions targeting the app namespace (`AWS-DFD-Visualizer`).
+3. **Dual-Key Fallback:** Updated the Drag-and-Drop mode verification in `AwsDfdVisualizer.jsx` to dynamically fallback-check both `config?.display_mode` and the fully-prefixed key to restore manual sticky locking.
+
+---
+
 ## 📌 LL-001 — App Icon Not Updating in Splunk App List
 
 **Date Resolved:** June 18, 2026

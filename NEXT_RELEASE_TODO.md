@@ -5,6 +5,9 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: June 19, 2026
+- [x] **License Key Persistence & display_mode Sticky Fix** — Resolved `licenseKey` saving failure by removing the static `value=""` from the `<splunk-text-input>` control in `formatter.html`. Hardened prefix stripping in `visualization_source.js` to be case-insensitive. Resolved manual sticky drag placement failing to lock coordinates by fallback-checking `config?.display_mode` in `AwsDfdVisualizer.jsx`.
+
 ### ✅ Session: June 18, 2026 (Evening)
 - [x] **App Icon Dimensions Corrected (Root Cause Fix)** — Discovered that the May 23 icon fix silently failed because generated icons were `67×52`px instead of Splunk's required `36×36` / `72×72`. Additionally, only `appserver/static/` was updated; `static/` (Classic XML path) was missed. Used `ffmpeg` to produce pixel-exact resized icons and updated **all 4 files** in both locations atomically. See [LL-001](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/LESSONS_LEARNED.md) for the full diagnostic playbook.
 - [x] **Dynamic Edge Label Pill Width (Root Cause Fix)** — Replaced the fixed `bgWidth = 150px` constant in `LinkLabel` with a data-driven calculation: `Math.max(80, Math.ceil(text.length × fontSize × 0.58) + 24)`. Fixes truncated long labels ('Core PDP/PEP Data Access Path', 'Multi-Source PIP Query Engine') that were reported the previous session but only received a cosmetic spacing fix. See [LL-002](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/LESSONS_LEARNED.md).
