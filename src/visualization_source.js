@@ -34,8 +34,8 @@ export default SplunkVisualizationBase.extend({
         if (config) {
             Object.keys(config).forEach(key => {
                 let cleanKey = key;
-                cleanKey = cleanKey.replace(/^display\.visualizations\.custom\.[^.]+\.[^.]+\./i, '');
-                cleanKey = cleanKey.replace(/^display\.visualizations\.custom\.[^.]+\./i, '');
+                cleanKey = cleanKey.replace(/^display\.visualizations\.custom\.AWS-DFD-Visualizer\.AWS-DFD-Visualizer\./i, '');
+                cleanKey = cleanKey.replace(/^display\.visualizations\.custom\.AWS-DFD-Visualizer\./i, '');
                 cleanConfig[cleanKey] = config[key];
             });
         }

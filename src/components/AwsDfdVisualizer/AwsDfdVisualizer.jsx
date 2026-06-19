@@ -2406,7 +2406,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             .on('end', (event, d) => {
                 if (hideEdgesOnDrag) setIsDragging(false);
                 if (enablePhysics && !event.active) simulation.alphaTarget(0);
-                const mode = config?.['display.visualizations.custom.AWS-DFD-Visualizer.display_mode'] || 'auto';
+                const mode = config?.display_mode || config?.['display.visualizations.custom.AWS-DFD-Visualizer.display_mode'] || 'auto';
                 if (mode !== 'manual') {
                     d.fx = null; d.fy = null;
                 }
