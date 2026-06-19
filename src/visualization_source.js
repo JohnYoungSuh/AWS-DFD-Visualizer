@@ -29,13 +29,13 @@ export default SplunkVisualizationBase.extend({
         console.log("AWS-DFD-Visualizer: updateView() called", { data, config });
         if (!this.reactRoot) return;
 
-        // Strip Splunk's verbose config key prefix (supports both single and double namespace prefixes)
+        // Strip Splunk's verbose config key prefix (supports both single and double namespace prefixes case-insensitively)
         const cleanConfig = {};
         if (config) {
             Object.keys(config).forEach(key => {
                 let cleanKey = key;
-                cleanKey = cleanKey.replace('display.visualizations.custom.AWS-DFD-Visualizer.AWS-DFD-Visualizer.', '');
-                cleanKey = cleanKey.replace('display.visualizations.custom.AWS-DFD-Visualizer.', '');
+                cleanKey = cleanKey.replace(/^display\.visualizations\.custom\.[^.]+\.[^.]+\./i, '');
+                cleanKey = cleanKey.replace(/^display\.visualizations\.custom\.[^.]+\./i, '');
                 cleanConfig[cleanKey] = config[key];
             });
         }
