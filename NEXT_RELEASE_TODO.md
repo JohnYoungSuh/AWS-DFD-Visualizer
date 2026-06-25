@@ -87,6 +87,33 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 
+## 🚀 Release v2.8.1 (Dynamic Spacing & Customizable Terminology)
+
+- [ ] **Dynamic "Object-Subject" Spacing Engine**
+    - *Context*: ZTA swimlanes and Blueprint layouts have fixed node gaps, leading to overlaps for long labels or metadata counts.
+    - *Action*:
+        1. Refactor `assignCoordinates` and `computeDimensions` to replace static `gapX`/`gapY` constants with dynamic size-aware coordinate math.
+        2. Implement a `getNodeCardDimensions` helper that calculates the physical bounding box dimensions for each NodeCard, taking into account label text length (wrapped vs non-wrapped) and security group status rings.
+        3. Implement a dynamic link distance function that maintains a consistent "Air Gap" (padding) between connected source and target nodes based on the size of the larger of the two nodes.
+        4. Update the D3 rectangular collision (`rectCollide`) force to use the calculated node-specific `width`/`height` plus configurable padding parameters (`paddingX`/`paddingY`).
+- [ ] **Decoupled Plane Renaming & Terminology Customization**
+    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g. Navy Identity Server).
+    - *Action*:
+        1. Add text input controls to `formatter.html` and register defaults in `visualizations.conf` for `labelIdentityPlane` (default: "Identity/Management Plane"), `labelControlPlane` (default: "Control Plane"), and `labelDataPlane` (default: "Data Plane").
+        2. Update the Splunk data parser so that if an SPL eval field returns a custom `zone_name` (or `zone`), the visualizer prioritizes the SPL value over the UI preset options.
+        3. Bind renamed plane labels in the SVG decorations to CSS variables (`--plane-label-fill`, etc.) to ensure they remain high-contrast and theme-aware (Light/Dark mode).
+        4. Update the Draw.io exporter to output custom plane terminology dynamically in diagram XML structures.
+- [ ] **ZTA Swimlane Refinement**
+    - *Context*: Renamed planes/zones must propagate atomically to D3 polygonHull boundaries and Metanode grouping definitions.
+    - *Action*:
+        1. Update `groups` generation and tree virtual group IDs to group nodes dynamically by their resolved zone names (prioritizing `zone_name` then `group`).
+        2. Ensure the D3 `polygonHull` boundaries and their text headers update atomically and respect renamed custom boundaries.
+        3. Update the `Zone` component to support case-insensitive control plane checks and display customized zone names.
+- [ ] **Release Hygiene Synchronization (v2.8.1)**
+    - *Action*: Bump version to `2.8.1` concurrently in `package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf` (both stanzas), and `AwsDfdVisualizer.jsx`.
+
+---
+
 ## 🔴 Critical (Will Break Rendering)
 
 - [x] **CRITICAL BUG: clusterBy is Ignored in Hierarchy Layout Mode (Dashboard Engine Defect)** ✅ *Fixed June 2, 2026*
