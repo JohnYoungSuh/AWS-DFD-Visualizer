@@ -93,14 +93,17 @@ This list is based on failure analysis against mock config and standard D3 force
     - *Context*: ZTA swimlanes and Blueprint layouts have fixed node gaps, leading to overlaps for long labels or metadata counts.
     - *Action*:
         1. Refactor `assignCoordinates` and `computeDimensions` to replace static `gapX`/`gapY` constants with dynamic size-aware coordinate math.
-        2. Implement a `getNodeCardDimensions` helper that calculates the physical bounding box dimensions for each NodeCard, taking into account label text length (wrapped vs non-wrapped) and security group status rings.
-        3. Implement a dynamic link distance function that maintains a consistent "Air Gap" (padding) between connected source and target nodes based on the size of the larger of the two nodes.
-        4. Update the D3 rectangular collision (`rectCollide`) force to use the calculated node-specific `width`/`height` plus configurable padding parameters (`paddingX`/`paddingY`).
+        2. Implement a `getNodeCardDimensions` helper that calculates and returns a bounding box rect object `{ w, h }` for each NodeCard, taking into account label text length (wrapped vs non-wrapped) and security group status rings.
+        3. Text wrapping math: Use a proportional font character-per-line estimation calculation with a **15% Safety Buffer Percentage**: `(EstimatedCharWidth * charCount) * 1.15` to prevent status badges/pills from overlapping text.
+        4. Implement a dynamic link distance function that maintains a consistent "Air Gap" (padding) between connected source and target nodes based on the size of the larger of the two nodes.
+        5. Physics protection: Clamp the dynamic gaps to never exceed **1.5× the baseGap** (`maxGap Clamp`) to keep the graph from exploding in size on large datasets and to maintain visual "Architectural Proximity".
+        6. Update the D3 rectangular collision (`rectCollide`) force to use the calculated node-specific rect `{ w, h }` plus configurable padding parameters (`paddingX`/`paddingY`).
+        7. Verify that the "Zero-Latency" 300-tick bypass runs with these new dynamic dimensions so that small graphs settle instantly with correct gaps.
 - [ ] **Decoupled Plane Renaming & Terminology Customization**
-    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g. Navy Identity Server).
+    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g., Navy Identity Server, MKTL Governance presets).
     - *Action*:
-        1. Add text input controls to `formatter.html` and register defaults in `visualizations.conf` for `labelIdentityPlane` (default: "Identity/Management Plane"), `labelControlPlane` (default: "Control Plane"), and `labelDataPlane` (default: "Data Plane").
-        2. Update the Splunk data parser so that if an SPL eval field returns a custom `zone_name` (or `zone`), the visualizer prioritizes the SPL value over the UI preset options.
+        1. Add the "Governance Terminology" section to `formatter.html` with text inputs, and register defaults in `visualizations.conf` for `labelIdentityPlane` (default: "Identity/Management Plane"), `labelControlPlane` (default: "⚙️ Control Plane"), and `labelDataPlane` (default: "Data Plane"). Putting the emoji in the defaults allows users to change/delete prefixes from the Splunk UI without modifying the source code.
+        2. Update the Splunk data parser so that if an SPL eval field returns a custom `zone_name` (or `zone`), the visualizer prioritizes the SPL value over the UI preset options. This enables Sec-Agents to dynamically rename planes (e.g. `zone_name="⚠️ CONTAINMENT ZONE"`).
         3. Bind renamed plane labels in the SVG decorations to CSS variables (`--plane-label-fill`, etc.) to ensure they remain high-contrast and theme-aware (Light/Dark mode).
         4. Update the Draw.io exporter to output custom plane terminology dynamically in diagram XML structures.
 - [ ] **ZTA Swimlane Refinement**
@@ -111,6 +114,10 @@ This list is based on failure analysis against mock config and standard D3 force
         3. Update the `Zone` component to support case-insensitive control plane checks and display customized zone names.
 - [ ] **Release Hygiene Synchronization (v2.8.1)**
     - *Action*: Bump version to `2.8.1` concurrently in `package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf` (both stanzas), and `AwsDfdVisualizer.jsx`.
+- [ ] **Verification & Cypress Component Testing**
+    - *Action*:
+        1. Run component test suite `npm run test:cy` and confirm 100% pass rate.
+        2. Add a Cypress test case with an "Extreme Label" (100 characters). Verify that the `rectCollide` prevents the next node from overlapping this giant label.
 
 ---
 
