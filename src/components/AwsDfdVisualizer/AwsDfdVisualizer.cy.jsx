@@ -943,7 +943,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         });
     });
 
-    it('verifies custom plane names XSS script tag escaping and regex sanitization', () => {
+    it('verifies custom plane names XSS script tag escaping and recursive multi-character sanitization', () => {
         const xssData = {
             fields: [
                 {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}
@@ -959,7 +959,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
                     data={xssData} 
                     config={{ 
                         layoutMode: 'zero-trust',
-                        labelIdentityPlane: "Identity <script>alert(1)</script> Plane"
+                        labelIdentityPlane: "Identity <scr<script>ipt>alert(1)</script> Plane"
                     }} 
                     width={1200} 
                     height={800} 
@@ -968,9 +968,9 @@ describe('AwsDfdVisualizer Component Tests', () => {
             </div>
         );
 
-        // Under regex sanitization, any characters outside the allowlist (like <, >, ;) are stripped.
-        // Sanitized should be "Identity alert1 Plane"
-        cy.get('g.zt-plane-decorations text').first().should('contain.text', 'IDENTITY ALERT1 PLANE');
+        // Under recursive sanitization, nested script tags are recursively stripped and any other characters outside the allowlist are removed.
+        // Sanitized should still resolve cleanly to "Identity alert1 Plane"
+        cy.get('g.zt-plane-decorations text[x="20"]').first().should('contain.text', 'IDENTITY ALERT1 PLANE');
         // Ensure no active script element got injected inside the SVG container
         cy.get('svg').find('script').should('not.exist');
     });

@@ -2253,10 +2253,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     // Extract plane renaming overrides from config with strict sanitization
     const sanitizePlaneTitle = (title) => {
         if (typeof title !== 'string') return '';
-        // 1. Remove script tags completely
-        let sanitized = title.replace(/<\/?script[^>]*>/gi, '');
-        // 2. Remove other HTML brackets
-        sanitized = sanitized.replace(/[<>]/g, '');
+        let sanitized = title;
+        let prev;
+        
+        // 1. Recursively strip script tags until stable to prevent nested bypasses (e.g. <scr<script>ipt>)
+        do {
+            prev = sanitized;
+            sanitized = sanitized.replace(/<\/?script[^>]*>/gi, '');
+        } while (sanitized !== prev);
+
+        // 2. Recursively strip individual HTML brackets
+        do {
+            prev = sanitized;
+            sanitized = sanitized.replace(/[<>]/g, '');
+        } while (sanitized !== prev);
+
         // 3. Strict allowlist (excluding parentheses, brackets, and quotes to prevent injection)
         return sanitized.replace(/[^a-zA-Z0-9\s\-_:/.⚙️⚠️🚨]/gu, '').trim();
     };
