@@ -157,6 +157,18 @@
 	</splunk-control-group>
 </form>
 
+<form class="splunk-formatter-section" section-label="Governance Terminology">
+    <splunk-control-group label="Identity Plane Title" help="Custom label for the Identity Plane (top swimlane).">
+        <splunk-text-input name="{{VIZ_NAMESPACE}}.labelIdentityPlane" value="Identity/Management Plane"></splunk-text-input>
+    </splunk-control-group>
+    <splunk-control-group label="Control Plane Title" help="Custom label for the Policy & Control Plane (middle swimlane).">
+        <splunk-text-input name="{{VIZ_NAMESPACE}}.labelControlPlane" value="⚙️ Control Plane"></splunk-text-input>
+    </splunk-control-group>
+    <splunk-control-group label="Data Plane Title" help="Custom label for the Infrastructure / Data Plane (bottom swimlane).">
+        <splunk-text-input name="{{VIZ_NAMESPACE}}.labelDataPlane" value="Data Plane"></splunk-text-input>
+    </splunk-control-group>
+</form>
+
 <form class="splunk-formatter-section" section-label="Licensing">
     <splunk-control-group label="License Key" help="Enter your Enterprise or Sovereign GovTier license key (Base64 encoded format).">
         <splunk-text-input name="{{VIZ_NAMESPACE}}.licenseKey"></splunk-text-input>

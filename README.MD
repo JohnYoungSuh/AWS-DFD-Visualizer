@@ -1,4 +1,4 @@
-# AWS DFD Visualizer — v2.8.0
+# AWS DFD Visualizer — v2.8.1
 
 > [!IMPORTANT]
 > **Multi-Cloud Interactive Security Data Flow Diagram (DFD) for Splunk** — A high-performance, D3.js + React powered visualization engine. Renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, audit-ready Zero-Trust topology blueprints. Designed for **DoD Impact Level 5 (IL5)** and **NIST 800-53 / NIST 800-207** environments.
@@ -16,7 +16,7 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 
 ---
 
-## Key Features (v2.8.0)
+## Key Features (v2.8.1)
 
 ### ☁️ Multi-Cloud Service Provider (CSP) Support
 - **Modular Stencils**: Mappings decoupled into modular stencil libraries (`aws.js`, `azure.js`, `gcp.js`, `generic.js`).
@@ -27,6 +27,8 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 ### 🏛️ Zero-Trust Static Layout ("Blueprint Mode")
 - **Deterministic Enclosures**: Recursive Bottom-Up dimension calculator and Top-Down coordinate assigner draws nested VPCs/Subnets (AWS), VNets/Subnets (Azure), and VPC Networks/Subnets (GCP) with orthogonal Manhattan routing.
 - **NIST 800-207 Three-Plane Swimlanes**: Automatically sorts assets into Identity Plane (IAM, Users, Roles), Policy & Control Plane (WAF, CDN, Policy Engines), and Infrastructure/Data Plane (VPC, Compute, Database).
+- **Dynamic Node Card Spacing**: Bounding boxes are computed dynamically (`getNodeCardDimensions`) with a 15% text-wrapping buffer, expanding card sizes dynamically for extreme labels while maintaining size-aware link distances (clamped to a 1.5× baseGap threshold).
+- **Decoupled Plane Renaming & SPL Overrides**: Text inputs in the formatting options support customized terminology (defaulting to emojis like ⚙️ for the control plane). Prioritizes dynamic `zone_name` and `zone` fields returned via SPL to dynamically group and label ZTA swimlanes.
 - **SSH/22 Compliance Interception**: Automatically routes Port 22 connections to non-compliant nodes as dashed Vibrant Red paths — providing instant visual audit signals for open SSH ingress violations.
 - **Concentric Security Group Envelopes**: Draws green/red concentric rings around compute node cards to visually map assigned security group compliance state.
 - **Two-Pass SVG Rendering**: Link paths and label capsules render in separate SVG passes — label backgrounds always occlude lines beneath them.
@@ -34,6 +36,7 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 ### 🔒 STIG Hardening & Security Compliance
 - **Text-Only DOM Policy**: `dangerouslySetInnerHTML` and D3 `.html()` are explicitly banned. All dynamic strings use React standard interpolation (CWE-79 / XSS prevention).
 - **SPL Injection Sanitization**: `sanitizeSplunkToken` applies a strict regex allow-list before interpolating drilldown tokens.
+- **Custom Plane Regex Sanitization**: Inputs for plane renaming (via SPL and visual controls) are recursively sanitized using a strict allow-list regex (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`) to prevent XSS (CWE-79).
 - **DoS Circuit Breaker**: Blocks rendering and displays a warning if raw row count exceeds 5,000 records.
 - **Export Script Scanning**: SVG and Draw.io XML downloads are scanned for embedded `<script>` tags before export.
 - **Supply Chain**: TruffleHog secret scanning + Bandit SAST + CycloneDX SBOM on every build.

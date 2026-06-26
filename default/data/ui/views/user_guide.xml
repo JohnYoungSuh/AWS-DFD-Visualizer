@@ -328,6 +328,11 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
           <p>
             Traditional D3 force-directed visualizers place a heavy maintenance burden on administrators, who must manually drag cards to organize the layout and save their coordinates. The AWS-DFD-Visualizer completely eliminates this layout persistence overhead via its <strong>Pure Deterministic Static Layout Engine</strong>. In Blueprint Mode (activated by setting <code>layoutMode="Hierarchy"</code>, <code>clusterBy="group"</code>, and <code>draggableNodes="false"</code>), new subnets or EC2 scaling groups automatically compute their own structural grid dimensions bottom-up on search refresh. No human dragging, coordinate databases, or manual drag-and-drop maintenance is required.
           </p>
+
+          <h3 style="color: #FF9900;">Dynamic Node Card Spacing Engine (v2.8.1)</h3>
+          <p>
+            To prevent visual overlaps with extreme resource labels or compliance badge rings, the visualizer dynamically calculates each node's card bounds using character length metrics (applying a 15% safety buffer for text wrapping). D3 forces (<code>rectCollide</code> and <code>getDynamicLinkDistance</code>) dynamically adapt to these individual node sizes, maintaining a clean physical "Air Gap" (with a maximum 1.5× base gap clamp to retain architectural proximity).
+          </p>
         </div>
       </html>
     </panel>
@@ -342,6 +347,7 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
             <li><strong>Draggability and Zoom</strong> (<code>draggableNodes</code> / <code>canZoom</code>): Toggles interactivity for static audit exports.</li>
             <li><strong>Edge Styling</strong> (<code>smoothEdges</code>): Toggle curved SVG paths versus straight vector lines to maximize link legibility.</li>
             <li><strong>Multi-Cloud Stencil Set</strong> (<code>cspStencilSet</code>): Toggle between <em>Auto (Detect)</em>, <em>AWS</em>, <em>Azure</em>, and <em>GCP</em> to control stencil/icon theme parsing.</li>
+            <li><strong>Governance Terminology</strong> (<code>labelIdentityPlane</code> / <code>labelControlPlane</code> / <code>labelDataPlane</code>): Rename the Zero-Trust planes dynamically in the dashboard view. Default labels support emoji prefixes (e.g. ⚙️ Control Plane). Supports dynamic SPL overrides via the <code>zone_name</code> or <code>zone</code> query columns.</li>
           </ul>
         </div>
       </html>

@@ -172,7 +172,7 @@ const parseSplunkData = (data) => {
 
     rows.forEach(row => {
         let rawFrom, rawTo, rawType, rawLabel, rawEdge, rawGroup, rawIcon, rawStatus, suppConfig, captureTime;
-        let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown;
+        let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown, rawZoneName;
         
         if (isObjectMode) {
             rawFrom  = row?.from || row?.source || row?.src || row?.src_ip || row?.calling_service;
@@ -190,6 +190,7 @@ const parseSplunkData = (data) => {
             securityGroups = row?.securityGroups || row?.security_groups || null;
             rawNodeDrilldown = row?.node_drilldown || null;
             rawLinkDrilldown = row?.link_drilldown || null;
+            rawZoneName = row?.zone_name || row?.zone || null;
         } else {
             rawFrom  = (row && idxFrom > -1) ? row[idxFrom] : (row ? row[0] : null);
             rawTo    = (row && idxTo > -1) ? row[idxTo] : (row ? row[1] : null);
@@ -216,6 +217,8 @@ const parseSplunkData = (data) => {
             rawNodeDrilldown = (row && iNodeDrilldown > -1) ? row[iNodeDrilldown] : null;
             let iLinkDrilldown = fields.indexOf('link_drilldown');
             rawLinkDrilldown = (row && iLinkDrilldown > -1) ? row[iLinkDrilldown] : null;
+            let iZoneName = Math.max(fields.indexOf('zone_name'), fields.indexOf('zone'));
+            rawZoneName = (row && iZoneName > -1) ? row[iZoneName] : null;
         }
 
         const from  = ensureString(rawFrom);
@@ -223,7 +226,7 @@ const parseSplunkData = (data) => {
         const type  = ensureString(rawType) || 'AWS::Resource';
         let label = ensureString(rawLabel);
         const edge  = ensureString(rawEdge);
-        const group = ensureString(rawGroup) || 'Default';
+        const group = ensureString(rawZoneName) || ensureString(rawGroup) || 'Default';
         const icon  = ensureString(rawIcon);
         const status = ensureString(rawStatus);
         const vpcId = ensureString(rawVpcId);
@@ -286,6 +289,7 @@ const parseSplunkData = (data) => {
                 subnetId, 
                 security_groups: parsedSGs, 
                 node_drilldown,
+                zone_name: ensureString(rawZoneName) || null,
                 x: 0, 
                 y: 0 
             });
@@ -315,6 +319,9 @@ const parseSplunkData = (data) => {
             }
             if (subnetId && !existingNode.subnetId) {
                 existingNode.subnetId = subnetId;
+            }
+            if (rawZoneName && !existingNode.zone_name) {
+                existingNode.zone_name = ensureString(rawZoneName);
             }
             if (parsedSGs && parsedSGs.length && (!existingNode.security_groups || !existingNode.security_groups.length)) {
                 existingNode.security_groups = parsedSGs;
@@ -694,6 +701,101 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
     );
 };
 
+// SECTION: DYNAMIC_NODE_DIMENSIONS — Calculate node card width/height based on text length and styling
+const getNodeCardDimensions = (node, config) => {
+    if (!node) return { w: 280, h: 100 };
+    const designLayout = config?.designLayoutDashboard || 'default';
+    
+    // 1. Determine base dimensions based on layout density
+    let baseWidth = 280;
+    let baseHeight = 100;
+    if (designLayout === 'compact') {
+        baseWidth = 220;
+        baseHeight = 80;
+    } else if (designLayout === 'expanded') {
+        baseWidth = 340;
+        baseHeight = 120;
+    }
+
+    const getStatusHighlight = (status) => {
+        const s = String(status || '').toLowerCase().trim();
+        if (s === 'incident' || s === 'failing' || s === 'critical' || s === 'violation' || s === 'non-compliant' || s === 'critical-threat') {
+            return { labelPrefix: '🚨 ' };
+        }
+        if (s === 'warning' || s === 'alert' || s === 'suspicious') {
+            return { labelPrefix: '⚠️ ' };
+        }
+        return null;
+    };
+    
+    const highlight = getStatusHighlight(node.status);
+    const prefix = highlight ? highlight.labelPrefix : '';
+    const baseLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
+    const displayLabel = prefix + baseLabel;
+    
+    // Text sizing parameters
+    let textScale = 1.0;
+    if (designLayout === 'compact') textScale = 0.8;
+    else if (designLayout === 'expanded') textScale = 1.2;
+
+    const sizeConf = config?.nodeTextSize || 'medium';
+    let baseFontSize = 18;
+    if (sizeConf === 'small') baseFontSize = 14;
+    else if (sizeConf === 'large') baseFontSize = 24;
+    else if (sizeConf === 'extraLarge') baseFontSize = 32;
+    
+    const fontSize = Math.round(baseFontSize * textScale);
+    
+    // Proportional character estimation: average character width is around 0.55 * fontSize
+    const charWidth = fontSize * 0.55;
+    const charCount = displayLabel.length;
+    
+    const wrapText = String(config?.wrapNodeText || 'true') === 'true';
+    
+    let wNode = baseWidth;
+    let hNode = baseHeight;
+
+    if (wrapText) {
+        // If text is wrapped, we have a fixed width for the text block (wLabelWrap)
+        let textPadding = 100;
+        if (designLayout === 'compact') textPadding = 80;
+        else if (designLayout === 'expanded') textPadding = 130;
+        
+        let labelWrapWidth = wNode - textPadding;
+        
+        // Estimated lines:
+        const maxCharsPerLine = Math.max(1, Math.floor(labelWrapWidth / charWidth));
+        const numLines = Math.ceil(charCount / maxCharsPerLine);
+        
+        // If it's more than 2 lines, we need to grow the height!
+        const estimatedTextHeight = numLines * (fontSize * 1.1); // lineHeight is 1.1
+        const requiredHeight = estimatedTextHeight + (designLayout === 'compact' ? 40 : designLayout === 'expanded' ? 65 : 55);
+        if (requiredHeight > hNode) {
+            hNode = requiredHeight;
+        }
+    } else {
+        // Non-wrapped: text is on a single line. It is truncated if displayLabel.length > 25.
+        // Wait, under dynamic node sizing, we don't truncate text, but calculate required width:
+        let textPadding = 100;
+        if (designLayout === 'compact') textPadding = 80;
+        else if (designLayout === 'expanded') textPadding = 130;
+        
+        const estimatedTextWidth = (charCount * charWidth) * 1.15; // 15% safety buffer
+        const requiredWidth = estimatedTextWidth + textPadding;
+        if (requiredWidth > wNode) {
+            wNode = requiredWidth;
+        }
+    }
+    
+    // We should limit maximum card width to prevent the card from becoming ridiculously wide:
+    const maxWidth = baseWidth * 1.8;
+    if (wNode > maxWidth) {
+        wNode = maxWidth;
+    }
+    
+    return { w: Math.round(wNode), h: Math.round(hNode) };
+};
+
 // SECTION: NODE_CARD — SVG node card (AWS icon, label, type badge). React renders DOM, D3 handles math.
 const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, isZeroTrust, globalAdapter }) => {
     if (!node.x) return null;
@@ -730,29 +832,45 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
     const wrapText = String(config?.wrapNodeText || 'true') === 'true';
 
     const designLayout = config?.designLayoutDashboard || 'default';
-    let wNode = 280;
-    let hNode = 100;
+    
+    // Dynamic dimensions from helper
+    const dims = React.useMemo(() => {
+        if (node.width && node.height && !node.isContainer) {
+            return { w: node.width, h: node.height };
+        }
+        return getNodeCardDimensions(node, config);
+    }, [node.width, node.height, node.label, node.arn, node.id, node.status, config]);
+
+    const wNode = dims.w;
+    const hNode = dims.h;
+
     let textScale = 1.0;
+    if (designLayout === 'compact') textScale = 0.8;
+    else if (designLayout === 'expanded') textScale = 1.2;
 
-    let wImgBox = 66, hImgBox = 66, xImgBox = -128, yImgBox = -33;
-    let wImg = 58, hImg = 58, xImg = -124, yImg = -29;
-    let xText = -45, yTypeText = -14, yLabelText = 22, wLabelWrap = 180, hLabelWrap = 45, yLabelWrap = 0;
-
+    // Image/text relative scaling
+    let wImgBox = 66;
     if (designLayout === 'compact') {
-        wNode = 220;
-        hNode = 80;
-        textScale = 0.8;
-        wImgBox = 50; hImgBox = 50; xImgBox = -100; yImgBox = -25;
-        wImg = 42; hImg = 42; xImg = -96; yImg = -21;
-        xText = -40; yTypeText = -10; yLabelText = 18; wLabelWrap = 140; hLabelWrap = 35; yLabelWrap = 0;
+        wImgBox = 50;
     } else if (designLayout === 'expanded') {
-        wNode = 340;
-        hNode = 120;
-        textScale = 1.2;
-        wImgBox = 80; hImgBox = 80; xImgBox = -156; yImgBox = -40;
-        wImg = 70; hImg = 70; xImg = -151; yImg = -35;
-        xText = -60; yTypeText = -18; yLabelText = 26; wLabelWrap = 210; hLabelWrap = 50; yLabelWrap = 5;
+        wImgBox = 80;
     }
+    const hImgBox = wImgBox;
+    const xImgBox = -(wNode / 2) + (designLayout === 'compact' ? 10 : designLayout === 'expanded' ? 14 : 12);
+    const yImgBox = -(hImgBox / 2);
+
+    const wImg = wImgBox - (designLayout === 'compact' ? 8 : designLayout === 'expanded' ? 10 : 8);
+    const hImg = wImg;
+    const xImg = xImgBox + (designLayout === 'compact' ? 4 : designLayout === 'expanded' ? 5 : 4);
+    const yImg = yImgBox + (designLayout === 'compact' ? 4 : designLayout === 'expanded' ? 5 : 4);
+
+    const xText = xImgBox + wImgBox + (designLayout === 'compact' ? 10 : designLayout === 'expanded' ? 16 : 12);
+    const yTypeText = -hNode * 0.14;
+    const yLabelText = hNode * 0.22;
+    const wLabelWrap = (wNode / 2) - xText - (designLayout === 'compact' ? 10 : designLayout === 'expanded' ? 14 : 12);
+    const hLabelWrap = hNode - (designLayout === 'compact' ? 40 : designLayout === 'expanded' ? 65 : 55);
+    const yLabelWrap = -hNode * 0.05;
+
     
     let fontSize = Math.round(18 * textScale);
     let typeFontSize = Math.round(14 * textScale);
@@ -879,11 +997,14 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
 };
 
 // SECTION: ZONE — VPC/subnet enclosure rectangle (groupBy clustering placeholder)
-const Zone = ({ groupName, nodes, isDarkTheme }) => {
+const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
     if (nodes.length === 0 || !nodes[0].x) return null;
     
+    const cTitle = String(controlPlaneTitle || 'control plane').toLowerCase();
+    const gNameLower = groupName.toLowerCase();
     // Medium 3: Control Plane visual boundary
-    const isControlPlane = groupName.toLowerCase() === 'control plane' || 
+    const isControlPlane = gNameLower === cTitle || 
+                           gNameLower === 'control plane' || 
                            nodes.some(n => (n.type || '').includes('IAM') || (n.type || '').includes('CloudTrail') || (n.type || '').includes('WAF'));
 
     const fillColor = isControlPlane ? '#879196' : 'white';
@@ -1074,10 +1195,10 @@ const resolveHierarchy = (nodes, adapter) => {
     };
 };
 
-const computeDimensions = (node, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }) => {
+const computeDimensions = (node, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }, config = {}) => {
     const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     if (node.children && node.children.length > 0) {
-        node.children.forEach(child => computeDimensions(child, adapter, layoutParams));
+        node.children.forEach(child => computeDimensions(child, adapter, layoutParams, config));
 
         if (node.id === 'GLOBAL_ROOT') {
             node.width = 1200;
@@ -1123,28 +1244,39 @@ const computeDimensions = (node, adapter, layoutParams = { nodeWidth: 280, nodeH
             node.width = nodeWidth * 1.3;
             node.height = nodeHeight * 1.8;
         } else {
-            node.width = nodeWidth;
-            node.height = nodeHeight;
+            const dims = getNodeCardDimensions(node.data, config);
+            node.width = dims.w;
+            node.height = dims.h;
+            node.data.width = dims.w;
+            node.data.height = dims.h;
         }
     }
 };
 
-const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }, centerX = 600, centerY = 900) => {
+const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }, centerX = 600, centerY = 900, config = {}) => {
     const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
     unassociatedNodes.forEach((node, idx) => {
-        node.x = (nodeWidth / 2) + 150 + idx * (nodeWidth + 150);
+        const dims = getNodeCardDimensions(node, config);
+        node.width = dims.w;
+        node.height = dims.h;
+        node.x = (dims.w / 2) + 150 + idx * (dims.w + 150);
         node.y = 100;
     });
 
     const M = globalEdgeAssets.length;
     globalEdgeAssets.forEach((node, idx) => {
-        node.x = centerX - ((M - 1) * (nodeWidth + 200)) / 2 + idx * (nodeWidth + 200);
+        const dims = getNodeCardDimensions(node, config);
+        node.width = dims.w;
+        node.height = dims.h;
+        node.x = centerX - ((M - 1) * (dims.w + 200)) / 2 + idx * (dims.w + 200);
         node.y = 300;
         
         const hNode = root.descendants().find(d => d.id === node.id);
         if (hNode) {
             hNode.x = node.x;
             hNode.y = node.y;
+            hNode.width = dims.w;
+            hNode.height = dims.h;
         }
     });
 
@@ -1216,17 +1348,23 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, l
     root.descendants().forEach(d => {
         d.data.x = d.x;
         d.data.y = d.y;
+        d.data.width = d.width;
+        d.data.height = d.height;
     });
 };
 
-const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter) => {
+const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter, planeTitles = {}) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.8.0" type="device">\n`;
+    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.8.1" type="device">\n`;
     xml += `  <diagram id="aws-dfd-diagram" name="AWS DFD Diagram">\n`;
     xml += `    <mxGraphModel dx="1200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">\n`;
     xml += `      <root>\n`;
     xml += `        <mxCell id="0" />\n`;
     xml += `        <mxCell id="1" parent="0" />\n`;
+
+    const identityPlaneTitle = planeTitles.identityPlaneTitle || "Identity/Management Plane";
+    const controlPlaneTitle = planeTitles.controlPlaneTitle || "⚙️ Control Plane";
+    const dataPlaneTitle = planeTitles.dataPlaneTitle || "Data Plane";
 
     const designLayout = config?.designLayoutDashboard || 'default';
     let wNode = 280;
@@ -1250,15 +1388,15 @@ const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter) => {
     };
 
     if (isZeroTrust) {
-        xml += `        <mxCell id="zt-plane-identity" value="Identity Plane" style="swimlane;horizontal=1;startSize=20;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
+        xml += `        <mxCell id="zt-plane-identity" value="${escapeXml(identityPlaneTitle)}" style="swimlane;horizontal=1;startSize=20;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
         xml += `          <mxGeometry x="0" y="0" width="1200" height="200" as="geometry" />\n`;
         xml += `        </mxCell>\n`;
         
-        xml += `        <mxCell id="zt-plane-control" value="Policy &amp; Control Plane" style="swimlane;horizontal=1;startSize=20;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
+        xml += `        <mxCell id="zt-plane-control" value="${escapeXml(controlPlaneTitle)}" style="swimlane;horizontal=1;startSize=20;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
         xml += `          <mxGeometry x="0" y="200" width="1200" height="200" as="geometry" />\n`;
         xml += `        </mxCell>\n`;
         
-        xml += `        <mxCell id="zt-plane-infra" value="Infrastructure Plane" style="swimlane;horizontal=1;startSize=20;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
+        xml += `        <mxCell id="zt-plane-infra" value="${escapeXml(dataPlaneTitle)}" style="swimlane;horizontal=1;startSize=20;fillColor=#f8fafc;strokeColor=#cbd5e1;fontStyle=1;align=left;" vertex="1" parent="1">\n`;
         xml += `          <mxGeometry x="0" y="400" width="1200" height="1000" as="geometry" />\n`;
         xml += `        </mxCell>\n`;
     }
@@ -1974,7 +2112,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 .parentId(d => d.parentId);
             
             const hierarchy = stratify(stratifiedNodes);
-            computeDimensions(hierarchy, globalAdapter, layoutParams);
+            computeDimensions(hierarchy, globalAdapter, layoutParams, config);
 
             const infraRoots = hierarchy.children ? hierarchy.children.filter(c => !c.data.isGlobalEdge) : [];
             const totalWidth = infraRoots.reduce((sum, c) => sum + c.width, 0) + (infraRoots.length - 1) * layoutParams.gapX;
@@ -1997,7 +2135,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const dynamicH = Math.max(800, Math.ceil(402 + maxVpcHeight + 100));
             const centerY = (402 + dynamicH) / 2;
 
-            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, globalAdapter, layoutParams, centerX, centerY);
+            assignCoordinates(hierarchy, unassociatedNodes, globalEdgeAssets, globalAdapter, layoutParams, centerX, centerY, config);
             
             const resolvedNodes = [];
             const vpcContainers = [];
@@ -2105,6 +2243,41 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         isStaticBlueprint
     });
 
+    // Extract plane renaming overrides from config with strict sanitization
+    const sanitizePlaneTitle = (title) => {
+        if (typeof title !== 'string') return '';
+        // 1. Remove script tags completely
+        let sanitized = title.replace(/<\/?script[^>]*>/gi, '');
+        // 2. Remove other HTML brackets
+        sanitized = sanitized.replace(/[<>]/g, '');
+        // 3. Strict allowlist (excluding parentheses, brackets, and quotes to prevent injection)
+        return sanitized.replace(/[^a-zA-Z0-9\s\-_:/.⚙️⚠️🚨]/gu, '').trim();
+    };
+
+    let identityPlaneTitle = sanitizePlaneTitle(config?.labelIdentityPlane) || "Identity/Management Plane";
+    let controlPlaneTitle = sanitizePlaneTitle(config?.labelControlPlane) || "⚙️ Control Plane";
+    let dataPlaneTitle = sanitizePlaneTitle(config?.labelDataPlane) || "Data Plane";
+
+    // Scan parsed nodes to see if there is any zone_name / zone from SPL overrides
+    if (nodes && nodes.length > 0) {
+        nodes.forEach(node => {
+            if (node.zone_name) {
+                const zSan = sanitizePlaneTitle(node.zone_name);
+                if (zSan) {
+                    const type = (node.type || '').toUpperCase();
+                    if (globalAdapter) {
+                        if (globalAdapter.isIdentity(type)) {
+                            identityPlaneTitle = zSan;
+                        } else if (globalAdapter.isGlobalEdge(type) || node.isGlobalEdge) {
+                            controlPlaneTitle = zSan;
+                        } else {
+                            dataPlaneTitle = zSan;
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     useEffect(() => {
         if (!nodes.length || isLicenseExceeded) return;
@@ -2165,6 +2338,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         const H = 1000;
 
         nodes.forEach(n => {
+            const dims = getNodeCardDimensions(n, config);
+            n.width = dims.w;
+            n.height = dims.h;
             if (!n.x || isNaN(n.x)) { 
                 n.x = (W / 2) + (Math.random() * 50 - 25); 
                 n.y = (H / 2) + (Math.random() * 50 - 25); 
@@ -2194,6 +2370,25 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             chargeStrength = -2500;
         }
 
+        const getDynamicLinkDistance = (link) => {
+            const sId = typeof link.source === 'object' ? link.source.id : link.source;
+            const tId = typeof link.target === 'object' ? link.target.id : link.target;
+            const sourceNode = nodes.find(n => n.id === sId);
+            const targetNode = nodes.find(n => n.id === tId);
+            if (!sourceNode || !targetNode) return linkDistance;
+            
+            const wS = sourceNode.width || (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280);
+            const wT = targetNode.width || (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280);
+            
+            // Consistent Air Gap (padding) is 60px between the cards' borders
+            const airGap = 60;
+            const centerDistance = (wS + wT) / 2 + airGap;
+            
+            // Clamp gap: never exceed 1.5x the baseGap
+            const maxDistance = linkDistance * 1.5;
+            return Math.min(centerDistance, maxDistance);
+        };
+
         const rectCollide = () => {
             let localNodes = [];
             const paddingX = 40;
@@ -2203,13 +2398,13 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 const n = localNodes.length;
                 for (let i = 0; i < n; i++) {
                     const a = localNodes[i];
-                    const wA = (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280) / 2;
-                    const hA = (designLayout === 'compact' ? 80 : designLayout === 'expanded' ? 120 : 100) / 2;
+                    const wA = (a.width || (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280)) / 2;
+                    const hA = (a.height || (designLayout === 'compact' ? 80 : designLayout === 'expanded' ? 120 : 100)) / 2;
                     
                     for (let j = i + 1; j < n; j++) {
                         const b = localNodes[j];
-                        const wB = (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280) / 2;
-                        const hB = (designLayout === 'compact' ? 80 : designLayout === 'expanded' ? 120 : 100) / 2;
+                        const wB = (b.width || (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280)) / 2;
+                        const hB = (b.height || (designLayout === 'compact' ? 80 : designLayout === 'expanded' ? 120 : 100)) / 2;
                         
                         const dx = a.x - b.x;
                         const dy = a.y - b.y;
@@ -2249,7 +2444,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         }
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(linkDistance))
+            .force('link', d3.forceLink(links).id(d => d.id).distance(getDynamicLinkDistance))
             .force('charge', d3.forceManyBody().strength(chargeStrength))
             .force('center', d3.forceCenter(W / 2, H / 2))
             .force('collision', rectCollide())
@@ -2643,7 +2838,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.8.0 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.8.1 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 Tier: <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()} ({licenseInfo.valid ? `Licensed to: ${licenseInfo.customer}` : `Evaluation Mode: ${licenseInfo.reason}`})</span>
                 <br/>
@@ -2681,7 +2876,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     </button>
                     <button 
                         id="btn-export-drawio"
-                        onClick={() => exportToDrawio(nodes, links, isZeroTrust, config, globalAdapter)}
+                        onClick={() => exportToDrawio(nodes, links, isZeroTrust, config, globalAdapter, { identityPlaneTitle, controlPlaneTitle, dataPlaneTitle })}
                         style={{
                             padding: '6px 12px',
                             background: '#FF9900',
@@ -2846,24 +3041,30 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 <g ref={gRef}>
                     {/* Render Zero-Trust Plane separator lines & labels */}
                     {isZeroTrust && (
-                        <g className="zt-plane-decorations">
+                        <g className="zt-plane-decorations" style={{
+                            '--plane-label-fill': isDarkTheme ? "#cbd5e1" : "#0f172a",
+                            '--plane-bg-fill-1': isDarkTheme ? "#1f2937" : "#f8fafc",
+                            '--plane-bg-fill-2': isDarkTheme ? "#111827" : "#f1f5f9",
+                            '--plane-bg-fill-3': isDarkTheme ? "#1f2937" : "#f8fafc",
+                            '--plane-stroke': isDarkTheme ? "#374151" : "#e2e8f0"
+                        }}>
                             {/* Plane 1: Identity Plane */}
-                            <rect x={2} y={2} width={viewBoxWidth - 4} height={196} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
-                            <text x={20} y={30} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">IDENTITY PLANE</text>
+                            <rect x={2} y={2} width={viewBoxWidth - 4} height={196} fill="var(--plane-bg-fill-1)" fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke="var(--plane-stroke)" strokeWidth={1} rx={8} />
+                            <text x={20} y={30} fill="var(--plane-label-fill)" fontSize={11} fontWeight="bold" letterSpacing="0.05em">{identityPlaneTitle.toUpperCase()}</text>
                             {unassociatedNodes.length === 0 && (
-                                <text x={viewBoxWidth / 2} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Identity Plane Assets (e.g. IAM, Users, Roles)</text>
+                                <text x={viewBoxWidth / 2} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No {identityPlaneTitle} Assets (e.g. IAM, Users, Roles)</text>
                             )}
 
                             {/* Plane 2: Policy & Control Plane */}
-                            <rect x={2} y={202} width={viewBoxWidth - 4} height={196} fill={isDarkTheme ? "#111827" : "#f1f5f9"} fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
-                            <text x={20} y={230} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">POLICY &amp; CONTROL PLANE</text>
+                            <rect x={2} y={202} width={viewBoxWidth - 4} height={196} fill="var(--plane-bg-fill-2)" fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke="var(--plane-stroke)" strokeWidth={1} rx={8} />
+                            <text x={20} y={230} fill="var(--plane-label-fill)" fontSize={11} fontWeight="bold" letterSpacing="0.05em">{controlPlaneTitle.toUpperCase()}</text>
                             {globalEdgeAssets.length === 0 && (
-                                <text x={viewBoxWidth / 2} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No Policy &amp; Control Plane Assets (e.g. WAF, CloudFront)</text>
+                                <text x={viewBoxWidth / 2} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No {controlPlaneTitle} Assets (e.g. WAF, CloudFront)</text>
                             )}
 
                             {/* Plane 3: Infrastructure Plane */}
-                            <rect x={2} y={402} width={viewBoxWidth - 4} height={viewBoxHeight - 404} fill={isDarkTheme ? "#1f2937" : "#f8fafc"} fillOpacity={isDarkTheme ? 0.08 : 0.2} stroke={isDarkTheme ? "#374151" : "#e2e8f0"} strokeWidth={1} rx={8} />
-                            <text x={20} y={430} fill={isDarkTheme ? "#cbd5e1" : "#0f172a"} fontSize={11} fontWeight="bold" letterSpacing="0.05em">INFRASTRUCTURE PLANE</text>
+                            <rect x={2} y={402} width={viewBoxWidth - 4} height={viewBoxHeight - 404} fill="var(--plane-bg-fill-3)" fillOpacity={isDarkTheme ? 0.08 : 0.2} stroke="var(--plane-stroke)" strokeWidth={1} rx={8} />
+                            <text x={20} y={430} fill="var(--plane-label-fill)" fontSize={11} fontWeight="bold" letterSpacing="0.05em">{dataPlaneTitle.toUpperCase()}</text>
                         </g>
                     )}
 
@@ -2963,7 +3164,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     ) : (
                         <g className="zones">
                             {groupNames.map(grp => (
-                                <Zone key={grp} groupName={grp} nodes={nodes.filter(n => n.group === grp)} isDarkTheme={isDarkTheme} />
+                                <Zone key={grp} groupName={grp} nodes={nodes.filter(n => n.group === grp)} isDarkTheme={isDarkTheme} controlPlaneTitle={controlPlaneTitle} />
                             ))}
                         </g>
                     )}

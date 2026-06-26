@@ -528,7 +528,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         );
         cy.wait(500);
 
-        cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', '#0f172a');
+        cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', 'var(--plane-label-fill)');
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#0f172a');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#1e293b');
         cy.screenshot('light_theme_text_colors');
@@ -540,7 +540,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         );
         cy.wait(500);
 
-        cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', '#cbd5e1');
+        cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', 'var(--plane-label-fill)');
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#cbd5e1');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#cbd5e1');
         cy.screenshot('dark_theme_text_colors');
@@ -906,6 +906,127 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.contains('Dataset Too Large').should('be.visible');
         cy.contains('exceeds the safety limit of 5000').should('be.visible');
         cy.get('g.node-card').should('not.exist');
+    });
+
+    it('verifies extreme label collision overlap prevention', () => {
+        const extremeLabelData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}
+            ],
+            rows: [
+                ["node-a", "node-b", "AWS::EC2::Instance", "ThisIsAnExtremelyLongLabelDesignedToTestDynamicCardWidthAndCollisionPhysicsInRelease281WithTextWrappingDisabled"],
+                ["node-b", null, "AWS::EC2::Instance", "NormalNode"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={extremeLabelData} 
+                    config={{ 
+                        layoutMode: 'zero-trust',
+                        wrapNodeText: 'false'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.wait(500);
+        // Verify the extremely long node card has been dynamically widened
+        // Base width is 280, max is 280 * 1.8 = 504. The dynamic card should be wider than 280.
+        cy.get('g.node-card').first().find('rect').first().then(($rect) => {
+            const width = parseFloat($rect.attr('width'));
+            expect(width).to.be.greaterThan(280);
+        });
+    });
+
+    it('verifies custom plane names XSS script tag escaping and regex sanitization', () => {
+        const xssData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}
+            ],
+            rows: [
+                ["node-a", null, "AWS::IAM::User", "Identity Node"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={xssData} 
+                    config={{ 
+                        layoutMode: 'zero-trust',
+                        labelIdentityPlane: "Identity <script>alert(1)</script> Plane"
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        // Under regex sanitization, any characters outside the allowlist (like <, >, ;) are stripped.
+        // Sanitized should be "Identity alert1 Plane"
+        cy.get('g.zt-plane-decorations text').first().should('contain.text', 'IDENTITY ALERT1 PLANE');
+        // Ensure no active script element got injected inside the SVG container
+        cy.get('svg').find('script').should('not.exist');
+    });
+
+    it('verifies Draw.io XML contains customized plane terminology and is sanitized', () => {
+        let exportedXml = '';
+        cy.window().then((win) => {
+            cy.stub(win.URL, 'createObjectURL').callsFake((blob) => {
+                blob.text().then((text) => {
+                    exportedXml = text;
+                });
+                return 'blob:mock-url';
+            });
+            cy.stub(win.URL, 'revokeObjectURL').callsFake(() => {});
+
+            const doc = win.document;
+            cy.stub(doc, 'createElement').callsFake((tagName) => {
+                const el = doc.createElement.wrappedMethod.call(doc, tagName);
+                if (tagName === 'a') {
+                    cy.stub(el, 'click').callsFake(() => {});
+                }
+                return el;
+            });
+        });
+
+        const customData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}
+            ],
+            rows: [
+                ["node-a", null, "AWS::IAM::User", "Identity Node"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={customData} 
+                    config={{ 
+                        layoutMode: 'zero-trust',
+                        labelIdentityPlane: "My Custom Identity Plane <script>alert('xss')</script>"
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.get('#btn-export-drawio').click();
+        
+        // Assert on the intercepted XML string
+        cy.wrap(null).should(() => {
+            expect(exportedXml).to.contain('My Custom Identity Plane alertxss');
+            expect(exportedXml).to.not.contain('<script');
+        });
     });
 });
 

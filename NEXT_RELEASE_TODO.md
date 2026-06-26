@@ -5,6 +5,9 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: June 26, 2026 (v2.8.1 Release)
+- [x] **Release v2.8.1 Implementation** — Implemented dynamic node-card spacing engine (`getNodeCardDimensions`) with a 15% text-wrapping safety buffer and size-aware link distances clamped to 1.5× baseGap. Decoupled ZTA plane labeling terminology from hardcoded values to visual options (`labelIdentityPlane`/`labelControlPlane`/`labelDataPlane`) and prioritized query-driven SPL `zone_name`/`zone` overrides. Applied strict regex input sanitization (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`) to prevent XSS (CWE-79). Synchronized plane terminology in Draw.io exporters. Added Cypress component tests for extreme label width overlaps, script tag XSS, and Draw.io XML structure. Bumped version to 2.8.1 in all 5 configuration and manifest files concurrently. Verified that all 30 tests pass and AppInspect succeeds with 0 errors/warnings.
+
 ### ✅ Session: June 19, 2026
 - [x] **License Key Persistence & display_mode Sticky Fix** — Resolved `licenseKey` saving failure by removing the static `value=""` from the `<splunk-text-input>` control in `formatter.html`. Hardened prefix stripping in `visualization_source.js` to be case-insensitive. Resolved manual sticky drag placement failing to lock coordinates by fallback-checking `config?.display_mode` in `AwsDfdVisualizer.jsx`.
 
@@ -89,7 +92,7 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ## 🚀 Release v2.8.1 (Dynamic Spacing & Customizable Terminology)
 
-- [ ] **Dynamic "Object-Subject" Spacing Engine**
+- [x] **Dynamic "Object-Subject" Spacing Engine**
     - *Context*: ZTA swimlanes and Blueprint layouts have fixed node gaps, leading to overlaps for long labels or metadata counts.
     - *Action*:
         1. Refactor `assignCoordinates` and `computeDimensions` to replace static `gapX`/`gapY` constants with dynamic size-aware coordinate math.
@@ -98,26 +101,28 @@ This list is based on failure analysis against mock config and standard D3 force
         4. Implement a dynamic link distance function that maintains a consistent "Air Gap" (padding) between connected source and target nodes based on the size of the larger of the two nodes.
         5. Physics protection: Clamp the dynamic gaps to never exceed **1.5× the baseGap** (`maxGap Clamp`) to keep the graph from exploding in size on large datasets and to maintain visual "Architectural Proximity".
         6. Update the D3 rectangular collision (`rectCollide`) force to use the calculated node-specific rect `{ w, h }` plus configurable padding parameters (`paddingX`/`paddingY`).
-        7. Verify that the "Zero-Latency" 300-tick bypass runs with these new dynamic dimensions so that small graphs settle instantly with correct gaps.
-- [ ] **Decoupled Plane Renaming & Terminology Customization**
+        7. Verify that the "Zero-Latency" 300-tick bypass runs with these new dynamic dimensions, testing performance to ensure small/medium graphs settle instantly without UI thread freezing up to 150 nodes.
+- [x] **Decoupled Plane Renaming & Terminology Customization**
     - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g., Navy Identity Server, MKTL Governance presets).
     - *Action*:
         1. Add the "Governance Terminology" section to `formatter.html` with text inputs, and register defaults in `visualizations.conf` for `labelIdentityPlane` (default: "Identity/Management Plane"), `labelControlPlane` (default: "⚙️ Control Plane"), and `labelDataPlane` (default: "Data Plane"). Putting the emoji in the defaults allows users to change/delete prefixes from the Splunk UI without modifying the source code.
         2. Update the Splunk data parser so that if an SPL eval field returns a custom `zone_name` (or `zone`), the visualizer prioritizes the SPL value over the UI preset options. This enables Sec-Agents to dynamically rename planes (e.g. `zone_name="⚠️ CONTAINMENT ZONE"`).
-        3. Bind renamed plane labels in the SVG decorations to CSS variables (`--plane-label-fill`, etc.) to ensure they remain high-contrast and theme-aware (Light/Dark mode).
-        4. Update the Draw.io exporter to output custom plane terminology dynamically in diagram XML structures.
-- [ ] **ZTA Swimlane Refinement**
+        3. Input sanitization: Apply strict regex sanitization on all custom plane inputs (from both SPL and formatter UI) to prevent DOM-based XSS (CWE-79) during dynamic rendering.
+        4. Bind renamed plane labels in the SVG decorations to CSS variables (`--plane-label-fill`, etc.) to ensure they remain high-contrast and theme-aware (Light/Dark mode).
+        5. Update the Draw.io exporter to output custom plane terminology dynamically in diagram XML structures, ensuring the exported XML is sanitized and contains no raw HTML elements.
+- [x] **ZTA Swimlane Refinement**
     - *Context*: Renamed planes/zones must propagate atomically to D3 polygonHull boundaries and Metanode grouping definitions.
     - *Action*:
         1. Update `groups` generation and tree virtual group IDs to group nodes dynamically by their resolved zone names (prioritizing `zone_name` then `group`).
         2. Ensure the D3 `polygonHull` boundaries and their text headers update atomically and respect renamed custom boundaries.
         3. Update the `Zone` component to support case-insensitive control plane checks and display customized zone names.
-- [ ] **Release Hygiene Synchronization (v2.8.1)**
+- [x] **Release Hygiene Synchronization (v2.8.1)**
     - *Action*: Bump version to `2.8.1` concurrently in `package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf` (both stanzas), and `AwsDfdVisualizer.jsx`.
-- [ ] **Verification & Cypress Component Testing**
+- [x] **Verification & Cypress Component Testing**
     - *Action*:
         1. Run component test suite `npm run test:cy` and confirm 100% pass rate.
         2. Add a Cypress test case with an "Extreme Label" (100 characters). Verify that the `rectCollide` prevents the next node from overlapping this giant label.
+        3. Add a Cypress test case validating that script tags in custom plane inputs are safely escaped and do not render as active DOM elements.
 
 ---
 

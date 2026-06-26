@@ -48,3 +48,9 @@ Auto-refreshing dashboards running on operation center displays can easily lock 
 - **Export Script Scanning & Audit Logging**: Diagram download handlers (`exportToSvg`, `exportToDrawio`) scan generated XML/SVG content for `<script` tag signatures and block file downloads if any script block is detected. Downloading also triggers a `Splunk.util.trackEvent()` action to log architectural diagram exports for Splunk administrators.
 - **Automated Validation**: Automated scans for secrets (TruffleHog), SAST vulnerabilities (Bandit), and licensing (CycloneDX SBOM) run on every release branch commit.
 - **Hardened GitHub Actions**: CI/CD pipelines enforce explicit least-privilege repository permissions (`contents: read`) at the workflow level to prevent token elevation exploits and secure the build pipeline.
+
+### 4. Custom Plane Terminology Strict Sanitization (CWE-79 XSS Prevention)
+To prevent DOM-based Cross-Site Scripting (XSS) when rendering customized plane names or exporting diagrams, inputs from both Splunk UI controls and SPL `zone_name`/`zone` fields are strictly sanitized:
+- **HTML Element Strip**: Script tag blocks (`/<\/?script[^>]*>/gi`) and HTML tags (`/[<>]/g`) are recursively removed.
+- **Strict Character Allow-listing**: Only safe characters are permitted (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`). All quotes, brackets, parentheses, and other script delimiters are stripped.
+- **Propagation Safeguard**: Sanitization occurs at ingestion before rendering to the DOM and is reapplied during Draw.io XML export compiling.
