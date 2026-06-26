@@ -1,6 +1,6 @@
 {
   "name": "aws-dfd-visualizer",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "description": "Interactive AWS Data Flow Diagrams (DFD) for Splunk. Visualizes AWS Config topologies, nested VPCs/Subnets, and Zero-Trust compliance highlights.",
   "main": "src/visualization_source.js",
   "engines": {

@@ -1542,8 +1542,53 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     // ----------------------------------------------------
     // License Verification Logic
     // ----------------------------------------------------
+    const [localLicenseKey, setLocalLicenseKey] = useState(() => {
+        try {
+            return localStorage.getItem('aws_dfd_license_key') || '';
+        } catch (e) {
+            return '';
+        }
+    });
+
+    const [showLicenseConsole, setShowLicenseConsole] = useState(false);
+    const [localInputKey, setLocalInputKey] = useState(localLicenseKey);
+
+    useEffect(() => {
+        setLocalInputKey(localLicenseKey);
+    }, [localLicenseKey]);
+
+    const handleApplyLocalLicense = () => {
+        const trimmed = localInputKey.trim();
+        if (!trimmed) {
+            handleClearLocalLicense();
+            return;
+        }
+        try {
+            const decoded = atob(trimmed);
+            const parsed = JSON.parse(decoded);
+            if (parsed.signature !== "dfd-visualizer-valid-sig-12345") {
+                alert("Invalid license signature. Key cannot be applied.");
+                return;
+            }
+            localStorage.setItem('aws_dfd_license_key', trimmed);
+            setLocalLicenseKey(trimmed);
+            alert("License key successfully saved locally!");
+        } catch (e) {
+            alert("Invalid license key format. Key cannot be parsed.");
+        }
+    };
+
+    const handleClearLocalLicense = () => {
+        try {
+            localStorage.removeItem('aws_dfd_license_key');
+        } catch (e) {}
+        setLocalLicenseKey('');
+        setLocalInputKey('');
+        alert("Local license key cleared.");
+    };
+
     const licenseInfo = useMemo(() => {
-        const key = config?.licenseKey || "";
+        const key = config?.licenseKey || localLicenseKey || "";
         if (!key) {
             return { tier: "free", customer: "Demo/Eval", valid: false, reason: "Missing license key" };
         }
@@ -1568,7 +1613,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         } catch (e) {
             return { tier: "free", customer: "Demo/Eval", valid: false, reason: "Invalid license key format" };
         }
-    }, [config?.licenseKey]);
+    }, [config?.licenseKey, localLicenseKey]);
 
     const [showCsvConsole, setShowCsvConsole] = useState(false);
     const [csvInput, setCsvInput] = useState('');
@@ -2803,6 +2848,41 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                             <li><strong>Sovereign GovTier</strong>: Unlimited node capacity, offline AppInspect pre-hardened ($35,000 / year flat site license)</li>
                         </ul>
                     </div>
+                    <div style={{ marginTop: '20px', width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <textarea
+                            placeholder="Or paste your license key here to save it locally..."
+                            value={localInputKey}
+                            onChange={(e) => setLocalInputKey(e.target.value)}
+                            style={{
+                                width: '100%',
+                                height: '60px',
+                                padding: '8px',
+                                borderRadius: '6px',
+                                border: `1px solid ${isDarkTheme ? '#475569' : '#cbd5e1'}`,
+                                background: isDarkTheme ? '#1e293b' : '#ffffff',
+                                color: isDarkTheme ? '#f1f5f9' : '#0f172a',
+                                fontSize: '12px',
+                                fontFamily: 'monospace',
+                                resize: 'none'
+                            }}
+                        />
+                        <button
+                            onClick={handleApplyLocalLicense}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                background: '#10B981',
+                                color: '#ffffff',
+                                fontWeight: 'bold',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s'
+                            }}
+                        >
+                            Apply & Save Key Locally
+                        </button>
+                    </div>
                 </div>
             )}
             {isCalculating && (
@@ -2894,7 +2974,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.8.1 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.8.2 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 Tier: <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()} ({licenseInfo.valid ? `Licensed to: ${licenseInfo.customer}` : `Evaluation Mode: ${licenseInfo.reason}`})</span>
                 <br/>
@@ -2949,23 +3029,42 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     </button>
                 </div>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <button 
-                        id="btn-toggle-csv-console"
-                        onClick={() => setShowCsvConsole(!showCsvConsole)}
-                        style={{
-                            padding: '6px 12px',
-                            background: '#232F3E',
-                            color: 'white',
-                            border: '1px solid #545b64',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                        }}
-                    >
-                        {showCsvConsole ? '✕ Close CSV Console' : '📝 CSV Live Feed'}
-                    </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                            id="btn-toggle-license-console"
+                            onClick={() => setShowLicenseConsole(!showLicenseConsole)}
+                            style={{
+                                padding: '6px 12px',
+                                background: '#10B981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }}
+                        >
+                            {showLicenseConsole ? '✕ Close License' : '🔑 License Key'}
+                        </button>
+                        <button 
+                            id="btn-toggle-csv-console"
+                            onClick={() => setShowCsvConsole(!showCsvConsole)}
+                            style={{
+                                padding: '6px 12px',
+                                background: '#232F3E',
+                                color: 'white',
+                                border: '1px solid #545b64',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }}
+                        >
+                            {showCsvConsole ? '✕ Close CSV Console' : '📝 CSV Live Feed'}
+                        </button>
+                    </div>
                     
                     {showCsvConsole && (
                         <div id="csv-import-panel" style={{
@@ -3035,6 +3134,85 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     }}
                                 >
                                     Apply Feed
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {showLicenseConsole && (
+                        <div id="license-config-panel" style={{
+                            marginTop: '5px',
+                            padding: '10px',
+                            background: isDarkTheme ? '#1e2832' : 'white',
+                            border: '1px solid #545b64',
+                            borderRadius: '6px',
+                            width: '320px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            fontFamily: 'Inter, sans-serif',
+                            color: isDarkTheme ? '#f1f5f9' : '#0f172a',
+                            fontSize: '12px',
+                            textAlign: 'left'
+                        }}>
+                            <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', borderBottom: `1px solid ${isDarkTheme ? '#334155' : '#e2e8f0'}`, paddingBottom: '4px' }}>🔑 Licensing Settings</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span><strong>Current Tier:</strong> <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()}</span></span>
+                                <span><strong>Status:</strong> {licenseInfo.valid ? `Licensed to ${licenseInfo.customer}` : `Evaluation (${licenseInfo.reason})`}</span>
+                                {licenseInfo.valid && <span><strong>Node Limit:</strong> {licenseInfo.nodeLimit} nodes</span>}
+                                {licenseInfo.valid && <span><strong>Expires:</strong> {licenseInfo.expiration}</span>}
+                            </div>
+                            <textarea
+                                id="license-input-textarea"
+                                placeholder="Paste Base64 License Key here..."
+                                value={localInputKey}
+                                onChange={(e) => setLocalInputKey(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    height: '60px',
+                                    padding: '6px',
+                                    borderRadius: '4px',
+                                    border: `1px solid ${isDarkTheme ? '#475569' : '#cbd5e1'}`,
+                                    background: isDarkTheme ? '#111827' : '#ffffff',
+                                    color: isDarkTheme ? '#f1f5f9' : '#0f172a',
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    resize: 'none'
+                                }}
+                            />
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    id="btn-apply-license"
+                                    onClick={handleApplyLocalLicense}
+                                    style={{
+                                        flex: 1,
+                                        padding: '6px 12px',
+                                        background: '#10B981',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    Apply & Save
+                                </button>
+                                <button
+                                    id="btn-clear-license"
+                                    onClick={handleClearLocalLicense}
+                                    style={{
+                                        padding: '6px 12px',
+                                        background: '#EF4444',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    Clear
                                 </button>
                             </div>
                         </div>
