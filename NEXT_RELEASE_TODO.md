@@ -372,41 +372,237 @@ This list is based on failure analysis against mock config and standard D3 force
         1. Read `showLegend` from visual options (e.g., `<option name="showLegend">true</option>`).
         2. Parse active stencils/resource types rendered in the nodes dataset, map to icons via `ICON_MAP_RAW`, and draw a floating, translucent glassmorphic Legend panel in the bottom-left corner of the canvas.
 
-## 🏛️ Epic: Multi-Cloud Translation & IaC Architect Mode (v3.0.0 Roadmap)
+## 🏛️ Epic: Migration Architect & TKU — Cognitive Control Plane (v3.0.0 Roadmap)
 
-*This epic captures the proposed engineering roadmap to transition the visualizer from a logs-viewer to an interactive Multi-Cloud design and Infrastructure-as-Code (IaC) generation tool.*
+*This epic transitions the AWS-DFD-Visualizer from a logs-viewer into an interactive **Cognitive Control Plane**. It adopts the TKU (Technology Knowledge Update) model — first pioneered by BMC Discovery — to automatically recognize, classify, and govern every technology on the canvas. The v3.0.0 release moves the product from "Discovery" into "Automated Knowledge & Governance."*
 
-### Phase 1: Core Architecture (The Grouping Engine)
-- [x] **Implement the CSP Adapter Registry** — Created the modular `src/components/AwsDfdVisualizer/stencils/` registry scaffolding and extracted AWS/Azure/GCP adapters. *(Completed June 13, 2026)*
-- [ ] **Develop the "Metanode" Aggregator**
-    - *Context*: Large environments (e.g. 10k servers) create visual "hairballs" that break dashboard readability.
-    - *Action*: Build a data-aggregation utility that groups Splunk results dynamically by type, subnet, and tags, rendering $\ge10,000$ servers as $<100$ collapsed Metanodes.
-- [x] **Add the Synchronous Layout Bypass** — Implemented pre-ticking of 300 force simulation loops synchronously in the background to show fully settled diagrams instantly. *(Completed June 13, 2026)*
+> **Engineering Philosophy:**
+> - **Low-Friction Ingestion (CIM-First):** Do NOT create new `inputs.conf` files. Leverage existing Splunk TAs and the Common Information Model (CIM) to interpret "Digital Exhaust" (Flow Logs, Config data, NetFlow).
+> - **Decoupled Knowledge Layer:** The identification engine lives in a Splunk lookup (`dfd_knowledge_base.csv`) and macro (`dfd_identify`), completely independent of the React/D3 visualization layer.
+> - **Air-Gap Compatible:** All processing is client-side or Splunk-side. No outbound API calls. Full IL5 / DoD compliance preserved.
 
-### Phase 2: The Designer UI (The "Architect Mode")
-- [ ] **Implement `isArchitectMode` State Toggle**
-    - *Action*: Expose a switch in the Splunk Formatter options panel (`display.visualizations.custom.AWS-DFD-Visualizer.isArchitectMode`) to enable interactive modification features.
-- [ ] **Build the Migration Side-Drawer**
-    - *Action*: Render a sliding React panel component on node card selection that shows resource attributes.
-- [ ] **Feature: Display "Observed Metadata"** — Render read-only metadata fields retrieved from live Splunk logs in the side-drawer.
-- [ ] **Feature: Display "Target Metadata"** — Expose editable input forms inside the side-drawer to allow architects to define desired target specifications.
-- [ ] **Add "Target CSP" Translation Dropdown**
-    - *Action*: Support selecting "Target: Azure" or "Target: GCP" to dynamically swap AWS node card stencils for target provider stencils in real-time.
+---
 
-### Phase 3: The IaC Service (The "Generator")
-- [ ] **Define the `toHCL` Method inside `CspAdapter`** — Add a standard HCL generation interface to the stencil adapters.
-- [ ] **HCL Translation Logic**
-    - *Action*: Implement mappings translating node attributes (e.g., `AWS::EC2::Instance` $\rightarrow$ `azurerm_linux_virtual_machine` or `google_compute_instance`) and D3 links (edges $\rightarrow$ Security Group or Firewall Rules).
-- [ ] **Create the "Global Generator Service"**
-    - *Action*: Write a compiler utility that traverses the active canvas nodes/edges, generates individual resource HCL blocks, and aggregates them.
-- [ ] **Add the "Export Code" Button**
-    - *Action*: Place a primary export action in the side-drawer allowing the user to copy or download a compiled `main.tf` Terraform file representing the canvas design.
+### 🔮 Phase 1: The Knowledge & Pattern Engine (The TKU Layer)
 
-### Phase 4: Contest & Sales Polish (The "Wow" Factor)
-- [ ] **Finalize the "NOC Edition" Pure Black Mode**
-    - *Action*: Add option for pure black backgrounds (`#000000`) with high-contrast glowing borders and vibrant connection overlays to fit operations center displays.
-- [x] **Implement Drilldown Actions** — Hook node clicks to parameterized JIT searches targeting raw log records with SQL injection sanitization. *(Completed June 6, 2026)*
-- [ ] **Update README & Documentation** — Write the "Migration Architect" use case in Splunkbase app descriptions.
+*Objective: Build the behavioral identification engine that classifies technologies by their "Digital Signatures" — port behavior, regex patterns, and traffic DNA — without relying on hostnames or agent installs.*
 
+- [ ] **Develop `dfd_knowledge_base.csv` — The TKU Lookup**
+    - *Context*: This is the "heartbeat" of the identification engine. It maps behavioral signatures (port + traffic pattern) to identified technology products and their associated ZTA functional roles.
+    - *Action*:
+        1. Create `lookups/dfd_knowledge_base.csv` with the following schema:
+           `signature_id, port, protocol, traffic_regex, product_name, vendor, category, zta_role, icon_key, confidence_score`
+        2. Seed the initial lookup with AWS/Azure/GCP native services (RDS, Aurora, DynamoDB, Azure SQL, Cloud SQL) plus the following **3rd Party Vendor Signatures**:
+           - **Oracle:** Port `1521` + `TNS` traffic pattern → `Oracle DB Cluster` → ZTA Role: `PIP_DATA`
+           - **F5 BIG-IP APM:** Port `443` + `/mgmt/shared/authn` URI pattern → `F5 APM` → ZTA Role: `PDP_PEP`
+           - **Cisco ASA:** Port `443`/`8443` + DTLS + `ASDM` banner → `Cisco ASA Firewall` → ZTA Role: `PEP_GATEWAY`
+           - **Palo Alto NGFW:** Port `3978` + XMPP beacon → `Palo Alto NGFW` → ZTA Role: `PEP_GATEWAY`
+           - **Cisco ISE:** Port `1812`/`1813` RADIUS + port `8443` → `Cisco ISE` → ZTA Role: `PAP_POLICY`
+           - **HashiCorp Vault:** Port `8200` + `/v1/sys/health` → `HashiCorp Vault` → ZTA Role: `PAP_CREDENTIAL`
+        3. Register the lookup in `default/transforms.conf` (`[dfd_knowledge_base]`) and validate it loads cleanly via `make inspect`.
+    - *Verification*: `| inputlookup dfd_knowledge_base.csv | stats count by vendor` returns non-zero rows for each vendor in the seed set.
 
+- [ ] **Create the `dfd_identify` Splunk Macro — The TPL-Style Identification Engine**
+    - *Context*: This macro is the "TPL compiler" equivalent. It correlates live CIM-normalized flow/config data against the Knowledge Base to produce a classified node list, without requiring agent installs or DNS resolution.
+    - *Action*:
+        1. Create `default/macros.conf` entry `[dfd_identify(1)]` where arg 1 is the base search string.
+        2. The macro body:
+           ```spl
+           `$base_search$`
+           | eval port=coalesce(dest_port, dvc_port)
+           | lookup dfd_knowledge_base.csv port AS port protocol AS protocol OUTPUT product_name, vendor, zta_role, icon_key, confidence_score
+           | eval product_name=coalesce(product_name, type, "Unknown")
+           | rex field=uri_path "(?<uri_sig>/[^?#]{3,60})"
+           | eval zta_role=coalesce(zta_role, "DATA_RESOURCE")
+           ```
+        3. Support a `confidence_score` threshold filter (`>= 0.7`) to suppress low-confidence matches.
+        4. Document the macro in `default/data/ui/views/user_guide.xml` under a new "TKU Knowledge Engine" section.
+    - *Verification*: Running `` `dfd_identify("index=netflow")` | stats count by product_name `` in Splunk returns classified product rows.
+
+- [ ] **Implement Semantic Metanodes — The "Service Pillar" Aggregator**
+    - *Context*: Large environments (10,000+ raw nodes) create visual "hairballs" that destroy dashboard readability. The TKU identification enables smart collapsing — 10,000 raw EC2 nodes classified as "Oracle DB Cluster" collapse into a single Metanode card labeled `Oracle DB Cluster [×312]`.
+    - *Action*:
+        1. In `parseSplunkData`, add a **post-identification aggregation pass** that groups rows sharing the same `product_name` (from the TKU lookup) into a single synthetic Metanode object:
+           ```js
+           const metanode = {
+               id: `meta_${safeId(product_name)}`,
+               label: `${product_name} [×${count}]`,
+               isMeta: true,
+               childIds: [...],
+               zta_role, icon_key, vendor
+           };
+           ```
+        2. Expose a `enableMetanodes` visual option (default: `true` when node count ≥ 500).
+        3. Clicking a Metanode card in the canvas expands it in-place, revealing the individual child nodes with a smooth D3 transition.
+        4. Add a Cypress component test verifying Metanode creation: 200 Oracle-type rows collapse to a single `g.node-card[data-meta="true"]` element.
+    - *Verification*: Canvas renders ≤ 100 Metanodes for a 10,000-row dataset in < 2 seconds.
+
+- [ ] **Implement Signature-to-Icon Binding — TKU Icon Resolver Fallback**
+    - *Context*: Unknown or 3rd-party services (Oracle, F5, Cisco) lack entries in `ICON_MAP_RAW`. The TKU `icon_key` field from the Knowledge Base must drive icon resolution as a first-class fallback.
+    - *Action*:
+        1. Update `getIconPath` to check `node.icon_key` from TKU identification **before** falling back to the generic stencil.
+        2. Add new vendor icon files under `appserver/static/icons/vendors/`: `oracle.svg`, `f5.svg`, `cisco.svg`, `paloalto.svg`, `hashicorp-vault.svg`, `cisco-ise.svg`.
+        3. Update `ICON_MAP_RAW` with keys matching the `icon_key` values in `dfd_knowledge_base.csv`.
+        4. Enforce `644` file permissions on all new icons (Makefile already handles this).
+    - *Verification*: A node with `type="Oracle"` renders the `oracle.svg` icon instead of `generic.svg`.
+
+---
+
+### 🔮 Phase 2: The ZTA Perspective & Architect UI (The Interface)
+
+*Objective: Surface the TKU-identified ZTA roles as a clean, interactive NIST 800-207 swimlane diagram. Allow architects to rename planes, inspect metadata, and detect compliance drift in real-time.*
+
+- [ ] **Implement the "ZTA Functional Toggle" — NIST 800-207 Swimlane Re-Arrangement**
+    - *Context*: Once TKU assigns ZTA roles (`PAP`, `PDP`, `PEP`, `PIP`, `DATA_RESOURCE`) to nodes, the visualization must re-arrange the DFD into the canonical NIST 800-207 horizontal swimlane layout.
+    - *Action*:
+        1. Add `layoutMode="zta-functional"` as a new option in `visualizations.conf` and `formatter.html`.
+        2. In the layout engine, assign nodes to swimlanes based on `node.zta_role`:
+           - `PAP_*` → **Policy Administration Plane** (top)
+           - `PDP_*` / `PEP_*` → **Policy Decision / Enforcement Plane** (middle)
+           - `PIP_*` → **Policy Information Plane** (middle-lower)
+           - `DATA_RESOURCE` → **Resource / Data Plane** (bottom)
+        3. Render lane dividers with glassmorphic background fills and plane labels.
+        4. Auto-generate `zone_name` metadata on each node based on its resolved ZTA role so it participates in the existing `Zone` component rendering.
+    - *Verification*: A dataset with mixed `zta_role` values renders F5 APM in the PDP/PEP lane and Oracle DB in the Data Plane lane with correct plane label headers.
+
+- [ ] **Integrate Custom Plane Renaming — SPL `zone_name` & UI Override (Carry-Forward)**
+    - *Context*: Already implemented in v2.8.1 for `labelIdentityPlane`/`labelControlPlane`/`labelDataPlane`. Extend this to the two new ZTA-Functional planes (`PIP` and `Resource`).
+    - *Action*:
+        1. Register `labelPipPlane` (default: `"Policy Information Plane"`) and `labelResourcePlane` (default: `"Resource / Data Plane"`) in `formatter.html` and `visualizations.conf`.
+        2. Honor `zone_name` SPL field overrides with the same priority chain as existing planes (SPL > UI option > default).
+        3. Apply the same strict regex sanitization (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`) to prevent DOM XSS (CWE-79).
+        4. Example rename via SPL: `eval zone_name="Navy Identity Server (NIS) Layer"`.
+    - *Verification*: A dataset with `zone_name="NIS Layer"` renders `NIS LAYER` as the plane label, not the default string.
+
+- [ ] **Build the "Architect Mode" Side-Drawer**
+    - *Context*: Clicking a node card in Architect Mode opens a right-side sliding panel that renders both the observed "As-Is" state from Splunk and the editable "To-Be" migration target design.
+    - *Action*:
+        1. Add `isArchitectMode` boolean option to `formatter.html` and `visualizations.conf`.
+        2. Implement `<ArchitectDrawer />` as a new React component. It slides in from the right via a CSS `transform: translateX()` animation when `selectedNode !== null`.
+        3. **"Observed Metadata" Section (Read-Only)**: Display TKU-identified fields — `product_name`, `vendor`, `zta_role`, `confidence_score`, `port`, `protocol` — sourced from the node's Splunk row data.
+        4. **"Target Metadata" Section (Editable)**: Expose form fields — `targetCsp`, `targetServiceType`, `targetRegion`, `targetTier`, `migrationWave` — backed by local React state that feeds into the IaC Generator (Phase 3).
+        5. Clicking outside the drawer or pressing `Escape` collapses it.
+    - *Verification*: Clicking a node card in `isArchitectMode=true` renders `#architect-drawer` in the DOM containing both `.observed-metadata` and `.target-metadata` sections.
+
+- [ ] **Implement Visual Drift Detection — "As-Is vs. Design State" Contradiction Highlighting**
+    - *Context*: If Splunk observes live traffic that contradicts either the TKU-defined security policy or the architect's "Target Metadata" design, the node must be flagged in RED with a pulsing border to signal active non-compliance.
+    - *Action*:
+        1. Define a `driftRules` array in the component config (or a new `dfd_drift_rules.csv` lookup) mapping `(product_name, observed_port, target_tier)` tuples to a `hasDrift: boolean` flag.
+        2. In `parseSplunkData`, after TKU lookup, run a drift evaluation pass. Set `node.hasDrift = true` if:
+           - Observed port contradicts the expected port for the identified product (e.g., Oracle on port `3306` instead of `1521`).
+           - The node's `zta_role` contradicts the architect's assigned `targetTier`.
+        3. In `NodeCard`, add a `data-drift="true"` attribute and apply a pulsing red border CSS animation (`@keyframes drift-pulse`) when `node.hasDrift === true`.
+        4. Add a `T_GOV:DRIFT` label badge overlay on drifted cards.
+    - *Verification*: A node with contradicting port renders `g.node-card[data-drift="true"]` with a red pulsing border.
+
+---
+
+### 🔮 Phase 3: The Generative IaC Service (The Compiler Output)
+
+*Objective: Transform the canvas from a read-only diagram into a Terraform "compiler" — outputting production-ready, module-based HCL from the architect's observed and target metadata.*
+
+- [ ] **Extend `CspAdapter` with a `toHCL(node, links)` Interface**
+    - *Context*: Each CSP adapter (AWS, Azure, GCP) already has stencil-level knowledge. Adding `toHCL` gives each adapter the ability to generate provider-specific Terraform resource blocks.
+    - *Action*:
+        1. Add a `toHCL(node, links)` abstract method signature to the `CspAdapter` base class in `src/components/AwsDfdVisualizer/stencils/`.
+        2. Implement `toHCL` in `AwsAdapter`, `AzureAdapter`, `GcpAdapter`:
+           - `AWS::EC2::Instance` → `resource "aws_instance" "..." { ... }`
+           - `AWS::RDS::DBInstance` → `resource "aws_db_instance" "..." { ... }`
+           - `Azure::Compute::VirtualMachine` → `resource "azurerm_linux_virtual_machine" "..." { ... }`
+        3. Links (edges with port/protocol) translate to Security Group rules or Firewall Rules in the HCL output.
+    - *Verification*: `AwsAdapter.toHCL({ type: 'AWS::EC2::Instance', ... }, [])` returns a non-empty HCL string containing `resource "aws_instance"`.
+
+- [ ] **Implement Pattern-to-Module Mapping — TKU-Aware Terraform Module Output**
+    - *Context*: Instead of generating raw individual resources, TKU-identified patterns should map to reusable **Terraform Modules** that encapsulate best-practice configurations. This is analogous to BMC Discovery's "Pattern → Application" mapping.
+    - *Action*:
+        1. Create a `MODULE_MAP` constant mapping `product_name` → Terraform registry module source:
+           - `"Oracle DB Cluster"` → `module "oracle_rds" { source = "terraform-aws-modules/rds/aws" ... }`
+           - `"F5 APM"` → `module "f5_apm" { source = "f5devcentral/bigip-module/aws" ... }`
+           - `"Cisco ASA"` → `module "cisco_asa" { source = "hashicorp/aws" ... }` (Firewall Manager resource)
+        2. When `node.isMeta === true` (Metanode), use the `MODULE_MAP` lookup instead of generating individual raw resources.
+        3. Module variables (`instance_count`, `engine_version`, `region`) are populated from the node's `targetMetadata` form fields set in the Architect Drawer.
+    - *Verification*: A Metanode with `product_name="Oracle DB Cluster"` outputs `module "oracle_rds_..."` HCL instead of individual `resource` blocks.
+
+- [ ] **Develop the HCL Compiler Service — `main.tf` Serialization**
+    - *Context*: The compiler traverses the full canvas state and produces a complete, importable `main.tf` Terraform plan.
+    - *Action*:
+        1. Create `src/components/AwsDfdVisualizer/services/HclCompiler.js`.
+        2. Implement `compile(nodes, links, targetProvider)` method:
+           - Emits `terraform { required_providers { ... } }` header block.
+           - Emits `provider "aws" | "azurerm" | "google"` block based on `targetProvider`.
+           - Iterates nodes, calling `adapter.toHCL(node, nodeLinks)` and collecting outputs.
+           - Deduplicates Security Group / Firewall rules generated from edges.
+           - Returns the assembled HCL string.
+        3. Sanitize all interpolated values (resourceId, label, region) with a strict regex allowlist to prevent HCL injection.
+        4. Download via `URL.createObjectURL(new Blob([hcl], { type: 'text/plain' }))` as `main.tf`.
+    - *Verification*: `HclCompiler.compile([...nodes], [...links], 'aws')` returns a string beginning with `terraform {` and containing one `resource` or `module` block per unique node.
+
+- [ ] **Add the "Export Terraform" Button in the Architect Drawer**
+    - *Action*:
+        1. Place a primary `🏗️ Export main.tf` button at the bottom of the `<ArchitectDrawer />` (or in the HUD controls row when `isArchitectMode=true`).
+        2. On click, invoke `HclCompiler.compile(nodes, links, targetProvider)` and trigger the file download.
+        3. Trigger `Splunk.util.trackEvent('dfd_iac_export', { nodeCount, targetProvider })` for IL5 audit logging (see Phase 4).
+    - *Verification*: Clicking the button produces a downloaded `main.tf` file in Cypress via `cy.readFile('main.tf').should('contain', 'terraform {')` (download stubbed via Cypress intercept).
+
+---
+
+### 🔮 Phase 4: Executive Governance & Audit (The Control Surface)
+
+*Objective: Provide leadership with a decision-tree-driven "Risk & Action" panel and ensure all exports are audit-logged to satisfy DoD IL5 "Need to Know" requirements.*
+
+- [ ] **Create the MKTL Governance Table — Executive Risk & Action Panel**
+    - *Context*: Leadership needs a concise, machine-readable table that summarizes each identified service, its migration decision, the governance logic that drove it, and the resulting risk posture. This replaces ad-hoc "slide decks" with a live, SPL-backed governance artifact.
+    - *Action*:
+        1. Create `lookups/dfd_governance_rules.csv` with schema: `service_pattern, decision, rationale_code, risk_level, action`.
+           - Example row: `Oracle DB Cluster, Migrate, T_GOV:DRIFT, HIGH, Lift-and-Shift to AWS RDS`
+           - Example row: `F5 APM, Retain, T_GOV:SOVEREIGN, MEDIUM, Maintain on-prem for classified traffic`
+        2. Register in `default/transforms.conf` as `[dfd_governance_rules]`.
+        3. Create an SPL-driven `default/data/ui/views/mktl_governance.xml` SimpleXML dashboard:
+           - Panel 1: Table visualization joining `dfd_identify` output with `dfd_governance_rules` lookup to produce the live Governance Table.
+           - Panel 2: The AWS-DFD-Visualizer custom viz panel rendering the DFD with drift indicators.
+        4. Add a "Governance" navigation entry in `default/data/ui/nav/default.xml`.
+        5. Governance table columns: `Service | Identified By | ZTA Role | Decision | Logic Code | Risk | Action | Wave`.
+    - *Verification*: The `mktl_governance.xml` dashboard renders without Splunk errors and the governance table is populated when `dfd_knowledge_base.csv` and `dfd_governance_rules.csv` are both populated.
+
+- [ ] **Implement Comprehensive Export Auditing — IL5 "Need to Know" Compliance**
+    - *Context*: Every export event (SVG, Draw.io XML, Terraform HCL) must be logged to Splunk's internal audit trail to satisfy IL5 "Need to Know" access controls and satisfy STIG AU-12 (Audit Record Generation).
+    - *Action*:
+        1. Extend the existing `Splunk.util.trackEvent()` calls (added in v2.8.1 for SVG/Draw.io exports) to include `targetProvider` and `isMigrationExport` fields.
+        2. Add new `trackEvent` calls for:
+           - `dfd_terraform_export`: fired when `main.tf` is downloaded; payload includes `{ nodeCount, metanodeCount, targetProvider, timestamp }`.
+           - `dfd_drift_alert_viewed`: fired when a node with `hasDrift=true` is clicked in Architect Mode; payload includes `{ nodeId, product_name, driftReason }`.
+           - `dfd_governance_table_viewed`: fired when `mktl_governance.xml` is loaded; payload includes `{ serviceCount, highRiskCount }`.
+        3. Document the full event schema in `SECURITY.md` under a new "Audit Event Reference" section.
+        4. Validate that the `Splunk.util.trackEvent` mock in `AwsDfdVisualizer.cy.jsx` is updated to spy on the new event names.
+    - *Verification*: Cypress test asserts `Splunk.util.trackEvent` is called with `'dfd_terraform_export'` after clicking the Export Terraform button.
+
+---
+
+### 🔮 Phase 0: Carry-Forward Items (Prerequisite for v3.0.0)
+
+*These items from the v2.9.0 backlog are prerequisites that must be completed or scoped before Phase 1 work begins.*
+
+- [ ] **On-Premise to Cloud Data Path Stitching** *(from v2.9.0 Backlog)*
+    - *Action*: Correlate cross-platform logs (VMware/Cisco NAT feeds joined with `sourcetype=aws:config`). Build queries linking Transit Gateway destinations with NAT endpoints inside on-premise subnets. This data is the primary input for TKU pattern recognition.
+- [ ] **Canvas-Native Auto-Legend Overlay** *(from v2.9.0 Backlog)*
+    - *Action*: Auto-generate a floating glassmorphic Legend panel in the bottom-left of the D3 canvas. In v3.0.0, the legend must also display TKU-identified product icons (`oracle.svg`, `f5.svg`, etc.) alongside cloud-native icons.
+- [ ] **`enableMetanodes` Visual Option in `formatter.html`**
+    - *Action*: Register `enableMetanodes` (boolean, default `true`) in `formatter.html` and `visualizations.conf` so operators can toggle Metanode collapsing without code changes.
+
+---
+
+### Release Hygiene (v3.0.0 Version Bump)
+- [ ] **Synchronize version to `3.0.0` across all 5 required files simultaneously:**
+    1. `package.json`
+    2. `splunk-app-manifest.json`
+    3. `Makefile`
+    4. `default/app.conf` (both `[launcher]` and `[id]` stanzas)
+    5. `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx` (UI header string `v3.0.0`)
+- [ ] **Run `npm run build`** — confirm `webpack compiled successfully`.
+- [ ] **Run `make inspect`** — confirm `error: 0, failure: 0, warning: 0`.
+- [ ] **Run `npm run test:cy`** — confirm 100% pass rate with all new TKU and Metanode test specs.
+- [ ] **Update `README.MD`** — Add "Cognitive Control Plane", "TKU Knowledge Engine", and "Terraform IaC Export" sections.
+- [ ] **Update `SECURITY.md`** — Add "Audit Event Reference" for all new `trackEvent` calls.
+- [ ] **Update `default/data/ui/views/user_guide.xml`** — Document `dfd_identify` macro usage, `dfd_knowledge_base.csv` schema, and the Architect Mode workflow.
+- [ ] **Commit**: `feat: implement v3.0.0 Cognitive Control Plane — TKU Knowledge Engine, ZTA Functional Mapping, Generative IaC, MKTL Governance`
 
