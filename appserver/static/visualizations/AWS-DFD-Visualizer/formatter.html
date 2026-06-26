@@ -158,13 +158,21 @@
 </form>
 
 <form class="splunk-formatter-section" section-label="Governance Terminology">
-    <splunk-control-group label="Identity Plane Title" help="Custom label for the Identity Plane (top swimlane).">
+    <splunk-control-group label="Terminology Preset" help="Select a governance preset or Custom to specify manually.">
+        <splunk-select name="{{VIZ_NAMESPACE}}.governancePreset" value="standard">
+            <option value="standard">Standard Architecture</option>
+            <option value="zta">Zero Trust (NIST) (PAP, PDP, PEP)</option>
+            <option value="business">Business Service (Client, Tx, DB)</option>
+            <option value="custom">Custom (Use text fields below)</option>
+        </splunk-select>
+    </splunk-control-group>
+    <splunk-control-group label="Identity Plane Title" help="Custom label for the Identity Plane (top swimlane). Only active when Custom is selected.">
         <splunk-text-input name="{{VIZ_NAMESPACE}}.labelIdentityPlane" value="Identity/Management Plane"></splunk-text-input>
     </splunk-control-group>
-    <splunk-control-group label="Control Plane Title" help="Custom label for the Policy & Control Plane (middle swimlane).">
+    <splunk-control-group label="Control Plane Title" help="Custom label for the Policy & Control Plane (middle swimlane). Only active when Custom is selected.">
         <splunk-text-input name="{{VIZ_NAMESPACE}}.labelControlPlane" value="⚙️ Control Plane"></splunk-text-input>
     </splunk-control-group>
-    <splunk-control-group label="Data Plane Title" help="Custom label for the Infrastructure / Data Plane (bottom swimlane).">
+    <splunk-control-group label="Data Plane Title" help="Custom label for the Infrastructure / Data Plane (bottom swimlane). Only active when Custom is selected.">
         <splunk-text-input name="{{VIZ_NAMESPACE}}.labelDataPlane" value="Data Plane"></splunk-text-input>
     </splunk-control-group>
 </form>

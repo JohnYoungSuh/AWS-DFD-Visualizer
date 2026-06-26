@@ -241,8 +241,8 @@ describe('AwsDfdVisualizer Component Tests', () => {
             </div>
         );
 
-        // Verify the node cards render with width 220 and height 80
-        cy.get('g.node-card rect').first().should('have.attr', 'width', '220');
+        // Verify the node cards render with width 260 (220 compact base + 40 type badge) and height 80
+        cy.get('g.node-card rect').first().should('have.attr', 'width', '260');
         cy.get('g.node-card rect').first().should('have.attr', 'height', '80');
         cy.screenshot('compact_mode_layout');
     });
@@ -1027,6 +1027,122 @@ describe('AwsDfdVisualizer Component Tests', () => {
             expect(exportedXml).to.contain('My Custom Identity Plane alertxss');
             expect(exportedXml).to.not.contain('<script');
         });
+    });
+
+    it('verifies dynamic link distance adjustments on long link labels', () => {
+        const longLinkLabelData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "edge_label"}
+            ],
+            rows: [
+                ["node-a", "node-b", "AWS::EC2::Instance", "Cross-Account-Identity-Verification-Access"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={longLinkLabelData} 
+                    config={{ 
+                        layoutMode: 'force',
+                        display_mode: 'auto'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+
+        cy.wait(600); // Wait for simulation to run
+
+        // Verify the distance between node-a and node-b is pushed wider (using 2D Euclidean distance due to diagonal layout)
+        cy.get('g.node-card').first().then(($a) => {
+            const transformA = $a.attr('transform');
+            const xA = parseFloat(transformA.match(/translate\(\s*([^,)\s]+)/)[1]);
+            const yA = parseFloat(transformA.match(/translate\(\s*[^,)\s]+\s*,\s*([^,)\s]+)/)[1]);
+            cy.get('g.node-card').last().then(($b) => {
+                const transformB = $b.attr('transform');
+                const xB = parseFloat(transformB.match(/translate\(\s*([^,)\s]+)/)[1]);
+                const yB = parseFloat(transformB.match(/translate\(\s*[^,)\s]+\s*,\s*([^,)\s]+)/)[1]);
+                const dist = Math.sqrt((xA - xB) ** 2 + (yA - yB) ** 2);
+                // Dynamic spacing pushes the nodes significantly apart to clear the long label (clamped to maxDistance 330)
+                expect(dist).to.be.greaterThan(300);
+            });
+        });
+    });
+
+    it('verifies preset terminology changes for ZTA and Business Service presets', () => {
+        // Zero Trust Preset
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={mockData} 
+                    config={{ 
+                        layoutMode: 'zero-trust',
+                        governancePreset: 'zta'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+        cy.wait(300);
+        cy.get('g.zt-plane-decorations text[x="20"]').eq(0).should('contain.text', 'PAP / POLICY ADMINISTRATION');
+        cy.get('g.zt-plane-decorations text[x="20"]').eq(1).should('contain.text', 'PDP / POLICY DECISION');
+        cy.get('g.zt-plane-decorations text[x="20"]').eq(2).should('contain.text', 'PEP / PIP DATA PLANE');
+
+        // Business Service Preset
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={mockData} 
+                    config={{ 
+                        layoutMode: 'zero-trust',
+                        governancePreset: 'business'
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+        cy.wait(300);
+        cy.get('g.zt-plane-decorations text[x="20"]').eq(0).should('contain.text', 'CUSTOMER / CLIENT LAYER');
+        cy.get('g.zt-plane-decorations text[x="20"]').eq(1).should('contain.text', 'TRANSACTION / PROCESSING');
+        cy.get('g.zt-plane-decorations text[x="20"]').eq(2).should('contain.text', 'DATABASE / STORAGE LAYER');
+    });
+
+    it('verifies custom control plane group header matches controlPlaneTitle and retains gear prefix', () => {
+        const controlGroupData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "group"}
+            ],
+            rows: [
+                ["node-a", null, "AWS::EC2::Instance", "NIS Engine"]
+            ]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer 
+                    data={controlGroupData} 
+                    config={{ 
+                        layoutMode: 'force',
+                        clusterBy: 'group',
+                        governancePreset: 'custom',
+                        labelControlPlane: "NIS Engine"
+                    }} 
+                    width={1200} 
+                    height={800} 
+                    isDarkTheme={true} 
+                />
+            </div>
+        );
+        cy.wait(300);
+        // The group is matched as control plane, and renders "⚙️ NIS ENGINE"
+        cy.get('g.zone text').should('contain.text', '⚙️ NIS ENGINE');
     });
 });
 

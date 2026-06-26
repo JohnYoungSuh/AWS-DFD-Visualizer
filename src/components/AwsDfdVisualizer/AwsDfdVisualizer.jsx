@@ -787,6 +787,11 @@ const getNodeCardDimensions = (node, config) => {
         }
     }
     
+    // Account for Type Badges (e.g. AWS::EC2::Instance) occupying extra width to prevent clipping
+    if (node.type && String(node.type).trim() !== '') {
+        wNode += 40;
+    }
+
     // We should limit maximum card width to prevent the card from becoming ridiculously wide:
     const maxWidth = baseWidth * 1.8;
     if (wNode > maxWidth) {
@@ -1062,7 +1067,9 @@ const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
         <g className="zone">
             <path d={pathD} fill={fillColor} fillOpacity={fillOpacity} stroke={strokeColor} strokeDasharray={strokeDash} strokeWidth={2} />
             <text x={textX} y={textY} fill={isControlPlane ? (isDarkTheme ? "#9ca3af" : "#475569") : (isDarkTheme ? "#cbd5e1" : "#0f172a")} fontSize={isControlPlane ? 20 : 18} fontWeight="bold">
-                {isControlPlane ? "⚙️ CONTROL PLANE" : groupName.toUpperCase()}
+                {isControlPlane 
+                    ? (groupName.toLowerCase().includes('⚙️') ? groupName.toUpperCase() : `⚙️ ${groupName.toUpperCase()}`) 
+                    : groupName.toUpperCase()}
             </text>
         </g>
     );
@@ -2254,9 +2261,43 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         return sanitized.replace(/[^a-zA-Z0-9\s\-_:/.⚙️⚠️🚨]/gu, '').trim();
     };
 
-    let identityPlaneTitle = sanitizePlaneTitle(config?.labelIdentityPlane) || "Identity/Management Plane";
-    let controlPlaneTitle = sanitizePlaneTitle(config?.labelControlPlane) || "⚙️ Control Plane";
-    let dataPlaneTitle = sanitizePlaneTitle(config?.labelDataPlane) || "Data Plane";
+    const preset = config?.governancePreset || 'standard';
+    
+    let defaultIdentity = "Identity/Management Plane";
+    let defaultControl = "⚙️ Control Plane";
+    let defaultData = "Data Plane";
+    
+    if (preset === 'zta') {
+        defaultIdentity = "PAP / Policy Administration";
+        defaultControl = "PDP / Policy Decision";
+        defaultData = "PEP / PIP Data Plane";
+    } else if (preset === 'business') {
+        defaultIdentity = "Customer / Client Layer";
+        defaultControl = "Transaction / Processing";
+        defaultData = "Database / Storage Layer";
+    }
+    
+    let identityPlaneTitle = sanitizePlaneTitle(config?.labelIdentityPlane);
+    let controlPlaneTitle = sanitizePlaneTitle(config?.labelControlPlane);
+    let dataPlaneTitle = sanitizePlaneTitle(config?.labelDataPlane);
+
+    if (preset === 'standard' && !config?.labelIdentityPlane && !config?.labelControlPlane && !config?.labelDataPlane) {
+        identityPlaneTitle = defaultIdentity;
+        controlPlaneTitle = defaultControl;
+        dataPlaneTitle = defaultData;
+    } else if (preset === 'zta') {
+        identityPlaneTitle = defaultIdentity;
+        controlPlaneTitle = defaultControl;
+        dataPlaneTitle = defaultData;
+    } else if (preset === 'business') {
+        identityPlaneTitle = defaultIdentity;
+        controlPlaneTitle = defaultControl;
+        dataPlaneTitle = defaultData;
+    } else {
+        if (!identityPlaneTitle) identityPlaneTitle = defaultIdentity;
+        if (!controlPlaneTitle) controlPlaneTitle = defaultControl;
+        if (!dataPlaneTitle) dataPlaneTitle = defaultData;
+    }
 
     // Scan parsed nodes to see if there is any zone_name / zone from SPL overrides
     if (nodes && nodes.length > 0) {
@@ -2380,8 +2421,12 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const wS = sourceNode.width || (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280);
             const wT = targetNode.width || (designLayout === 'compact' ? 220 : designLayout === 'expanded' ? 340 : 280);
             
-            // Consistent Air Gap (padding) is 60px between the cards' borders
-            const airGap = 60;
+            // Dynamic air gap to accommodate link label length to prevent overlap
+            const labelStr = String(link.label || '');
+            const labelFontSize = designLayout === 'compact' ? 9 : designLayout === 'expanded' ? 13 : 11;
+            const estimatedLabelWidth = labelStr.length * (labelFontSize * 0.58);
+            const airGap = Math.max(60, estimatedLabelWidth + 20);
+            
             const centerDistance = (wS + wT) / 2 + airGap;
             
             // Clamp gap: never exceed 1.5x the baseGap
