@@ -45,7 +45,9 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 ### 🔑 Commercial License Enforcement
 - **Free Tier**: Renders up to 50 nodes; displays a glassmorphic "License Capacity Exceeded" overlay beyond that.
 - **Enterprise / Sovereign Tiers**: Base64-encoded license keys validated fully client-side — no network calls, air-gap safe.
-- **Format Panel Integration**: License key entry exposed directly in the Splunk Format panel.
+- **Two Ingestion Methods**:
+  1. **Option A: Format Panel Integration (Dashboard Persistence)** — Saves the key directly in the dashboard XML. Best for permanent production deployment so all users viewing the dashboard load the licensed view.
+  2. **Option B: Canvas Console Button (Browser Local Storage Persistence)** — Click the green **License Key** button on the visualizer canvas, paste the key, and click **Apply & Save**. Saves the key to browser local storage. Best for ad-hoc search pages, debugging, and user sessions without modifying dashboard definitions.
 
 ### ⚡ Performance & Physics Optimization
 - **Rectangular Collision Force (`rectCollide`)**: Custom D3 force mapped directly to card dimensions (`280×100`px) prevents text overlaps and horizontal stacking.
