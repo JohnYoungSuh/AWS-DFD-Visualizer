@@ -1,7 +1,7 @@
 # AWS DFD Visualizer — Splunkbase Listing Copy
 
 > **Copy-paste reference for the Splunkbase submission portal.**
-> All values verified against `formatter.html`, `visualizations.conf`, and stencil registries as of v2.8.0.
+> All values verified against `formatter.html`, `visualizations.conf`, and stencil registries as of v2.8.3.
 
 ---
 
@@ -176,6 +176,8 @@ All options are accessible via the **Format** button in the dashboard panel edit
 | Clustering | `clusterBy` | `none`, `color`, `group` | `none` | `group`: polygon hulls (force mode) or rectangular Blueprint boundaries (hierarchy mode) |
 | Missing Image URL | `missingImageURL` | URL string | `/static/app/AWS-DFD-Visualizer/icons/generic.svg` | Fallback icon URL for unrecognized stencil types |
 | Drilldown Using | `drilldownClick` | `singleOrDouble`, `single` | `singleOrDouble` | `singleOrDouble` = double-click triggers drilldown; `single` = single click |
+| Custom Status Palette | `statusPalette` | Key=Hex csv string | *(empty)* | Map custom status strings (e.g. NonCompliant) to hex color values (#FF6B6B) |
+
 
 ### Physics Section
 
@@ -230,6 +232,7 @@ All options are accessible via the **Format** button in the dashboard panel edit
 
 | Version | Date | Highlights |
 |---|---|---|
+| **2.8.3** | Jul 9, 2026 | Log-weighted native edge bundling (Req-1), custom status palette configuration mapping (Req-2), unified highlighting helper, 5 Cypress integration specs, XSS inputs validation |
 | **2.8.0** | Jun 18, 2026 | Multi-cloud (AWS/Azure/GCP), Zero-Trust Blueprint Engine, STIG hardening, commercial licensing, dynamic edge label sizing |
 | 2.7.0 | Jun 1, 2026 | Draw.io export, CSV live feed console, compact layout, alternate physics models |
 | 2.6.2 | Jun 1, 2026 | Zero-Trust Static Deterministic Layout Engine (IL5 RMF Audit Mode) |
