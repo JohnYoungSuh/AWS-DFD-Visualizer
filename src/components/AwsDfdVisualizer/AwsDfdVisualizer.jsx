@@ -1801,6 +1801,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     [config.tokenValue || 'tokenValue']: node.arn || node.id,
                     [config.tokenNode || 'tokenNode']: node.label,
                     [config.tokenToolTip || 'tokenToolTip']: node.type,
+                    // Native SPL column mappings so Splunk maps the correct row
+                    from: node.arn || node.id,
+                    node_label: node.label || '',
+                    type: node.type || '',
                     clicked_drilldown_search: drilldownQuery
                 }, e);
             }
@@ -1837,6 +1841,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 [config.tokenNode || 'tokenNode']: link.source.label,
                 [config.tokenToNode || 'tokenToNode']: link.target.label,
                 [config.tokenToolTip || 'tokenToolTip']: link.label,
+                // Native SPL column mappings so Splunk maps the correct row
+                from: link.source.arn || link.source.id,
+                to: link.target.arn || link.target.id,
+                edge_label: link.label || '',
                 clicked_drilldown_search: drilldownQuery
             }, e);
         }
