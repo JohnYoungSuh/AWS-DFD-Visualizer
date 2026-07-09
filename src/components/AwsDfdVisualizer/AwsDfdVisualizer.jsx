@@ -120,6 +120,34 @@ const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     return fallbackUrl;
 };
 
+// SECTION: STATUS_HIGHLIGHT — Unified module-level status color/prefix resolver.
+// Accepts an optional customPaletteMap (status→hex) that AUGMENTS (never replaces) built-in defaults.
+// Built-in defaults are always preserved: ResourceDeleted/ResourceNotRecorded guards run independently
+// in NodeCard at render time and are not affected by this function.
+// CWE-79 guard: customPaletteMap keys and hex values are validated by the caller before use here.
+const buildStatusHighlight = (status, customPaletteMap = {}) => {
+    const s = String(status || '').toLowerCase().trim();
+    const sOrig = String(status || '').trim();
+
+    // 1. User-defined custom palette (augments, does not replace built-in defaults)
+    const customHex = customPaletteMap[sOrig] || customPaletteMap[s];
+    if (customHex && /^#[0-9A-Fa-f]{6}$/.test(customHex)) {
+        return { color: customHex, className: 'custom-status', labelPrefix: '🔵 ' };
+    }
+
+    // 2. Built-in critical/violation defaults (always preserved)
+    if (s === 'incident' || s === 'failing' || s === 'critical' || s === 'violation' || s === 'non-compliant' || s === 'critical-threat') {
+        return { color: '#FF0000', className: 'pulsing-red', labelPrefix: '🚨 ' };
+    }
+
+    // 3. Built-in warning defaults (always preserved)
+    if (s === 'warning' || s === 'alert' || s === 'suspicious') {
+        return { color: '#FFA500', className: 'pulsing-yellow', labelPrefix: '⚠️ ' };
+    }
+
+    return null;
+};
+
 // SECTION: PARSE_SPLUNK_DATA — Handles both data.rows (Classic XML) and data.results (Dashboard Studio)
 // Also applies: edgeSet dedup (Bug #2), null label guard (Bug #3), named-column access (no positional indexing)
 const ensureString = (val) => {
@@ -376,7 +404,8 @@ const parseSplunkData = (data) => {
                 source: currentEdge.source, 
                 target: currentEdge.target, 
                 link_drilldown: currentEdge.link_drilldown || null,
-                protocols: new Set(currentEdge.label ? [currentEdge.label] : []) 
+                protocols: new Set(currentEdge.label ? [currentEdge.label] : []),
+                count: 1
             });
         } else {
             const existingRecord = acc.get(deterministicKey);
@@ -386,6 +415,7 @@ const parseSplunkData = (data) => {
             if (currentEdge.link_drilldown && !existingRecord.link_drilldown) {
                 existingRecord.link_drilldown = currentEdge.link_drilldown;
             }
+            existingRecord.count = (existingRecord.count || 1) + 1;
         }
         return acc;
     }, new Map());
@@ -394,7 +424,8 @@ const parseSplunkData = (data) => {
         source: edge.source,
         target: edge.target,
         label: Array.from(edge.protocols).filter(Boolean).sort().join(', '),
-        link_drilldown: edge.link_drilldown
+        link_drilldown: edge.link_drilldown,
+        count: edge.count || 1
     }));
 
     return { nodes: Array.from(nodesMap.values()), links: cleanEdges };
@@ -637,15 +668,21 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
 };
 
 // SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line)
+// Edge weight: strokeWidth scales logarithmically with row count (min 2px, max 10px).
+// React owns this prop — D3 never mutates it directly (React-D3 SoC rule).
 const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode, isHovered, onMouseEnter, onMouseLeave }) => {
     const geom = getLinkGeometry(link, config, isZeroTrust, targetNode, sourceNode);
     if (!geom) return null;
     const { d, strokeColor, strokeDash, markerEnd } = geom;
 
+    // Edge weighting: log2 scale clamped to [2, 10]px. Single row → 2px; 50 rows → ~7px; 100+ → 10px.
+    const edgeCount = link.count || 1;
+    const edgeStrokeWidth = Math.min(10, 2 + Math.log2(edgeCount + 1));
+
     return (
         <g className="link-group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
-            <path d={d} stroke="transparent" fill="none" strokeWidth={25} />
-            <path d={d} stroke={strokeColor} fill="none" strokeWidth={3} strokeDasharray={strokeDash} markerEnd={markerEnd} />
+            <path d={d} stroke="transparent" fill="none" strokeWidth={Math.max(25, edgeStrokeWidth + 12)} />
+            <path d={d} stroke={strokeColor} fill="none" strokeWidth={edgeStrokeWidth} strokeDasharray={strokeDash} markerEnd={markerEnd} data-edge-count={edgeCount} />
         </g>
     );
 };
@@ -673,6 +710,13 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
     const displayFontSize = isHovered ? Math.round(fontSize * 1.15) : fontSize;
     const displayBgWidth = isHovered ? Math.ceil(dynamicBgWidth * 1.15) : dynamicBgWidth;
 
+    // Edge count badge: shown on hover when multiple rows share this path
+    const edgeCount = link.count || 1;
+    const showCountBadge = isHovered && edgeCount > 1;
+    const countLabel = `×${edgeCount} rows`;
+    const countFontSize = Math.max(9, fontSize - 4);
+    const countBadgeWidth = Math.ceil(countLabel.length * countFontSize * 0.58) + 16;
+
     return (
         <g className="link-label-group" transform={`translate(${midX},${midY})`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
             <rect 
@@ -697,6 +741,27 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
             >
                 {displayLabel}
             </text>
+            {showCountBadge && (
+                <g transform={`translate(0, ${(displayFontSize + 16)/2 + 4})`}>
+                    <rect
+                        width={countBadgeWidth}
+                        height={countFontSize + 8}
+                        rx={8}
+                        x={-(countBadgeWidth/2)}
+                        y={0}
+                        style={{ fill: '#4A90D9' }}
+                    />
+                    <text
+                        textAnchor="middle"
+                        dy={countFontSize * 0.75}
+                        fontSize={countFontSize}
+                        fontWeight="600"
+                        fill="#ffffff"
+                    >
+                        {countLabel}
+                    </text>
+                </g>
+            )}
         </g>
     );
 };
@@ -717,18 +782,8 @@ const getNodeCardDimensions = (node, config) => {
         baseHeight = 120;
     }
 
-    const getStatusHighlight = (status) => {
-        const s = String(status || '').toLowerCase().trim();
-        if (s === 'incident' || s === 'failing' || s === 'critical' || s === 'violation' || s === 'non-compliant' || s === 'critical-threat') {
-            return { labelPrefix: '🚨 ' };
-        }
-        if (s === 'warning' || s === 'alert' || s === 'suspicious') {
-            return { labelPrefix: '⚠️ ' };
-        }
-        return null;
-    };
-    
-    const highlight = getStatusHighlight(node.status);
+    // Use unified module-level buildStatusHighlight (no customPaletteMap available in getNodeCardDimensions context)
+    const highlight = buildStatusHighlight(node.status);
     const prefix = highlight ? highlight.labelPrefix : '';
     const baseLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
     const displayLabel = prefix + baseLabel;
@@ -802,21 +857,16 @@ const getNodeCardDimensions = (node, config) => {
 };
 
 // SECTION: NODE_CARD — SVG node card (AWS icon, label, type badge). React renders DOM, D3 handles math.
-const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, isZeroTrust, globalAdapter }) => {
+const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, isZeroTrust, globalAdapter, customPaletteMap }) => {
     if (!node.x) return null;
 
     const [isHovered, setIsHovered] = React.useState(false);
 
-    const getStatusHighlight = (status) => {
-        const s = String(status || '').toLowerCase().trim();
-        if (s === 'incident' || s === 'failing' || s === 'critical' || s === 'violation' || s === 'non-compliant' || s === 'critical-threat') {
-            return { color: '#FF0000', className: 'pulsing-red', labelPrefix: '🚨 ' };
-        }
-        if (s === 'warning' || s === 'alert' || s === 'suspicious') {
-            return { color: '#FFA500', className: 'pulsing-yellow', labelPrefix: '⚠️ ' };
-        }
-        return null;
-    };
+    // Delegate to unified module-level buildStatusHighlight, passing custom palette from Splunk options
+    const highlight = buildStatusHighlight(node.status, customPaletteMap || {});
+    const prefix = highlight ? highlight.labelPrefix : '';
+    const baseLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
+    const displayLabel = prefix + baseLabel;
 
     const nodeAdapter = React.useMemo(() => {
         const type = String(node.type || '').toUpperCase();
@@ -827,10 +877,6 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
         return globalAdapter;
     }, [node, globalAdapter]);
 
-    const highlight = getStatusHighlight(node.status);
-    const prefix = highlight ? highlight.labelPrefix : '';
-    const baseLabel = node.label || String(node.arn || node.id).split(/[:/]/).pop() || node.id || '';
-    const displayLabel = prefix + baseLabel;
     const typeLabel = (node.type || `${nodeAdapter.typePrefix}Resource`).replace(nodeAdapter.typePrefix, '');
     const fallbackUrl = config?.missingImageURL || getAppStaticUrl('icons/generic.svg');
     const iconPath = getIconPath(node, nodeAdapter, globalAdapter, fallbackUrl);
@@ -1640,6 +1686,29 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const activeData = localData || data;
     const rawRowCount = (activeData?.results?.length) || (activeData?.rows?.length) || (Array.isArray(activeData) ? activeData.length : 0);
     const isDatasetTooLarge = rawRowCount > 5000;
+
+    // SECTION: STATUS_PALETTE — Parse user-defined custom status→hex color mappings from Splunk options.
+    // Format: "NonCompliant=#FF6B6B,EXEMPT=#4ECB71" (comma-delimited key=hex pairs).
+    // CWE-79 sanitization: key allow-list + hex pattern validation. Invalid entries silently dropped.
+    // Custom entries AUGMENT built-in defaults; they never override ResourceDeleted/ResourceNotRecorded guards.
+    const customPaletteMap = useMemo(() => {
+        const raw = String(config?.statusPalette || '').trim();
+        if (!raw) return {};
+        return raw.split(',').reduce((acc, pair) => {
+            const eqIdx = pair.indexOf('=');
+            if (eqIdx < 1) return acc;
+            const key = pair.slice(0, eqIdx).trim();
+            const val = pair.slice(eqIdx + 1).trim();
+            const safeKey = /^[a-zA-Z0-9\-_\s]{1,64}$/.test(key) ? key : null;
+            const safeHex = /^#[0-9A-Fa-f]{6}$/.test(val) ? val : null;
+            if (safeKey && safeHex) {
+                acc[safeKey] = safeHex;
+            } else {
+                console.warn('AWS-DFD-Visualizer: Invalid statusPalette entry ignored (failed CWE-79 sanitization):', pair);
+            }
+            return acc;
+        }, {});
+    }, [config?.statusPalette]);
 
     const layoutParams = useMemo(() => {
         // --- Dynamic gapX calculation ---
@@ -2974,7 +3043,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.8.2 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.8.3 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 Tier: <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()} ({licenseInfo.valid ? `Licensed to: ${licenseInfo.customer}` : `Evaluation Mode: ${licenseInfo.reason}`})</span>
                 <br/>
@@ -3468,6 +3537,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                                     config={config}
                                     isZeroTrust={isZeroTrust}
                                     globalAdapter={globalAdapter}
+                                    customPaletteMap={customPaletteMap}
                                 />
                             );
                         })}

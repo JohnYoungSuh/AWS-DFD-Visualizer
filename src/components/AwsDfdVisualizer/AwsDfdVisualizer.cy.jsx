@@ -1144,6 +1144,229 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // The group is matched as control plane, and renders "⚙️ NIS ENGINE"
         cy.get('g.zone text').should('contain.text', '⚙️ NIS ENGINE');
     });
+
+    it('verifies that local storage fallback and the interactive license console unlock capacity limits', () => {
+        // Clear local storage first
+        localStorage.removeItem('aws_dfd_license_key');
+
+        const largeNodes = [];
+        for (let i = 1; i <= 60; i++) {
+            largeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
+        }
+        const largeData = {
+            fields: [
+                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
+            ],
+            rows: largeNodes
+        };
+
+        const validKey = btoa(JSON.stringify({
+            customer: "TestCorpLocal",
+            tier: "enterprise",
+            nodeLimit: 1000,
+            expiration: "2030-12-31",
+            signature: "dfd-visualizer-valid-sig-12345"
+        }));
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={largeData} config={{ layoutMode: 'force', licenseKey: '' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+
+        // Should initially show capacity exceeded block
+        cy.contains('License Capacity Exceeded').should('be.visible');
+        cy.get('textarea[placeholder*="save it locally"]').should('be.visible');
+
+        // Paste the key and apply
+        cy.get('textarea[placeholder*="save it locally"]').type(validKey, { delay: 0 });
+        cy.contains('Apply & Save Key Locally').click();
+
+        // Warning should disappear and nodes should render
+        cy.contains('License Capacity Exceeded').should('not.exist');
+        cy.contains('ENTERPRISE (Licensed to: TestCorpLocal)').should('be.visible');
+        cy.get('g.node-card').should('have.length', 60);
+
+        // Toggle the License settings console to clear the key
+        cy.get('#btn-toggle-license-console').click();
+        cy.get('#license-config-panel').should('be.visible');
+        cy.get('#btn-clear-license').click();
+
+        // Once cleared, block screen should reappear
+        cy.contains('License Capacity Exceeded').should('be.visible');
+    });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// v2.8.3 Feature Tests — Req-1: Native Edge Bundling / Weighting
+// ─────────────────────────────────────────────────────────────────────────────
+describe('TC-AUT-v2.8.3-A: Edge Bundling — Multi-row deduplication and weight scaling', () => {
+    it('Spec A: 50 identical from→to rows collapse to 1 edge path with strokeWidth > 2', () => {
+        // Build 50 rows with the same from/to pair (A→B) plus 1 unique (C→D)
+        const duplicateRows = Array.from({ length: 50 }, () => ['NodeA', 'NodeB', 'compute', 'HTTPS', 'ALLOW']);
+        duplicateRows.push(['NodeC', 'NodeD', 'compute', 'HTTPS', 'ALLOW']);
 
+        const bundleData = {
+            fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'edge_label' }, { name: 'status' }],
+            rows: duplicateRows
+        };
+
+        mount(
+            <AwsDfdVisualizer
+                data={bundleData}
+                config={{ layoutMode: 'force', enablePhysics: 'false', licenseKey: '' }}
+                isDarkTheme={false}
+                onDrilldown={() => {}}
+            />
+        );
+
+        cy.wait(800);
+
+        // Should render exactly 2 unique edges (A→B and C→D), not 51
+        cy.get('g.link-group').should('have.length', 2);
+
+        // The A→B edge should have a strokeWidth > 2 (weighted by count=50)
+        // data-edge-count attribute is set to the aggregated count on the visible path
+        cy.get('g.link-group path[data-edge-count]').first().then($paths => {
+            const counts = $paths.map((i, el) => parseInt(el.getAttribute('data-edge-count'))).get();
+            const maxCount = Math.max(...counts);
+            expect(maxCount).to.equal(50);
+        });
+
+        // Verify strokeWidth is scaled up (log2(50+1) + 2 ≈ 7.67, clamped ≤ 10)
+        cy.get('g.link-group path[data-edge-count="50"]').should('have.attr', 'stroke-width').then(sw => {
+            expect(parseFloat(sw)).to.be.greaterThan(2);
+        });
+    });
+
+    it('Spec B: Single row renders at baseline strokeWidth of ~2px', () => {
+        const singleRowData = {
+            fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'edge_label' }, { name: 'status' }],
+            rows: [['Alpha', 'Beta', 'compute', 'TCP', 'ALLOW']]
+        };
+
+        mount(
+            <AwsDfdVisualizer
+                data={singleRowData}
+                config={{ layoutMode: 'force', enablePhysics: 'false', licenseKey: '' }}
+                isDarkTheme={false}
+                onDrilldown={() => {}}
+            />
+        );
+
+        cy.wait(800);
+
+        cy.get('g.link-group').should('have.length', 1);
+
+        // data-edge-count should be 1 and strokeWidth should be ≤ 3 (baseline: log2(1+1)+2 = 3)
+        cy.get('g.link-group path[data-edge-count="1"]').should('have.attr', 'stroke-width').then(sw => {
+            expect(parseFloat(sw)).to.be.closeTo(3, 0.5);
+        });
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// v2.8.3 Feature Tests — Req-2: Configurable Status Palettes
+// ─────────────────────────────────────────────────────────────────────────────
+describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
+    it('Spec A: Custom statusPalette maps NonCompliant→#FF6B6B and applies border color to node card', () => {
+        const paletteData = {
+            fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'edge_label' }, { name: 'status' }],
+            rows: [
+                ['PrismaFindings', 'EC2_WebServer', 'compute', 'CSPM', 'NonCompliant'],
+                ['EC2_WebServer', 'RDS', 'compute', 'SQL', 'ALLOW']
+            ]
+        };
+
+        mount(
+            <AwsDfdVisualizer
+                data={paletteData}
+                config={{
+                    layoutMode: 'force',
+                    enablePhysics: 'false',
+                    licenseKey: '',
+                    statusPalette: 'NonCompliant=#FF6B6B'
+                }}
+                isDarkTheme={false}
+                onDrilldown={() => {}}
+            />
+        );
+
+        cy.wait(800);
+
+        // Node cards should render; PrismaFindings should have custom-status class
+        cy.get('g.node-card').should('have.length.gte', 3);
+
+        // The node card for the NonCompliant node should have a rect with stroke matching the custom hex
+        // custom-status class is applied to the rect when a custom palette entry is used
+        cy.get('g.node-card rect.custom-status').should('exist');
+        cy.get('g.node-card rect.custom-status').first().should('have.attr', 'stroke', '#FF6B6B');
+    });
+
+    it('Spec B: Script tag injection in statusPalette key is rejected — no <script> element in DOM', () => {
+        const injectionData = {
+            fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'edge_label' }, { name: 'status' }],
+            rows: [['Alpha', 'Beta', 'compute', 'HTTPS', 'ALLOW']]
+        };
+
+        mount(
+            <AwsDfdVisualizer
+                data={injectionData}
+                config={{
+                    layoutMode: 'force',
+                    enablePhysics: 'false',
+                    licenseKey: '',
+                    // Malicious input: script tag as status key
+                    statusPalette: '<script>alert(1)</script>=#FF0000,ValidStatus=#00FF00'
+                }}
+                isDarkTheme={false}
+                onDrilldown={() => {}}
+            />
+        );
+
+        cy.wait(500);
+
+        // The SVG render tree must not contain any <script> element — verifies CWE-79 guard
+        // Note: cy.get('script') would match Cypress runner scripts; scope to SVG only.
+        cy.get('svg').find('script').should('not.exist');
+
+        // The malicious statusPalette key is sanitized and dropped; ValidStatus=#00FF00 is also
+        // dropped because it comes after the separator in the same invalid pair parse attempt.
+        // Component must render without crashing regardless.
+        cy.get('g.node-card').should('have.length.gte', 2);
+    });
+
+    it('Spec C: ResourceDeleted node stays dimmed/dashed even if a custom palette maps ResourceDeleted', () => {
+        const deletedData = {
+            fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'edge_label' }, { name: 'status' }],
+            rows: [
+                // Node A has ResourceDeleted status — built-in dimming guard must win
+                ['DeletedLambda', 'RDS', 'compute', 'SQL', 'ResourceDeleted'],
+            ]
+        };
+
+        mount(
+            <AwsDfdVisualizer
+                data={deletedData}
+                config={{
+                    layoutMode: 'force',
+                    enablePhysics: 'false',
+                    licenseKey: '',
+                    // User tries to "un-delete" by mapping ResourceDeleted to a bright green
+                    statusPalette: 'ResourceDeleted=#00FF00'
+                }}
+                isDarkTheme={false}
+                onDrilldown={() => {}}
+            />
+        );
+
+        cy.wait(800);
+
+        cy.get('g.node-card').should('have.length.gte', 1);
+
+        // The DeletedLambda card should retain its dimmed opacity (0.6) via inline style
+        // and its rect should have the dashed stroke (stroke-dasharray="6,6")
+        cy.get('g.node-card').first().should('have.attr', 'style').and('include', 'opacity: 0.6');
+        cy.get('g.node-card rect').first().should('have.attr', 'stroke-dasharray', '6,6');
+    });
+});

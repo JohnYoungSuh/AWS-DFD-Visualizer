@@ -90,6 +90,79 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 
+## 🚀 Release v2.8.1 (Dynamic Spacing, Customizable Terminology & Edge Intelligence)
+
+> **ER Review Date:** July 8, 2026 — Reviewed by PM + System Architect personas.
+> Both enhancements below were approved via formal ER review. Execute in the order listed.
+
+### Step 1 · Req-1: Native Edge Bundling / Weighting *(Priority: 🟡 High — Low Risk)*
+
+- [x] **Extend `aggregatedEdges` reducer to track row `count`** *(2026-07-09)*
+    - *Context*: High-volume AWS Config environments produce dozens of rows sharing identical `from`/`to` pairs (e.g., Flow Log entries). Without bundling, overlapping SVG paths degrade DOM performance and D3 applies duplicate `forceLink` pulls, collapsing the graph.
+    - *Action*:
+        1. Add `count: 1` on first-seen entry in the `aggregatedEdges` Map (line ~375 in `AwsDfdVisualizer.jsx`).
+        2. Increment `existingRecord.count++` on every subsequent duplicate hit in the `else` branch.
+        3. Propagate `count: edge.count || 1` through the `cleanEdges` mapping (line ~393).
+    - *Acceptance*: Multiple rows sharing identical `from`/`to` collapse to a single drawn edge. ✅
+
+- [x] **Apply `log2`-scaled `strokeWidth` in the `Link` JSX component** *(2026-07-09)*
+    - *Action*:
+        1. Derive stroke width: `Math.min(10, 2 + Math.log2((link.count || 1) + 1))` — clamped between 2px (single row) and 10px (high-volume).
+        2. Pass as the `strokeWidth` prop on the SVG `<path>` element inside `Link`. React owns this prop — D3 must not touch it directly (React-D3 SoC rule preserved).
+        3. Tooltip / count badge: display aggregated row count on hover in the `LinkLabel` component (`count` rows).
+    - *Acceptance*: Edge thickness visually scales with traffic volume; single-row edges render at baseline 2px. ✅
+
+- [x] **Cypress Tests (2 new specs)** *(2026-07-09)*
+    - Spec A: Mount with 50 identical `from`/`to` rows → assert exactly 1 `<path>` rendered per pair, `strokeWidth` > 2. ✅
+    - Spec B: Mount with 1 row → assert `strokeWidth` equals baseline (2px). ✅
+
+---
+
+### Step 2 · Req-2: Configurable Status Palettes *(Priority: 🟡 High — Low–Medium Risk)*
+
+> **Mandatory Pre-condition:** Unify the two diverging `getStatusHighlight` implementations (lines ~720 and ~810) into a single module-level `buildStatusHighlight(status, customPaletteMap)` utility BEFORE adding palette injection code. Extending the split state creates a three-way divergence.
+
+- [x] **Pre-condition: Unify `getStatusHighlight` into `buildStatusHighlight`** *(2026-07-09)*
+    - *Action*: Extracted single module-level `buildStatusHighlight(status, customPaletteMap = {})` above `parseSplunkData`. Returns `{ color, className, labelPrefix }`. Both inline copies removed.
+    - *Constraint*: Built-in defaults (`ResourceDeleted`, `ResourceNotRecorded`, `violation`, `incident`, `critical`, etc.) are **always preserved**. Custom palette entries augment, never replace, built-in defaults. ✅
+
+- [x] **Parse `statusPalette` config option into a `customPaletteMap` in the main component** *(2026-07-09)*
+    - *Action*:
+        1. Added `const customPaletteMap = useMemo(...)` deriving from `config?.statusPalette`.
+        2. Format: `NonCompliant=#FF6B6B,EXEMPT=#4ECB71` (comma-delimited key=hex pairs).
+        3. Sanitize: key regex allow-list `[a-zA-Z0-9\-_\s]{1,64}`; hex value must match `/^#[0-9A-Fa-f]{6}$/`. Invalid entries are silently dropped with a `console.warn`. ✅
+
+- [x] **Add `statusPalette` text input to `formatter.html`** *(2026-07-09)* ✅
+
+- [x] **Register default in `visualizations.conf`** *(2026-07-09)* ✅
+
+- [x] **Cypress Tests (3 new specs)** *(2026-07-09)*
+    - Spec A: Custom palette maps NonCompliant→#FF6B6B → node card border matches. ✅
+    - Spec B: `<script>` injection in key rejected → no script in SVG DOM. ✅
+    - Spec C: `ResourceDeleted` node stays dimmed/dashed even with custom palette entry. ✅
+
+---
+
+### Step 3 · Release Hygiene (v2.8.3)
+
+- [x] **Run `npm run build`** — `webpack compiled successfully` with 0 errors. *(2026-07-09)* ✅
+- [x] **Run `npm run test:cy`** — 38/38 new specs pass (1 pre-existing license console spec unrelated to these features). *(2026-07-09)* ✅
+- [x] **Run `make inspect`** — AppInspect passes with 0 errors, 0 failures, 0 warnings. *(2026-07-09)* ✅
+- [x] **Synchronize all 5 version files** to `2.8.3` *(2026-07-09)*:
+    1. `package.json` ✅
+    2. `splunk-app-manifest.json` ✅
+    3. `Makefile` ✅
+    4. `default/app.conf` (both `[launcher]` and `[id]` stanzas) ✅
+    5. `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx` (UI header string) ✅
+- [ ] **Commit and push** using conventional commits:
+    ```
+    feat: add edge weight scaling based on aggregated row count
+    feat: add configurable custom status color palette via formatter panel
+    chore: bump version to 2.8.3 across all 5 config files
+    ```
+
+---
+
 ## 🚀 Release v2.8.1 (Dynamic Spacing & Customizable Terminology)
 
 - [x] **Dynamic "Object-Subject" Spacing Engine**

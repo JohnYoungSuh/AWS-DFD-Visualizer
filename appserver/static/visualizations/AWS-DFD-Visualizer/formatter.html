@@ -102,6 +102,10 @@
 		</splunk-radio-input>
 	</splunk-control-group>
 
+    <splunk-control-group label="Custom Status Palette" help="Map custom status values to hex colors. Format: Status1=#RRGGBB,Status2=#RRGGBB (e.g. NonCompliant=#FF6B6B,EXEMPT=#4ECB71). Augments built-in defaults.">
+        <splunk-text-input name="{{VIZ_NAMESPACE}}.statusPalette"></splunk-text-input>
+    </splunk-control-group>
+
 </form>
 
 <form class="splunk-formatter-section" section-label="Physics">
