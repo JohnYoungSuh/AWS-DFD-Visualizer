@@ -286,6 +286,31 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
 | eval edge_label=mvindex(parts, 1)
 | table from to type node_label edge_label group status captureTime]]></pre>
 
+          <h3 style="color: #FF9900; margin-top: 25px;">Scenario E: Custom Status Palette Integration via Asset Lookup</h3>
+          <p style="margin-bottom: 5px;">This scenario demonstrates how to correlate AWS telemetry data with a local CSV asset inventory (<code>my_asset_inventory_lookup</code>) to dynamically determine configuration status (assigning flags like <code>NonCompliant</code> or <code>EXEMPT</code>) and highlight node borders dynamically using the Custom Status Palette options:</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| makeresults count=1
+| eval from="i-0123456789abcdef0", to="i-9876543210fedcba0", type="AWS::EC2::Instance"
+| append [
+    | makeresults count=1
+    | eval from="i-9876543210fedcba0", to="i-unknown-resource", type="AWS::RDS::DBInstance"
+  ]
+| append [
+    | makeresults count=1
+    | eval from="i-11112222333344445", to="i-0123456789abcdef0", type="AWS::EC2::Instance"
+  ]
+| lookup my_asset_inventory_lookup resourceId as from OUTPUT role as asset_role
+| lookup my_asset_inventory_lookup resourceId as to OUTPUT role as target_role
+| eval status = case(
+    isnull(asset_role), "UnregisteredAsset",
+    asset_role="Identity Plane" AND isnull(target_role), "PolicyViolation",
+    true(), "OK"
+  )
+| eval node_label = coalesce(asset_role, "Unknown Asset")
+| table from to type node_label status]]></pre>
+          <p style="margin-top: 5px; font-size: 13px; color: #a9b1ba;">
+            <strong>To verify:</strong> paste the SPL query above into the visualizer, open the <strong>Format Options ➔ General ➔ Custom Status Palette</strong> input, and enter: <code>UnregisteredAsset=#EF4444,PolicyViolation=#F59E0B</code>. Unregistered nodes (like the unknown target) will render with red borders, while policy violations will show amber borders.
+          </p>
+
           <h3 style="color: #FF9900; margin-top: 30px;">The "Executive Blueprint" Reference Recipe</h3>
           <p>To establish a stable, aggregated, and compliant static dashboard layout that represents Zero-Trust architecture boundaries, combine the following three mandatory architectural rules:</p>
           
