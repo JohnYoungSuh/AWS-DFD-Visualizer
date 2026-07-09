@@ -26,6 +26,8 @@ Auditing complex cloud infrastructure for compliance — DoD Impact Level 5 (IL5
 - Automatically draws nested VPC/Subnet (AWS), VNet/Subnet (Azure), and VPC Network/Subnet (GCP) enclosures
 - Highlights **SSH/22 compliance violations** as dashed red paths — instant visual audit signal for open ingress
 - Renders concentric **Security Group compliance rings** around compute nodes (green = compliant, red = non-compliant)
+- Bundles parallel connection paths into single **logarithmically scaled weighted edges** with hover count badges to optimize visualization performance
+- Dynamically maps custom compliance values to visual hex color overrides via the **Custom Status Palette** Format options panel
 - Supports interactive node click **drilldowns** into raw Splunk searches (VPC Flow Logs, Config History, GuardDuty findings)
 
 ### Key Differentiators
