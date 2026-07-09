@@ -4,6 +4,41 @@
 
 ---
 
+## 📌 LL-007 — Diverging Implementation Logic Drift
+
+**Date Resolved:** July 9, 2026
+**Symptom:** Adding custom status colors threatened to diverge status handling further between `NodeCard` and `LinkLabel`.
+
+### Root Cause
+Status highlight rules existed in two separate inline copies:
+* `getStatusHighlight` in `LinkLabel` (returning only `labelPrefix`)
+* `getStatusHighlight` in `NodeCard` (returning `color`, `className`, and `labelPrefix`)
+
+Extending these separately would have created a three-way logic drift.
+
+### Solution
+Unified the logic into a single module-level `buildStatusHighlight(status, customPaletteMap = {})` function situated above `parseSplunkData`. Both visual sub-components delegate to this shared function, maintaining a single source of truth.
+
+---
+
+## 📌 LL-006 — Cypress Test XSS Global Selector Leak
+
+**Date Resolved:** July 9, 2026
+**Symptom:** Cypress component test failed with "Too many elements found. Found 1, expected 0" when asserting no `<script>` tags were rendered.
+
+### Root Cause
+The Cypress assertion was written as `cy.get('script').should('have.length', 0)`. While intended to assert that no malicious script was injected by the status palette visualizer option, it matched the Cypress runner's own instrumentation and setup script elements inside the page DOM.
+
+### Solution
+Scoped the selector to the SVG container:
+```javascript
+cy.get('svg').find('script').should('not.exist');
+```
+This target-scopes the assertion to check only the visualizer component's subtree.
+
+---
+
+
 ## 📌 LL-005 — License Key Not Saving in Formatting Panel
 
 **Date Resolved:** June 19, 2026

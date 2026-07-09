@@ -1,3 +1,59 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.3
+
+**Release Date:** July 9, 2026
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture
+
+---
+
+## Overview
+
+Version 2.8.3 is a minor feature and security hardening release introducing native edge bundling/weighting for high-volume network environments, user-defined custom status color palettes via the Splunk Format panel UI, and strict CWE-79 input sanitization controls for Visualizer options.
+
+---
+
+## ⚡ Feature: Native Edge Bundling & Logarithmic Weight Scaling (Req-1)
+
+AWS-DFD-Visualizer now automatically bundles overlapping connections to improve render performance and layout legibility.
+
+- **Deduplication & Counter**: The data aggregation pipeline clusters parallel records sharing identical source and target endpoints into a single edge containing a `count` attribute.
+- **Logarithmic Stroke Weight**: Links scale their rendered path thickness logarithmically based on the row count:
+  ```javascript
+  strokeWidth = Math.min(10, 2 + Math.log2(count + 1))
+  ```
+  Single rows draw at a baseline 2.5px width, while high-volume traffic (50+ rows) scales up to 10px to visually signify volume. React owns this visual SVG attribute directly (React-D3 SoC rule preserved).
+- **Hover Count Badge**: Hovering on a weighted edge displays a blue tooltip/badge containing the aggregated row counts (e.g. `×42 rows`) under the connection label.
+
+---
+
+## 🎨 Feature: Configurable Custom Status Palettes (Req-2)
+
+Enables dynamic, UI-driven color overrides for custom telemetry status codes.
+
+- **Format Panel Integration**: Adds a "Custom Status Palette" text input in the Format options panel (`formatter.html`) to allow mapping custom values to hex colors (e.g., `NonCompliant=#FF6B6B,EXEMPT=#4ECB71`).
+- **Unified Highlight Engine**: Replaces two pre-existing diverging inline methods in `LinkLabel` and `NodeCard` with a module-level `buildStatusHighlight(status, customPaletteMap)` helper.
+- **Priority Defenses**: Custom visual overrides augment rather than replace core built-in safety highlights. Crucial life-cycle states (like `ResourceDeleted` dimming/opacity and `ResourceNotRecorded` dashed styling) take absolute precedence and cannot be disabled.
+
+---
+
+## 🔒 Security & XSS Mitigation (CWE-79 / STIG)
+
+- **Palette Input Sanitization**: The status palette configuration parser applies strict key allow-listing (`/^[a-zA-Z0-9\-_\s]{1,64}$/`) and value format validation (`/^#[0-9A-Fa-f]{6}$/`). Malicious script tags or special character payloads are safely stripped and ignored before DOM rendering.
+- **AppInspect Cleanliness**: The codebase compiles with 0 warnings, 0 failures, and 0 errors, meeting the zero-tolerance criteria for Splunk AppInspect.
+
+---
+
+## 🧪 Testing and Quality Assurance
+
+- **5 New Cypress Integration Tests**:
+  - `TC-AUT-v2.8.3-A Spec A`: Mounts 50 duplicate paths to confirm 1 aggregated edge path is rendered with weight scaling.
+  - `TC-AUT-v2.8.3-A Spec B`: Asserts single-row baseline edge width resolves to baseline.
+  - `TC-AUT-v2.8.3-B Spec A`: Verifies custom palette mapping maps status to border colors.
+  - `TC-AUT-v2.8.3-B Spec B`: Asserts malicious `<script>` injection attempts are safely stripped from the SVG.
+  - `TC-AUT-v2.8.3-B Spec C`: Verifies `ResourceDeleted` built-in dimming rules override custom palette color mappings.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.8.0
 
 **Release Date:** June 18, 2026
