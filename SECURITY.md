@@ -54,3 +54,10 @@ To prevent DOM-based Cross-Site Scripting (XSS) when rendering customized plane 
 - **HTML Element Strip**: Script tag blocks (`/<\/?script[^>]*>/gi`) and HTML tags (`/[<>]/g`) are recursively removed.
 - **Strict Character Allow-listing**: Only safe characters are permitted (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`). All quotes, brackets, parentheses, and other script delimiters are stripped.
 - **Propagation Safeguard**: Sanitization occurs at ingestion before rendering to the DOM and is reapplied during Draw.io XML export compiling.
+
+### 5. Custom Status Palette Strict Sanitization (CWE-79 XSS Prevention)
+To prevent DOM-based Cross-Site Scripting (XSS) and injection vulnerabilities when loading custom status color maps via the `statusPalette` visualizer option:
+- **Strict Key Validation**: Keys representing custom status names are matched against a strict alphanumeric allow-list (`^[a-zA-Z0-9\-_\s]{1,64}$`). Any key containing HTML tags, scripts, or punctuation is rejected and logged.
+- **Strict Hex Color Validation**: Custom color values must strictly conform to a 6-digit hex pattern (`^#[0-9A-Fa-f]{6}$`). Invalid inputs are silently dropped.
+- **Priority Default Safeguard**: User-defined custom colors only augment visual statuses; core built-in compliance and life-cycle defaults (like `ResourceDeleted` dimming or `ResourceNotRecorded` dashed states) cannot be overriden or disabled by custom status configuration.
+

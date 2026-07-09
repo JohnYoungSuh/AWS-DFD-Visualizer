@@ -1,4 +1,4 @@
-# AWS DFD Visualizer — v2.8.1
+# AWS DFD Visualizer — v2.8.3
 
 > [!IMPORTANT]
 > **Multi-Cloud Interactive Security Data Flow Diagram (DFD) for Splunk** — A high-performance, D3.js + React powered visualization engine. Renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, audit-ready Zero-Trust topology blueprints. Designed for **DoD Impact Level 5 (IL5)** and **NIST 800-53 / NIST 800-207** environments.
@@ -16,7 +16,8 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 
 ---
 
-## Key Features (v2.8.1)
+## Key Features (v2.8.3)
+
 
 ### ☁️ Multi-Cloud Service Provider (CSP) Support
 - **Modular Stencils**: Mappings decoupled into modular stencil libraries (`aws.js`, `azure.js`, `gcp.js`, `generic.js`).
@@ -50,14 +51,18 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 - **Rectangular Collision Force (`rectCollide`)**: Custom D3 force mapped directly to card dimensions (`280×100`px) prevents text overlaps and horizontal stacking.
 - **Zero-Latency Layout Bypass**: Pre-ticks 300 physics cycles synchronously for graphs < 100 nodes — renders fully settled instantly.
 - **Batched `requestAnimationFrame` Layout**: Graphs ≥ 150 nodes process in 30-tick batches with a glassmorphic loader to prevent thread-locking.
+- **Native Edge Bundling**: Automatically aggregates multiple rows sharing the same source/destination paths into a single, thicker weighted edge. Edge thickness scales logarithmically (`2` to `10`px) relative to traffic volume (clamped between 2px baseline and 10px max) to maximize layout rendering performance (NIST 800-53 SC-5).
 - **Level of Detail (LOD) Scaling**: Hides card labels and SVG shadows when zoomed out (k < 0.45) to reduce DOM reflow overhead.
 
 ### 🎨 Rendering Quality & UX Polish
 - **Dynamic Edge Label Pill Width**: Label capsules auto-size from actual text length — no more truncated long protocol labels.
+- **Aggregated Row Tooltip Badge**: Displays a visual count badge (`×N rows`) below the label capsule on hovering weighted/bundled edges.
+- **Configurable Custom Status Palette**: Map custom compliance or data values to visual hex color overrides via the format options panel (`statusPalette`). Sanitized safely with keys allow-listed and hex pattern validated (CWE-79).
 - **Violation Label Sizing**: `⚠️ SSH/22` pill width accounts for the full display string including emoji prefix.
 - **Draw.io Exporter**: Exports current diagram to standard Draw.io XML for formal engineering documentation.
 - **SPL → D3 Live Feed Mode**: Paste CSV edge tables directly into a client-side console overlay to preview layouts instantly.
 - **JIT Drilldowns & Token Controls**: Dynamic SPL query interpolation with `sanitizeSplunkToken` injection protection.
+
 
 ---
 
