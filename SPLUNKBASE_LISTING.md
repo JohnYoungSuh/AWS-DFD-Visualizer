@@ -230,6 +230,7 @@ All options are accessible via the **Format** button in the dashboard panel edit
 
 | Version | Date | Highlights |
 |---|---|---|
+| **2.8.4** | Aug 6, 2026 | Removed all commercial licensing constraints (50-node limit, block overlay, Format panel inputs) and the 1,000-node safety cap to allow unlimited node layouts. |
 | **2.8.3** | Jul 9, 2026 | Log-weighted native edge bundling (Req-1), custom status palette configuration mapping (Req-2), unified highlighting helper, 5 Cypress integration specs, XSS inputs validation |
 | **2.8.0** | Jun 18, 2026 | Multi-cloud (AWS/Azure/GCP), Zero-Trust Blueprint Engine, STIG hardening, commercial licensing, dynamic edge label sizing |
 | 2.7.0 | Jun 1, 2026 | Draw.io export, CSV live feed console, compact layout, alternate physics models |

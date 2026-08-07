@@ -1,3 +1,38 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.4
+
+**Release Date:** August 6, 2026
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture
+
+---
+
+## Overview
+
+Version 2.8.4 is an emergency release that removes all commercial licensing restrictions, overlays, and limits, enabling unlimited, restriction-free data flow diagram rendering. The 1,000-node display cap has also been lifted to support large-scale enterprise deployments without truncation.
+
+---
+
+## 🔑 Licensing Removal & Unlimited Node Layouts
+
+- **Emergency Licensing Constraints Removal**: All licensing validation code, Base64 parser checks, tier checks, and commercial licensing enforcement constraints have been completely removed.
+- **Removed Licensing UI Elements**: 
+  - The glassmorphic "License Capacity Exceeded" warning block overlay that restricted unlicensed datasets exceeding 50 nodes.
+  - The "License Key" HUD console button and its settings configurations/text areas.
+  - The "Licensing" section options in the Splunk Format panel (`formatter.html`).
+  - Local storage key bindings (`aws_dfd_license_key`) and inputs.
+- **Removed 1,000-Node Display Cap**: Lifted the 1,000-node rendering cap to allow displaying complete, high-density topologies without truncation. Large datasets (>500 nodes) still trigger a performance warning banner recommending data filtering, but the display is no longer capped.
+- **License Update in Documentation**: Replaced licensing options and billing notes in `README.MD`, `SPLUNKBASE_LISTING.md`, and `user_guide.xml` with references to the open Apache License 2.0 standard.
+
+---
+
+## 🧪 Testing and Quality Assurance
+
+- **Cypress Test Refactoring**: Updated Cypress component specs to align with the licensing removal. Removed test suites verifying license keys, local storage persistence, and licensing block screens.
+- **High-Volume Verification**: Refactored the high-volume rendering test case to verify that a dataset with 1,200 nodes renders completely (1,200 nodes and their connections draw on the canvas) and the warning banner no longer claims the display is capped.
+- **Webpack & AppInspect Validation**: Built production Webpack bundle cleanly. Verified all 37 Cypress component tests pass successfully. Passed Splunk AppInspect with 0 errors, 0 warnings, and 0 failures.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.8.3
 
 **Release Date:** July 9, 2026
