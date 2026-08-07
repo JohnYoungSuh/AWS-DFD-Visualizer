@@ -415,7 +415,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').contains('Web Server').should('exist');
     });
 
-    it('truncates node payload to 1,000 exactly and prunes dangling links for high-volume inputs', () => {
+    it('verifies that high-volume inputs do not truncate to 1,000 nodes and warning banner does not mention display cap', () => {
         const highVolNodes = [];
         for (let i = 1; i <= 1200; i++) {
             highVolNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
@@ -436,10 +436,10 @@ describe('AwsDfdVisualizer Component Tests', () => {
             </div>
         );
 
-        cy.contains('Nodes: 1000').should('be.visible');
-        cy.contains('Links: 1').should('be.visible');
+        cy.contains('Nodes: 1200').should('be.visible');
+        cy.contains('Links: 2').should('be.visible');
         cy.get('#high-volume-warning-banner').should('be.visible');
-        cy.contains('Warning: High-volume dataset detected (1200 nodes). Display capped at 1,000 nodes.').should('be.visible');
+        cy.contains('Warning: High-volume dataset detected (1200 nodes). Performance may be degraded').should('be.visible');
     });
 
     it('verifies discrete zoom triggers data-lod active attribute precisely once and does not crash', () => {
@@ -794,7 +794,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.screenshot('hybrid_multi_csp_layout');
     });
 
-    it('verifies that Free Developer Edition blocks rendering and displays the capacity overlay if node count > 50', () => {
+    it('verifies that a large dataset (> 50 nodes) renders successfully without any license restrictions', () => {
         const largeNodes = [];
         for (let i = 1; i <= 60; i++) {
             largeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
@@ -812,42 +812,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
             </div>
         );
 
-        cy.contains('License Capacity Exceeded').should('be.visible');
-        cy.contains('Free Developer Edition').should('be.visible');
-        cy.contains('capped at 50 nodes').should('be.visible');
-        cy.get('g.node-card').should('have.length', 0); // No nodes should render visually on canvas
-    });
-
-    it('verifies that a valid Enterprise license key decodes successfully, overrides limits, and shows correct HUD status', () => {
-        const largeNodes = [];
-        for (let i = 1; i <= 60; i++) {
-            largeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
-        }
-        const largeData = {
-            fields: [
-                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
-            ],
-            rows: largeNodes
-        };
-
-        // Valid test license key: { "customer": "TestCorp", "tier": "enterprise", "nodeLimit": 1000, "expiration": "2030-12-31", "signature": "dfd-visualizer-valid-sig-12345" }
-        const validKey = btoa(JSON.stringify({
-            customer: "TestCorp",
-            tier: "enterprise",
-            nodeLimit: 1000,
-            expiration: "2030-12-31",
-            signature: "dfd-visualizer-valid-sig-12345"
-        }));
-
-        mount(
-            <div style={{ width: 1200, height: 800 }}>
-                <AwsDfdVisualizer data={largeData} config={{ layoutMode: 'force', licenseKey: validKey }} width={1200} height={800} isDarkTheme={true} />
-            </div>
-        );
-
-        // HUD should output licensed state
-        cy.contains('ENTERPRISE (Licensed to: TestCorp)').should('be.visible');
-        // It should bypass the block overlay and draw the nodes
         cy.contains('License Capacity Exceeded').should('not.exist');
         cy.get('g.node-card').should('have.length', 60);
     });
@@ -1145,56 +1109,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.zone text').should('contain.text', '⚙️ NIS ENGINE');
     });
 
-    it('verifies that local storage fallback and the interactive license console unlock capacity limits', () => {
-        // Clear local storage first
-        localStorage.removeItem('aws_dfd_license_key');
-
-        const largeNodes = [];
-        for (let i = 1; i <= 60; i++) {
-            largeNodes.push([`Node_${i}`, null, "AWS::Resource", `Node Label ${i}`, null, "Default", "", "OK"]);
-        }
-        const largeData = {
-            fields: [
-                {name: "from"}, {name: "to"}, {name: "type"}, {name: "node_label"}, {name: "edge_label"}, {name: "group"}, {name: "icon"}, {name: "status"}
-            ],
-            rows: largeNodes
-        };
-
-        const validKey = btoa(JSON.stringify({
-            customer: "TestCorpLocal",
-            tier: "enterprise",
-            nodeLimit: 1000,
-            expiration: "2030-12-31",
-            signature: "dfd-visualizer-valid-sig-12345"
-        }));
-
-        mount(
-            <div style={{ width: 1200, height: 800 }}>
-                <AwsDfdVisualizer data={largeData} config={{ layoutMode: 'force', licenseKey: '' }} width={1200} height={800} isDarkTheme={true} />
-            </div>
-        );
-
-        // Should initially show capacity exceeded block
-        cy.contains('License Capacity Exceeded').should('be.visible');
-        cy.get('textarea[placeholder*="save it locally"]').should('be.visible');
-
-        // Paste the key and apply
-        cy.get('textarea[placeholder*="save it locally"]').type(validKey, { delay: 0 });
-        cy.contains('Apply & Save Key Locally').click();
-
-        // Warning should disappear and nodes should render
-        cy.contains('License Capacity Exceeded').should('not.exist');
-        cy.contains('ENTERPRISE (Licensed to: TestCorpLocal)').should('be.visible');
-        cy.get('g.node-card').should('have.length', 60);
-
-        // Toggle the License settings console to clear the key
-        cy.get('#btn-toggle-license-console').click();
-        cy.get('#license-config-panel').should('be.visible');
-        cy.get('#btn-clear-license').click();
-
-        // Once cleared, block screen should reappear
-        cy.contains('License Capacity Exceeded').should('be.visible');
-    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

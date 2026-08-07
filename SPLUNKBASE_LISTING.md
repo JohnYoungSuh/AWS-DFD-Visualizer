@@ -7,7 +7,7 @@
 
 ## 📋 App Summary (Short Description — ~245 chars)
 
-> Multi-cloud interactive Data Flow Diagram (DFD) visualizer for Splunk. Renders AWS, Azure, and GCP Config topologies as Zero-Trust blueprint diagrams with nested VPC/Subnet enclosures, SSH/22 compliance violation paths, and commercial license enforcement. Designed for DoD IL5 / NIST 800-53 / Zero-Trust Architecture environments.
+> Multi-cloud interactive Data Flow Diagram (DFD) visualizer for Splunk. Renders AWS, Azure, and GCP Config topologies as Zero-Trust blueprint diagrams with nested VPC/Subnet enclosures, and SSH/22 compliance violation paths. Designed for DoD IL5 / NIST 800-53 / Zero-Trust Architecture environments.
 
 ---
 
@@ -35,7 +35,6 @@ Auditing complex cloud infrastructure for compliance — DoD Impact Level 5 (IL5
 - 🏛️ **Deterministic Blueprint Mode** — reproducible, physics-free layouts for IL5 RMF audit briefings
 - ☁️ **Hybrid multi-cloud** — AWS + Azure + GCP on a single canvas with auto-detected stencils
 - 🔒 **STIG-hardened** — text-only DOM rendering (no `dangerouslySetInnerHTML`), SPL injection allow-list, DoS circuit breaker at 5,000 rows
-- 🔑 **Air-gap-safe licensing** — client-side only, no outbound network calls (DoD IL5 compliant)
 - ✅ **AppInspect clean** — 0 errors, 0 failures, 0 warnings on every release
 
 ---
@@ -47,7 +46,7 @@ Auditing complex cloud infrastructure for compliance — DoD Impact Level 5 (IL5
 | Splunk Version | Enterprise or Cloud 9.x (recommended) |
 | Framework | Dashboard Studio (Unified Dashboard Framework) **and** Classic SimpleXML |
 | Node.js (build only) | ≥ 22 LTS (only needed if building from source) |
-| License | Free tier: up to 50 nodes. Enterprise/Sovereign tier: unlimited |
+| License | Apache License 2.0 |
 
 ### Supported Stencil Keys by Cloud Provider
 
@@ -197,11 +196,8 @@ All options are accessible via the **Format** button in the dashboard panel edit
 | Smooth Edges | `smoothEdges` | `true`, `false` | `true` | Draw curved arc connections (`true`) or straight lines (`false`) |
 | Link Text Size | `linkTextSize` | `small`, `medium`, `large`, `extraLarge` | `medium` | Font size of edge label capsules |
 
-### Licensing Section
 
-| Option | XML Name | Values | Default | Description |
-|---|---|---|---|---|
-| License Key | `licenseKey` | Base64 string | *(empty)* | Enter Enterprise or Sovereign GovTier key. Without a key, rendering is capped at 50 nodes. |
+
 
 ---
 
@@ -226,7 +222,7 @@ All options are accessible via the **Format** button in the dashboard panel edit
 - **DOM Security:** `dangerouslySetInnerHTML` and D3 `.html()` are explicitly banned — all dynamic strings use React standard interpolation (CWE-79 / XSS prevention)
 - **SPL Injection:** `sanitizeSplunkToken` applies a strict regex allow-list before interpolating drilldown tokens
 - **DoS Protection:** Client-side circuit breaker blocks rendering if row count exceeds 5,000 records
-- **Air-gap Safe:** License validation is fully client-side — no outbound network calls made at any time
+
 
 ---
 
@@ -249,4 +245,4 @@ Full release notes: [RELEASE_NOTES.md](https://github.com/JohnYoungSuh/AWS-DFD-V
 
 - **GitHub Issues:** https://github.com/JohnYoungSuh/AWS-DFD-Visualizer/issues
 - **Stencil Reference:** `README_STENCILS.md` included in the `.spl` package
-- **License Inquiries:** Contact SUH Labs for Enterprise or Sovereign GovTier keys
+

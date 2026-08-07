@@ -1585,81 +1585,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const simulationRef = useRef(null);
     const clickTimeoutRef = useRef(null);
 
-    // ----------------------------------------------------
-    // License Verification Logic
-    // ----------------------------------------------------
-    const [localLicenseKey, setLocalLicenseKey] = useState(() => {
-        try {
-            return localStorage.getItem('aws_dfd_license_key') || '';
-        } catch (e) {
-            return '';
-        }
-    });
-
-    const [showLicenseConsole, setShowLicenseConsole] = useState(false);
-    const [localInputKey, setLocalInputKey] = useState(localLicenseKey);
-
-    useEffect(() => {
-        setLocalInputKey(localLicenseKey);
-    }, [localLicenseKey]);
-
-    const handleApplyLocalLicense = () => {
-        const trimmed = localInputKey.trim();
-        if (!trimmed) {
-            handleClearLocalLicense();
-            return;
-        }
-        try {
-            const decoded = atob(trimmed);
-            const parsed = JSON.parse(decoded);
-            if (parsed.signature !== "dfd-visualizer-valid-sig-12345") {
-                alert("Invalid license signature. Key cannot be applied.");
-                return;
-            }
-            localStorage.setItem('aws_dfd_license_key', trimmed);
-            setLocalLicenseKey(trimmed);
-            alert("License key successfully saved locally!");
-        } catch (e) {
-            alert("Invalid license key format. Key cannot be parsed.");
-        }
-    };
-
-    const handleClearLocalLicense = () => {
-        try {
-            localStorage.removeItem('aws_dfd_license_key');
-        } catch (e) {}
-        setLocalLicenseKey('');
-        setLocalInputKey('');
-        alert("Local license key cleared.");
-    };
-
-    const licenseInfo = useMemo(() => {
-        const key = config?.licenseKey || localLicenseKey || "";
-        if (!key) {
-            return { tier: "free", customer: "Demo/Eval", valid: false, reason: "Missing license key" };
-        }
-        try {
-            const decoded = atob(key.trim());
-            const parsed = JSON.parse(decoded);
-            const expDate = new Date(parsed.expiration);
-            const now = new Date();
-            if (expDate < now) {
-                return { tier: "free", customer: parsed.customer, valid: false, reason: `License expired on ${parsed.expiration}` };
-            }
-            if (parsed.signature !== "dfd-visualizer-valid-sig-12345") {
-                return { tier: "free", customer: parsed.customer, valid: false, reason: "Invalid license signature" };
-            }
-            return {
-                tier: parsed.tier || "free",
-                customer: parsed.customer || "Enterprise Customer",
-                expiration: parsed.expiration,
-                nodeLimit: parsed.nodeLimit || 50,
-                valid: true
-            };
-        } catch (e) {
-            return { tier: "free", customer: "Demo/Eval", valid: false, reason: "Invalid license key format" };
-        }
-    }, [config?.licenseKey, localLicenseKey]);
+    // Commercial License Verification Logic removed in v2.8.4
 
     const [showCsvConsole, setShowCsvConsole] = useState(false);
     const [csvInput, setCsvInput] = useState('');
@@ -1935,21 +1861,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         const parsed = parseSplunkData(activeData);
         const globalAdapter = detectProvider(parsed.nodes, config?.cspStencilSet || 'auto');
 
-        // SVG DOM Limit Safety Cap & Isolated Link Pruning
+        // SVG DOM Limit Safety Cap & Pruning removed in v2.8.4
         const originalNodesCount = parsed.nodes.length;
-        if (originalNodesCount > 1000) {
-            // Pass 1: Prune Nodes cleanly
-            const prunedNodes = parsed.nodes.slice(0, 1000);
-            const activeNodeIds = new Set(prunedNodes.map(n => n.id));
 
-            // Pass 2: Cleanly prune dangling links to avoid D3 TypeErrors
-            const safeLinks = parsed.links.filter(l => 
-                activeNodeIds.has(l.source) && activeNodeIds.has(l.target)
-            );
-
-            parsed.nodes = prunedNodes;
-            parsed.links = safeLinks;
-        }
 
         const gNames = Array.from(new Set(parsed.nodes.map(n => n.group)));
         
@@ -2358,13 +2272,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
-    const isLicenseExceeded = useMemo(() => {
-        const count = originalNodesCount || nodes.length;
-        if (!licenseInfo.valid) {
-            return count > 50;
-        }
-        return count > licenseInfo.nodeLimit;
-    }, [licenseInfo, originalNodesCount, nodes]);
+    const isLicenseExceeded = false;
 
     console.log("AWS-DFD-Visualizer: layout determination result:", {
         isZeroTrustLayout,
@@ -2454,7 +2362,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     }
 
     useEffect(() => {
-        if (!nodes.length || isLicenseExceeded) return;
+        if (!nodes.length) return;
 
         const svg = d3.select(svgRef.current);
         const zoom = d3.zoom()
@@ -2892,76 +2800,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     return (
         <div style={{ width: '100%', height: '100%', minHeight: '400px', overflow: 'hidden', background: 'transparent', position: 'relative' }}>
-            {isLicenseExceeded && (
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: isDarkTheme ? 'rgba(15, 23, 42, 0.95)' : 'rgba(248, 250, 252, 0.95)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 1000,
-                    fontFamily: 'Inter, sans-serif',
-                    padding: '40px',
-                    textAlign: 'center',
-                    color: isDarkTheme ? '#f1f5f9' : '#0f172a'
-                }}>
-                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
-                    <h2 style={{ fontSize: '28px', color: '#EF4444', margin: '0 0 10px 0' }}>License Capacity Exceeded</h2>
-                    <p style={{ fontSize: '15px', maxWidth: '600px', lineHeight: '1.6', margin: '0 0 20px 0', color: isDarkTheme ? '#cbd5e1' : '#475569' }}>
-                        The current dataset has <strong>{nodes.length} nodes</strong>, which exceeds the limit for the <strong>Free Developer Edition</strong> (capped at 50 nodes). 
-                        Please configure a valid Enterprise or Sovereign GovTier license key in the Splunk Format Menu under the Licensing tab.
-                    </p>
-                    <div style={{ background: isDarkTheme ? '#1e293b' : '#ffffff', border: `1px solid ${isDarkTheme ? '#334155' : '#e2e8f0'}`, borderRadius: '8px', padding: '16px 24px', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', textAlign: 'left', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                        <span style={{ fontWeight: 'bold', color: '#EF4444' }}>Reason: {licenseInfo.reason}</span>
-                        <hr style={{ border: 'none', borderTop: `1px solid ${isDarkTheme ? '#334155' : '#e2e8f0'}`, margin: '8px 0' }} />
-                        <span style={{ fontWeight: 'bold' }}>Recommended Commercial Tiers:</span>
-                        <ul style={{ margin: '4px 0 0 16px', padding: 0, listStyleType: 'disc', color: isDarkTheme ? '#94a3b8' : '#64748b' }}>
-                            <li><strong>Enterprise Tier</strong>: Cap up to 1,000 nodes ($12,000 / year per Search Head)</li>
-                            <li><strong>Sovereign GovTier</strong>: Unlimited node capacity, offline AppInspect pre-hardened ($35,000 / year flat site license)</li>
-                        </ul>
-                    </div>
-                    <div style={{ marginTop: '20px', width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <textarea
-                            placeholder="Or paste your license key here to save it locally..."
-                            value={localInputKey}
-                            onChange={(e) => setLocalInputKey(e.target.value)}
-                            style={{
-                                width: '100%',
-                                height: '60px',
-                                padding: '8px',
-                                borderRadius: '6px',
-                                border: `1px solid ${isDarkTheme ? '#475569' : '#cbd5e1'}`,
-                                background: isDarkTheme ? '#1e293b' : '#ffffff',
-                                color: isDarkTheme ? '#f1f5f9' : '#0f172a',
-                                fontSize: '12px',
-                                fontFamily: 'monospace',
-                                resize: 'none'
-                            }}
-                        />
-                        <button
-                            onClick={handleApplyLocalLicense}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: '#10B981',
-                                color: '#ffffff',
-                                fontWeight: 'bold',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s'
-                            }}
-                        >
-                            Apply & Save Key Locally
-                        </button>
-                    </div>
-                </div>
-            )}
+
             {isCalculating && (
                 <div style={{
                     position: 'absolute',
@@ -3051,9 +2890,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.8.3 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
-                <br/>
-                Tier: <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()} ({licenseInfo.valid ? `Licensed to: ${licenseInfo.customer}` : `Evaluation Mode: ${licenseInfo.reason}`})</span>
+                v2.8.4 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
@@ -3108,23 +2945,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <button 
-                            id="btn-toggle-license-console"
-                            onClick={() => setShowLicenseConsole(!showLicenseConsole)}
-                            style={{
-                                padding: '6px 12px',
-                                background: '#10B981',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                            }}
-                        >
-                            {showLicenseConsole ? '✕ Close License' : '🔑 License Key'}
-                        </button>
+
                         <button 
                             id="btn-toggle-csv-console"
                             onClick={() => setShowCsvConsole(!showCsvConsole)}
@@ -3215,85 +3036,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                             </div>
                         </div>
                     )}
-                    {showLicenseConsole && (
-                        <div id="license-config-panel" style={{
-                            marginTop: '5px',
-                            padding: '10px',
-                            background: isDarkTheme ? '#1e2832' : 'white',
-                            border: '1px solid #545b64',
-                            borderRadius: '6px',
-                            width: '320px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                            fontFamily: 'Inter, sans-serif',
-                            color: isDarkTheme ? '#f1f5f9' : '#0f172a',
-                            fontSize: '12px',
-                            textAlign: 'left'
-                        }}>
-                            <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', borderBottom: `1px solid ${isDarkTheme ? '#334155' : '#e2e8f0'}`, paddingBottom: '4px' }}>🔑 Licensing Settings</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <span><strong>Current Tier:</strong> <span style={{ color: licenseInfo.valid ? '#10B981' : '#EAB308', fontWeight: 'bold' }}>{licenseInfo.tier.toUpperCase()}</span></span>
-                                <span><strong>Status:</strong> {licenseInfo.valid ? `Licensed to ${licenseInfo.customer}` : `Evaluation (${licenseInfo.reason})`}</span>
-                                {licenseInfo.valid && <span><strong>Node Limit:</strong> {licenseInfo.nodeLimit} nodes</span>}
-                                {licenseInfo.valid && <span><strong>Expires:</strong> {licenseInfo.expiration}</span>}
-                            </div>
-                            <textarea
-                                id="license-input-textarea"
-                                placeholder="Paste Base64 License Key here..."
-                                value={localInputKey}
-                                onChange={(e) => setLocalInputKey(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    height: '60px',
-                                    padding: '6px',
-                                    borderRadius: '4px',
-                                    border: `1px solid ${isDarkTheme ? '#475569' : '#cbd5e1'}`,
-                                    background: isDarkTheme ? '#111827' : '#ffffff',
-                                    color: isDarkTheme ? '#f1f5f9' : '#0f172a',
-                                    fontSize: '11px',
-                                    fontFamily: 'monospace',
-                                    resize: 'none'
-                                }}
-                            />
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    id="btn-apply-license"
-                                    onClick={handleApplyLocalLicense}
-                                    style={{
-                                        flex: 1,
-                                        padding: '6px 12px',
-                                        background: '#10B981',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        fontSize: '12px'
-                                    }}
-                                >
-                                    Apply & Save
-                                </button>
-                                <button
-                                    id="btn-clear-license"
-                                    onClick={handleClearLocalLicense}
-                                    style={{
-                                        padding: '6px 12px',
-                                        background: '#EF4444',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        fontSize: '12px'
-                                    }}
-                                >
-                                    Clear
-                                </button>
-                            </div>
-                        </div>
-                    )}
+
                 </div>
             </div>
 
@@ -3318,7 +3061,6 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 }}>
                     <span>
                         ⚠️ Warning: High-volume dataset detected ({originalNodesCount} nodes). 
-                        {originalNodesCount > 1000 ? ' Display capped at 1,000 nodes.' : ''} 
                         Performance may be degraded; please aggregate or filter your SPL search.
                     </span>
                     <button 

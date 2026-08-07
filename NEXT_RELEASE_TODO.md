@@ -5,6 +5,9 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: August 6, 2026 (v2.8.4 Emergency Licensing Removal)
+- [x] **v2.8.4 Emergency Release** — Removed all commercial licensing enforcement constraints (50-node limit, block screen overlay, format menu licensing field, and local storage console inputs) and the 1,000-node safety cap to allow unlimited, restriction-free node layouts. Updated user documentation, Splunkbase listing details, and Cypress test specs. Confirmed clean Webpack build, 100% test pass rate across 37 specs, and clean Splunk AppInspect report (0 errors, 0 warnings, 0 failures).
+
 ### ✅ Session: June 26, 2026 (v2.8.1 Release & Refinements)
 - [x] **Release v2.8.1 Implementation & Sales Readiness Refinements** — Implemented dynamic node-card spacing engine (`getNodeCardDimensions`) with a 15% text-wrapping safety buffer, size-aware link distances clamped to 1.5× baseGap, and a +40px type badge width expansion. Decoupled ZTA plane labeling terminology from hardcoded values to visual options (`labelIdentityPlane`/`labelControlPlane`/`labelDataPlane`), added a governance preset dropdown (`governancePreset`: `standard`, `zta`, `business`, `custom`), and prioritized query-driven SPL `zone_name`/`zone` overrides. Upgraded `Zone` component matching logic to retain custom control plane zone titles with the gear emoji (`⚙️`) prefix. Applied strict regex input sanitization (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`) to prevent XSS (CWE-79). Synchronized plane terminology in Draw.io exporters. Resolved moderate-severity vulnerability (GHSA-64mm-vxmg-q3vj) in `http-proxy-middleware` via `npm audit fix`. Added/updated Cypress component tests for compact card dimensions, dynamic label spacing, preset changes, and zone headers, confirming 100% test pass rate (33 passing specs) and clean local AppInspect pre-release audit.
 
