@@ -17,7 +17,7 @@ import { polygonHull } from 'd3-polygon';
 import { line, curveStepAfter, curveStepBefore, curveCatmullRomClosed } from 'd3-shape';
 import { stratify, tree } from 'd3-hierarchy';
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceX, forceY } from 'd3-force';
-import { detectProvider, CSP_REGISTRY, genericAdapter } from './stencils';
+import { detectProvider, CSP_REGISTRY, genericAdapter, ALIAS_REGISTRY } from './stencils';
 
 const d3 = {
     ascending,
@@ -44,15 +44,24 @@ const d3 = {
 // SECTION: PATH_RESOLUTION — Dynamically resolve app base URL to support custom Splunk web mount locations
 const getAppStaticUrl = (pathWithinApp) => {
     const defaultPath = `/en-US/static/app/AWS-DFD-Visualizer/${pathWithinApp}`;
-    if (window.Splunk && window.Splunk.util && typeof window.Splunk.util.make_full_url === 'function') {
-        return window.Splunk.util.make_full_url(`/static/app/AWS-DFD-Visualizer/${pathWithinApp}`);
+    if (typeof window !== 'undefined' && window.Splunk && window.Splunk.util && typeof window.Splunk.util.make_full_url === 'function') {
+        try {
+            return window.Splunk.util.make_full_url(`static/app/AWS-DFD-Visualizer/${pathWithinApp}`);
+        } catch (e) {
+            return defaultPath;
+        }
     }
     return defaultPath;
 };
 
 const ICON_BASE = getAppStaticUrl('icons/');
 
-// SECTION: ICON_RESOLUTION — Dynamic icon resolution supporting Multi-CSP stencils and generic fallbacks
+// Generic keywords in CFN/ARM/GCP resource types that shouldn't steal specific service matches
+const GENERIC_TYPE_KEYWORDS = new Set([
+    'FUNCTION', 'TABLE', 'BUCKET', 'INSTANCE', 'GROUP', 'POLICY', 'RESOURCE', 'SERVICE', 'SERVER', 'CLUSTER', 'STREAM'
+]);
+
+// SECTION: ICON_RESOLUTION — Dynamic icon resolution supporting Multi-CSP stencils, auto-generated catalogs, category defaults, and generic fallbacks
 const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
     const base = ICON_BASE.endsWith('/') ? ICON_BASE : ICON_BASE + '/';
     const status = String(node.status || '').toUpperCase().trim();
@@ -60,63 +69,161 @@ const getIconPath = (node, adapter, globalAdapter, fallbackUrl) => {
         return base + 'skull.svg';
     }
 
-    const explicitIcon = (node.icon || node.stencil || '').toUpperCase();
-    
-    // 1. Check direct adapter stencils
-    const adapterId = String(adapter.id || '').toLowerCase().trim();
-    const getPrefix = (id) => {
-        const idLower = String(id || '').toLowerCase().trim();
-        if (idLower === 'generic' || idLower === 'aws') return '';
-        return id + '/';
+    const activeAdapter = adapter || CSP_REGISTRY.aws;
+    const adapterId = String(activeAdapter.id || 'aws').toLowerCase().trim();
+    const tokenMap = activeAdapter.catalogTokenMap || {};
+    const aliasMap = (ALIAS_REGISTRY && ALIAS_REGISTRY[adapterId]) || {};
+    const categoryDefaultMap = activeAdapter.categoryDefaultMap || {};
+
+    const resolveActiveToken = (rawKey) => {
+        if (!rawKey) return null;
+        const compact = String(rawKey).replace(/[-_\s]/g, '').toUpperCase();
+        // 1. Check alias overlay
+        const aliasTarget = aliasMap[compact];
+        if (aliasTarget && tokenMap[aliasTarget]) {
+            return tokenMap[aliasTarget];
+        }
+        // 2. Direct catalog token lookup
+        if (tokenMap[compact]) {
+            return tokenMap[compact];
+        }
+        return null;
     };
-    const prefix = getPrefix(adapter.id);
-    if (explicitIcon && adapter.stencils[explicitIcon]) {
-        return base + prefix + adapter.stencils[explicitIcon];
+
+    const resolveGlobalToken = (rawKey) => {
+        if (!rawKey) return null;
+        const compact = String(rawKey).replace(/[-_\s]/g, '').toUpperCase();
+        for (const [providerId, providerAdapter] of Object.entries(CSP_REGISTRY)) {
+            const pTokenMap = providerAdapter.catalogTokenMap || {};
+            const pAliasMap = (ALIAS_REGISTRY && ALIAS_REGISTRY[providerId]) || {};
+            const pAlias = pAliasMap[compact];
+            if (pAlias && pTokenMap[pAlias]) return pTokenMap[pAlias];
+            if (pTokenMap[compact]) return pTokenMap[compact];
+        }
+        return null;
+    };
+
+    const resolveCategoryDefault = (catKey) => {
+        if (!catKey) return null;
+        const compact = String(catKey).replace(/[-_\s+]/g, '').toUpperCase();
+        if (categoryDefaultMap[compact]) return categoryDefaultMap[compact];
+        for (const prov of Object.values(CSP_REGISTRY)) {
+            const pCatMap = prov.categoryDefaultMap || {};
+            if (pCatMap[compact]) return pCatMap[compact];
+        }
+        return null;
+    };
+
+    // 1. Check explicit icon_id, icon, or stencil column
+    const explicitIcon = (node.icon_id || node.icon || node.stencil || '').toUpperCase().trim();
+    if (explicitIcon) {
+        const pathFromToken = resolveActiveToken(explicitIcon) || resolveGlobalToken(explicitIcon);
+        if (pathFromToken) {
+            return base + pathFromToken;
+        }
+        if (genericAdapter.stencils[explicitIcon]) {
+            return base + genericAdapter.stencils[explicitIcon];
+        }
+        const catFallback = resolveCategoryDefault(explicitIcon);
+        if (catFallback) {
+            return base + catFallback;
+        }
     }
-    
-    // 2. Check generic stencils
+
+    // 2. Resolve from CloudFormation / ARM / GCP type / resource_type
+    const rawType = String(node.resource_type || node.type || node.component_type || '').toUpperCase().trim();
+    if (rawType && rawType !== 'AWS::RESOURCE') {
+        // Clean provider prefix
+        const cleanType = rawType
+            .replace(/^AWS::/i, '')
+            .replace(/^AZURE::/i, '')
+            .replace(/^GCP::/i, '')
+            .replace(/^MICROSOFT\./i, '');
+        
+        const fullCleanToken = cleanType.replace(/[-_:\s./]/g, '');
+        const directTypeMatch = resolveActiveToken(fullCleanToken) || resolveGlobalToken(fullCleanToken);
+        if (directTypeMatch) {
+            return base + directTypeMatch;
+        }
+
+        // Split on delimiter (::, /, ., _)
+        const segments = rawType.split(/[:/._]+/).filter(Boolean);
+        let candidateMatches = [];
+
+        for (const seg of segments) {
+            const segUpper = seg.toUpperCase();
+            if (segUpper === 'AWS' || segUpper === 'AZURE' || segUpper === 'GCP' || segUpper === 'MICROSOFT') continue;
+            if (resolveCategoryDefault(segUpper)) continue;
+            const matchPath = resolveActiveToken(segUpper) || resolveGlobalToken(segUpper);
+            if (matchPath) {
+                candidateMatches.push({ token: segUpper, path: matchPath, isGeneric: GENERIC_TYPE_KEYWORDS.has(segUpper) });
+            }
+        }
+
+        if (candidateMatches.length > 0) {
+            // Prioritize non-generic tokens (e.g. LAMBDA over FUNCTION), then longest token
+            const nonGeneric = candidateMatches.filter(m => !m.isGeneric);
+            const pool = nonGeneric.length > 0 ? nonGeneric : candidateMatches;
+            pool.sort((a, b) => b.token.length - a.token.length);
+            return base + pool[0].path;
+        }
+
+        // Category default fallback for type segments (e.g. Compute, Database, Storage, Network, Security)
+        for (const seg of segments) {
+            const segUpper = seg.toUpperCase();
+            const catPath = resolveCategoryDefault(segUpper);
+            if (catPath) {
+                return base + catPath;
+            }
+        }
+    }
+
+    // 3. Category matching from component_type / category if provided
+    const compType = String(node.component_type || node.category || '').toUpperCase().trim();
+    if (compType) {
+        const compCatPath = resolveCategoryDefault(compType);
+        if (compCatPath) return base + compCatPath;
+    }
+
+    // 4. Resolve from node ARN / ID (true decoupling: avoid matching primarily from display_name when explicit type/id is available)
+    const id = String(node.arn || node.id || '').toUpperCase();
+    const hasExplicitType = rawType && rawType !== 'AWS::RESOURCE';
+    const label = hasExplicitType ? '' : String(node.label || '').toUpperCase();
+    const idAndLabelTokens = `${id} ${label}`.split(/[:/._\s-]+/).filter(t => t.length >= 2);
+
+    let idMatches = [];
+    for (const t of idAndLabelTokens) {
+        if (t === 'ARN' || t === 'AWS' || t === 'AZURE' || t === 'GCP' || t === 'RESOURCE') continue;
+        const matchPath = resolveActiveToken(t) || resolveGlobalToken(t);
+        if (matchPath) {
+            idMatches.push({ token: t, path: matchPath, isGeneric: GENERIC_TYPE_KEYWORDS.has(t) });
+        }
+    }
+
+    if (idMatches.length > 0) {
+        const nonGeneric = idMatches.filter(m => !m.isGeneric);
+        const pool = nonGeneric.length > 0 ? nonGeneric : idMatches;
+        pool.sort((a, b) => b.token.length - a.token.length);
+        return base + pool[0].path;
+    }
+
+    // 5. Check category fallback on ID tokens
+    for (const t of idAndLabelTokens) {
+        const catPath = resolveCategoryDefault(t);
+        if (catPath) return base + catPath;
+    }
+
+    // 6. Check generic adapter stencils via exact token match
     if (explicitIcon && genericAdapter.stencils[explicitIcon]) {
         return base + genericAdapter.stencils[explicitIcon];
     }
-
-    const type  = (node.type || '').toUpperCase();
-    const id    = (node.arn || node.id || '').toUpperCase();
-    const label = (node.label || '').toUpperCase();
-    
-    // Clean type prefix (e.g. AWS:: or Azure:: or GCP::)
-    const cleanType = type.replace(adapter.typePrefix.toUpperCase(), '');
-    
-    let iconFile = adapter.stencils[cleanType];
-    
-    if (!iconFile) {
-        const parts = type.split('::');
-        const service = parts[parts.length - 1] || '';
-        const domain = parts[1] || '';
-        iconFile = adapter.stencils[service] || adapter.stencils[domain];
-    }
-
-    // Semantic Fallback on active adapter
-    if (!iconFile || type.indexOf('RESOURCE') !== -1) {
-        for (const [key, value] of Object.entries(adapter.stencils)) {
-            if (id.indexOf(key) !== -1 || label.indexOf(key) !== -1) {
-                iconFile = value;
-                break;
-            }
+    for (const t of idAndLabelTokens) {
+        if (genericAdapter.stencils[t]) {
+            return base + genericAdapter.stencils[t];
         }
     }
-    
-    // Semantic Fallback on Generic adapter
-    if (!iconFile) {
-        for (const [key, value] of Object.entries(genericAdapter.stencils)) {
-            if (id.indexOf(key) !== -1 || label.indexOf(key) !== -1 || explicitIcon.indexOf(key) !== -1) {
-                return base + value;
-            }
-        }
-    }
-    
-    if (iconFile) {
-        return base + prefix + iconFile;
-    }
+
+    // 7. Last resort: fallbackUrl (sanitized missingImageURL or generic.svg)
     return fallbackUrl;
 };
 
@@ -148,6 +255,74 @@ const buildStatusHighlight = (status, customPaletteMap = {}) => {
     return null;
 };
 
+// SECTION: ZERO_TRUST_PLANES_HELPER — 3-Stage Hybrid Plane Precedence Resolution
+const ZERO_TRUST_PLANES = {
+    POLICY: 'Policy_Plane',
+    IDENTITY: 'Identity_Plane',
+    CONTROL: 'Control_Plane',
+    DATA: 'Data_Plane'
+};
+
+const resolveZeroTrustPlane = (candidateStr) => {
+    if (!candidateStr || typeof candidateStr !== 'string') return null;
+    const str = candidateStr.trim();
+    if (!str || str.toLowerCase() === 'default' || str.toLowerCase() === 'unmapped') return null;
+
+    // 1. PEP belongs strictly to Control Plane
+    if (/(pep|policy.*enforcement.*point)/i.test(str)) {
+        return ZERO_TRUST_PLANES.CONTROL;
+    }
+    // 2. Policy: strictly PAP / PDP / Policy Engine / Policy Admin / Policy Control Plane / Governance scanners
+    if (/(policy.*control|policy.*admin|pap|policy.*engine|pdp|acas|trellix|hbss|forescout|cfengine|satellite|wsus|networker|ansible|splunk)/i.test(str)) {
+        return ZERO_TRUST_PLANES.POLICY;
+    }
+    // 3. Identity: Directory / IAM / Identity / Active Directory / Domain Controller / SSO / Auth
+    if (/(active.*directory|directory|domain.*controller|identity|iam|active_directory|okta|cognito|ping|keycloak|\bauth\b)/i.test(str)) {
+        return ZERO_TRUST_PLANES.IDENTITY;
+    }
+    // 4. Control: Control Plane, Access Gateways, Bastions, WAF, Gateways, Connection Brokers, RDP, SSH, Load Balancers, Proxies
+    if (/(control.*plane|access.*gateway|bastion|waf|pep|boundary|gateway|connection.*broker|rdp|ssh|load.*balancer|f5|alb|elb|apigateway|api.*gateway|proxy)/i.test(str)) {
+        return ZERO_TRUST_PLANES.CONTROL;
+    }
+    // 5. Data: Data Plane, Workloads, Databases, Storage, Compute
+    if (/(data.*plane|business.*workload|database|storage|workload|oracle|peoplesoft|tuxedo|weblogic|jboss|api_server|rds|s3|dynamo|ec2|application.*server|other.*system)/i.test(str)) {
+        return ZERO_TRUST_PLANES.DATA;
+    }
+    return null;
+};
+
+const resolveNodePlane = (node) => {
+    if (!node) return ZERO_TRUST_PLANES.DATA;
+    
+    // Priority 1: Explicit SPL fields
+    const candidates = [
+        node.plane,
+        node.src_plane,
+        node.dest_plane,
+        node.zone_name,
+        node.group,
+        node.vpcId,
+        node.container
+    ];
+    for (const cand of candidates) {
+        const matched = resolveZeroTrustPlane(ensureString(cand));
+        if (matched) return matched;
+    }
+
+    // Priority 2: Intelligent resource type / keyword classification
+    const typeStr = ensureString(node.type || '');
+    const labelStr = ensureString(node.label || '');
+    const idStr = ensureString(node.id || node.arn || '');
+    const iconStr = ensureString(node.icon || '');
+    const combined = `${typeStr} ${labelStr} ${idStr} ${iconStr}`;
+
+    const matchedCombined = resolveZeroTrustPlane(combined);
+    if (matchedCombined) return matchedCombined;
+
+    // Priority 3: Fallback
+    return ZERO_TRUST_PLANES.DATA;
+};
+
 // SECTION: PARSE_SPLUNK_DATA — Handles both data.rows (Classic XML) and data.results (Dashboard Studio)
 // Also applies: edgeSet dedup (Bug #2), null label guard (Bug #3), named-column access (no positional indexing)
 const ensureString = (val) => {
@@ -157,6 +332,14 @@ const ensureString = (val) => {
         return first !== undefined ? String(first) : '';
     }
     return String(val);
+};
+
+const indexOfFirstField = (fields, names) => {
+    for (const name of names) {
+        const idx = fields.indexOf(name);
+        if (idx > -1) return idx;
+    }
+    return -1;
 };
 
 const parseSplunkData = (data) => {
@@ -180,8 +363,8 @@ const parseSplunkData = (data) => {
     const fieldsRaw = data.fields || [];
     const fields = fieldsRaw.map(f => (typeof f === 'string' ? f : (f.name || f.label || '')).toLowerCase().trim());
 
-    const fromAliases = ['from', 'source', 'src', 'src_ip', 'calling_service'];
-    const toAliases = ['to', 'destination', 'dest', 'dest_ip', 'target_service'];
+    const fromAliases = ['resourceid', 'resource_id', 'from', 'source', 'src', 'src_ip', 'calling_service'];
+    const toAliases = ['targetresourceid', 'target_resource_id', 'to', 'destination', 'dest', 'dest_ip', 'target_service'];
     
     let idxFrom = -1;
     for (const alias of fromAliases) {
@@ -200,16 +383,16 @@ const parseSplunkData = (data) => {
 
     rows.forEach(row => {
         let rawFrom, rawTo, rawType, rawLabel, rawEdge, rawGroup, rawIcon, rawStatus, suppConfig, captureTime;
-        let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown, rawZoneName;
+        let rawVpcId, rawSubnetId, securityGroups, rawNodeDrilldown, rawLinkDrilldown, rawZoneName, rawPlane, rawDestPlane;
         
         if (isObjectMode) {
-            rawFrom  = row?.from || row?.source || row?.src || row?.src_ip || row?.calling_service;
-            rawTo    = row?.to || row?.destination || row?.dest || row?.dest_ip || row?.target_service;
-            rawType  = row?.type || 'AWS::Resource';
-            rawLabel = row?.node_label || row?.label;
-            rawEdge  = row?.edge_label || row?.link_text;
+            rawFrom  = row?.resourceId || row?.resource_id || row?.from || row?.source || row?.src || row?.src_ip || row?.calling_service;
+            rawTo    = row?.targetResourceId || row?.target_resource_id || row?.to || row?.destination || row?.dest || row?.dest_ip || row?.target_service;
+            rawType  = row?.resourceType || row?.resource_type || row?.type || row?.component_type || 'AWS::Resource';
+            rawLabel = row?.resourceName || row?.resource_name || row?.display_name || row?.node_label || row?.label;
+            rawEdge  = row?.relationshipName || row?.relationship_name || row?.edge_label || row?.link_text;
             rawGroup = row?.group || 'Default';
-            rawIcon  = row?.icon || row?.stencil;
+            rawIcon  = row?.icon_id || row?.icon || row?.stencil;
             rawStatus = row?.configurationItemStatus || row?.status;
             suppConfig = row?.supplementaryConfiguration;
             captureTime = row?.configurationItemCaptureTime || row?.captureTime || null;
@@ -219,14 +402,19 @@ const parseSplunkData = (data) => {
             rawNodeDrilldown = row?.node_drilldown || null;
             rawLinkDrilldown = row?.link_drilldown || null;
             rawZoneName = row?.zone_name || row?.zone || null;
+            rawPlane = row?.plane || row?.src_plane || row?.container || row?.plane_name || null;
+            rawDestPlane = row?.dest_plane || null;
         } else {
             rawFrom  = (row && idxFrom > -1) ? row[idxFrom] : (row ? row[0] : null);
             rawTo    = (row && idxTo > -1) ? row[idxTo] : (row ? row[1] : null);
-            rawType  = (row && fields.indexOf('type') > -1) ? row[fields.indexOf('type')] : (row ? (row[2] || 'AWS::Resource') : 'AWS::Resource');
-            rawLabel = (row && fields.indexOf('node_label') > -1) ? row[fields.indexOf('node_label')] : null;
-            rawEdge  = (row && fields.indexOf('edge_label') > -1) ? row[fields.indexOf('edge_label')] : '';
+            const iType = indexOfFirstField(fields, ['resourcetype', 'resource_type', 'type', 'component_type']);
+            rawType  = (row && iType > -1) ? row[iType] : (row ? (row[2] || 'AWS::Resource') : 'AWS::Resource');
+            const iLabel = indexOfFirstField(fields, ['resourcename', 'resource_name', 'display_name', 'node_label', 'label']);
+            rawLabel = (row && iLabel > -1) ? row[iLabel] : null;
+            const iEdge = indexOfFirstField(fields, ['relationshipname', 'relationship_name', 'edge_label', 'link_text']);
+            rawEdge  = (row && iEdge > -1) ? row[iEdge] : '';
             rawGroup = (row && fields.indexOf('group') > -1) ? row[fields.indexOf('group')] : 'Default';
-            let iIcon = Math.max(fields.indexOf('icon'), fields.indexOf('stencil'));
+            const iIcon = indexOfFirstField(fields, ['icon_id', 'icon', 'stencil']);
             rawIcon  = (row && iIcon > -1) ? row[iIcon] : '';
             let iStatus = Math.max(fields.indexOf('configurationitemstatus'), fields.indexOf('status'));
             rawStatus = (row && iStatus > -1) ? row[iStatus] : '';
@@ -247,6 +435,10 @@ const parseSplunkData = (data) => {
             rawLinkDrilldown = (row && iLinkDrilldown > -1) ? row[iLinkDrilldown] : null;
             let iZoneName = Math.max(fields.indexOf('zone_name'), fields.indexOf('zone'));
             rawZoneName = (row && iZoneName > -1) ? row[iZoneName] : null;
+            let iPlane = Math.max(fields.indexOf('plane'), fields.indexOf('src_plane'), fields.indexOf('container'), fields.indexOf('plane_name'));
+            rawPlane = (row && iPlane > -1) ? row[iPlane] : null;
+            let iDestPlane = fields.indexOf('dest_plane');
+            rawDestPlane = (row && iDestPlane > -1) ? row[iDestPlane] : null;
         }
 
         const from  = ensureString(rawFrom);
@@ -261,6 +453,7 @@ const parseSplunkData = (data) => {
         const subnetId = ensureString(rawSubnetId);
         const node_drilldown = ensureString(rawNodeDrilldown);
         const link_drilldown = ensureString(rawLinkDrilldown);
+        const plane = ensureString(rawPlane);
 
         if (!label) {
             label = from.split(/[:/]/).pop() || from || '';
@@ -304,13 +497,18 @@ const parseSplunkData = (data) => {
         const safeFromId = safeId(from);
 
         if (!nodesMap.has(safeFromId)) {
-            nodesMap.set(safeFromId, { 
+            const newNode = { 
                 id: safeFromId, 
                 arn: from, 
                 label: label, 
+                display_name: label,
                 type, 
+                resource_type: type,
+                component_type: type,
                 group, 
+                plane: plane || null,
                 icon, 
+                icon_id: icon,
                 status, 
                 captureTime: parsedTime, 
                 vpcId, 
@@ -320,21 +518,31 @@ const parseSplunkData = (data) => {
                 zone_name: ensureString(rawZoneName) || null,
                 x: 0, 
                 y: 0 
-            });
+            };
+            newNode.resolvedPlane = resolveNodePlane(newNode);
+            nodesMap.set(safeFromId, newNode);
         } else {
             const existingNode = nodesMap.get(safeFromId);
             const fallbackLabel = from.split(/[:/]/).pop() || from;
             if (label && label !== fallbackLabel && existingNode.label === fallbackLabel) {
                 existingNode.label = label;
+                existingNode.display_name = label;
             }
             if (type && type !== 'AWS::Resource' && existingNode.type === 'AWS::Resource') {
                 existingNode.type = type;
+                existingNode.resource_type = type;
+                existingNode.component_type = type;
             }
             if (group && group !== 'Default' && (existingNode.group === 'Default' || existingNode.group !== group)) {
                 existingNode.group = group;
             }
+            if (plane && !existingNode.plane) {
+                existingNode.plane = plane;
+                existingNode.resolvedPlane = resolveNodePlane(existingNode);
+            }
             if (icon && !existingNode.icon) {
                 existingNode.icon = icon;
+                existingNode.icon_id = icon;
             }
             if (status && !existingNode.status) {
                 existingNode.status = status;
@@ -364,7 +572,30 @@ const parseSplunkData = (data) => {
             rawLinks.push({ source: safeFromId, target: safeToId, label: edge, link_drilldown });
             if (!nodesMap.has(safeToId)) {
                 const toLabel = to.split(/[:/]/).pop() || to;
-                nodesMap.set(safeToId, { id: safeToId, arn: to, label: toLabel, type: 'AWS::Resource', group, icon: '', captureTime: null, x: 0, y: 0 });
+                const toNode = { 
+                    id: safeToId, 
+                    arn: to, 
+                    label: toLabel, 
+                    display_name: toLabel,
+                    type: 'AWS::Resource', 
+                    resource_type: 'AWS::Resource',
+                    component_type: 'AWS::Resource',
+                    group: ensureString(rawDestPlane) || group, 
+                    plane: ensureString(rawDestPlane) || null,
+                    icon: '', 
+                    icon_id: '',
+                    captureTime: null, 
+                    x: 0, 
+                    y: 0 
+                };
+                toNode.resolvedPlane = resolveNodePlane(toNode);
+                nodesMap.set(safeToId, toNode);
+            } else {
+                const existingToNode = nodesMap.get(safeToId);
+                if (rawDestPlane && !existingToNode.plane) {
+                    existingToNode.plane = ensureString(rawDestPlane);
+                    existingToNode.resolvedPlane = resolveNodePlane(existingToNode);
+                }
             }
         }
         
@@ -835,7 +1066,7 @@ const getNodeCardDimensions = (node, config) => {
         if (designLayout === 'compact') textPadding = 80;
         else if (designLayout === 'expanded') textPadding = 130;
         
-        const estimatedTextWidth = (charCount * charWidth) * 1.15; // 15% safety buffer
+        const estimatedTextWidth = (charCount * charWidth) * 1.25; // 25% safety buffer
         const requiredWidth = estimatedTextWidth + textPadding;
         if (requiredWidth > wNode) {
             wNode = requiredWidth;
@@ -878,7 +1109,24 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
     }, [node, globalAdapter]);
 
     const typeLabel = (node.type || `${nodeAdapter.typePrefix}Resource`).replace(nodeAdapter.typePrefix, '');
-    const fallbackUrl = config?.missingImageURL || getAppStaticUrl('icons/generic.svg');
+    const sanitizeFallbackUrl = (url) => {
+        if (!url || typeof url !== 'string') return getAppStaticUrl('icons/generic.svg');
+        const trimmed = url.trim();
+        // Disallow remote URL schemes, protocol-relative URLs, javascript:, and data: schemes
+        if (/^(https?:|\/\/|javascript:|data:)/i.test(trimmed)) {
+            return getAppStaticUrl('icons/generic.svg');
+        }
+        // Allow app-relative static paths
+        if (trimmed.startsWith('/static/app/AWS-DFD-Visualizer/') || 
+            trimmed.startsWith('/en-US/static/app/AWS-DFD-Visualizer/')) {
+            return trimmed;
+        }
+        if (trimmed.startsWith('icons/')) {
+            return getAppStaticUrl(trimmed);
+        }
+        return getAppStaticUrl('icons/generic.svg');
+    };
+    const fallbackUrl = sanitizeFallbackUrl(config?.missingImageURL);
     const iconPath = getIconPath(node, nodeAdapter, globalAdapter, fallbackUrl);
     const wrapText = String(config?.wrapNodeText || 'true') === 'true';
 
@@ -944,8 +1192,8 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
     const hEnvCore = hNode * 0.6;
 
     const fillColor = isDarkTheme ? '#1e2832' : 'white';
-    const textColor = isDarkTheme ? '#dcdcdc' : '#232f3e';
-    const subTextColor = isDarkTheme ? '#a9b1ba' : '#545b64';
+    const textColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
+    const subTextColor = isDarkTheme ? '#CBD5E1' : '#475569';
     const shadowColor = isDarkTheme ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.22)';
 
     const hoveredScale = isHovered ? 1.15 : 1.0;
@@ -1053,15 +1301,48 @@ const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
     
     const cTitle = String(controlPlaneTitle || 'control plane').toLowerCase();
     const gNameLower = groupName.toLowerCase();
-    // Medium 3: Control Plane visual boundary
-    const isControlPlane = gNameLower === cTitle || 
-                           gNameLower === 'control plane' || 
-                           nodes.some(n => (n.type || '').includes('IAM') || (n.type || '').includes('CloudTrail') || (n.type || '').includes('WAF'));
+    
+    // Resolve which Zero-Trust plane this group/zone belongs to (do not force DATA on unmatched generic groups)
+    const directPlane = resolveZeroTrustPlane(groupName);
+    const nodeExplicitPlane = nodes.find(n => n.plane)?.plane ? resolveZeroTrustPlane(nodes.find(n => n.plane).plane) : null;
+    const resolvedPlane = directPlane || nodeExplicitPlane || null;
 
-    const fillColor = isControlPlane ? '#879196' : 'white';
-    const fillOpacity = isControlPlane ? 0.15 : 0.05;
-    const strokeDash = isControlPlane ? "4,4" : "12,6";
-    const strokeColor = isControlPlane ? "#545b64" : "#B1B1B1";
+    let fillColor = isDarkTheme ? '#334155' : '#e2e8f0';
+    let fillOpacity = isDarkTheme ? 0.12 : 0.06;
+    let strokeDash = '12,6';
+    let strokeColor = isDarkTheme ? '#64748b' : '#94a3b8';
+    let textColor = isDarkTheme ? '#f1f5f9' : '#0f172a';
+    let defaultBadge = '';
+
+    if (resolvedPlane === ZERO_TRUST_PLANES.POLICY) {
+        fillColor = isDarkTheme ? '#6366f1' : '#4f46e5';
+        fillOpacity = isDarkTheme ? 0.14 : 0.08;
+        strokeColor = isDarkTheme ? '#818cf8' : '#6366f1';
+        strokeDash = '6,4';
+        textColor = isDarkTheme ? '#c7d2fe' : '#4338ca';
+        defaultBadge = '🛡️';
+    } else if (resolvedPlane === ZERO_TRUST_PLANES.IDENTITY) {
+        fillColor = isDarkTheme ? '#f59e0b' : '#d97706';
+        fillOpacity = isDarkTheme ? 0.14 : 0.08;
+        strokeColor = isDarkTheme ? '#fbbf24' : '#f59e0b';
+        strokeDash = 'none';
+        textColor = isDarkTheme ? '#fde68a' : '#b45309';
+        defaultBadge = '🔑';
+    } else if (resolvedPlane === ZERO_TRUST_PLANES.CONTROL || gNameLower === cTitle || gNameLower === 'control plane') {
+        fillColor = isDarkTheme ? '#0284c7' : '#0284c7';
+        fillOpacity = isDarkTheme ? 0.14 : 0.08;
+        strokeColor = isDarkTheme ? '#38bdf8' : '#0284c7';
+        strokeDash = '4,4';
+        textColor = isDarkTheme ? '#bae6fd' : '#0369a1';
+        defaultBadge = '⚙️';
+    } else if (resolvedPlane === ZERO_TRUST_PLANES.DATA) {
+        fillColor = isDarkTheme ? '#10b981' : '#059669';
+        fillOpacity = isDarkTheme ? 0.10 : 0.05;
+        strokeColor = isDarkTheme ? '#34d399' : '#10b981';
+        strokeDash = 'none';
+        textColor = isDarkTheme ? '#a7f3d0' : '#047857';
+        defaultBadge = '💾';
+    }
 
     let pathD = '';
     let textX = 0;
@@ -1069,8 +1350,6 @@ const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
 
     // Medium 1: ZTA pillar grouping / cluster hulls
     if (nodes.length >= 1) {
-        // We need padding around the nodes so the hull doesn't cut through the node cards.
-        // Node cards are ~280x100, centered at x, y. Padding added.
         const points = [];
         nodes.forEach(n => {
             points.push([n.x - 180, n.y - 90]);
@@ -1080,14 +1359,17 @@ const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
         });
         const hull = d3.polygonHull(points);
         if (hull) {
-            // Create a curved path through the hull points
             const line = d3.line().curve(d3.curveCatmullRomClosed.alpha(0.5));
             pathD = line(hull);
             
-            // Text position: highest point of the hull
-            const topPoint = hull.reduce((a, b) => a[1] < b[1] ? a : b);
-            textX = topPoint[0];
-            textY = topPoint[1] - 20;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity;
+            hull.forEach(pt => {
+                if (pt[0] < minX) minX = pt[0];
+                if (pt[0] > maxX) maxX = pt[0];
+                if (pt[1] < minY) minY = pt[1];
+            });
+            textX = (minX + maxX) / 2;
+            textY = Math.max(35, minY - 24);
         }
     }
     
@@ -1105,17 +1387,27 @@ const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
                  V ${maxY-25} A 25 25 0 0 1 ${maxX-25} ${maxY} 
                  H ${minX+25} A 25 25 0 0 1 ${minX} ${maxY-25} 
                  V ${minY+25} A 25 25 0 0 1 ${minX+25} ${minY} Z`;
-        textX = minX + 30;
-        textY = minY - 20;
+        textX = (minX + maxX) / 2;
+        textY = Math.max(35, minY - 24);
+    }
+
+    let displayTitle = groupName.toUpperCase();
+    if (defaultBadge && !/[🛡️🔑⚙️💾⚠️🚨]/.test(groupName)) {
+        displayTitle = `${defaultBadge} ${displayTitle}`;
     }
 
     return (
-        <g className="zone">
+        <g className="zone" data-plane={resolvedPlane} data-stroke={strokeColor} data-badge={defaultBadge}>
             <path d={pathD} fill={fillColor} fillOpacity={fillOpacity} stroke={strokeColor} strokeDasharray={strokeDash} strokeWidth={2} />
-            <text x={textX} y={textY} fill={isControlPlane ? (isDarkTheme ? "#9ca3af" : "#475569") : (isDarkTheme ? "#cbd5e1" : "#0f172a")} fontSize={isControlPlane ? 20 : 18} fontWeight="bold">
-                {isControlPlane 
-                    ? (groupName.toLowerCase().includes('⚙️') ? groupName.toUpperCase() : `⚙️ ${groupName.toUpperCase()}`) 
-                    : groupName.toUpperCase()}
+            <text 
+                x={textX} 
+                y={textY} 
+                textAnchor="middle" 
+                fill={textColor} 
+                fontSize={20} 
+                fontWeight="800"
+            >
+                {displayTitle}
             </text>
         </g>
     );
@@ -1712,7 +2004,17 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         const executeDrilldown = () => {
             let drilldownQuery = '';
             if (node.node_drilldown) {
-                drilldownQuery = node.node_drilldown;
+                let query = String(node.node_drilldown);
+                if (/<\/?script[^>]*>/i.test(query) || /^(javascript:|data:)/i.test(query.trim())) {
+                    query = '';
+                } else {
+                    query = query
+                        .replace(/\$arn\$/g, sanitizeSplunkToken(node.arn || node.id))
+                        .replace(/\$id\$/g, sanitizeSplunkToken(node.id))
+                        .replace(/\$label\$/g, sanitizeSplunkToken(node.label || ''))
+                        .replace(/\$type\$/g, sanitizeSplunkToken(node.type || ''));
+                }
+                drilldownQuery = query;
             } else if (config.drilldownNodeTemplate) {
                 drilldownQuery = config.drilldownNodeTemplate
                     .replace(/\$arn\$/g, sanitizeSplunkToken(node.arn || node.id))
@@ -1724,13 +2026,13 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             if (onDrilldown) {
                 onDrilldown({
                     action: actionType,
-                    [config.tokenValue || 'tokenValue']: node.arn || node.id,
-                    [config.tokenNode || 'tokenNode']: node.label,
-                    [config.tokenToolTip || 'tokenToolTip']: node.type,
+                    [config.tokenValue || 'tokenValue']: sanitizeSplunkToken(node.arn || node.id),
+                    [config.tokenNode || 'tokenNode']: sanitizeSplunkToken(node.label || ''),
+                    [config.tokenToolTip || 'tokenToolTip']: sanitizeSplunkToken(node.type || ''),
                     // Native SPL column mappings so Splunk maps the correct row
-                    from: node.arn || node.id,
-                    node_label: node.label || '',
-                    type: node.type || '',
+                    from: sanitizeSplunkToken(node.arn || node.id),
+                    node_label: sanitizeSplunkToken(node.label || ''),
+                    type: sanitizeSplunkToken(node.type || ''),
                     clicked_drilldown_search: drilldownQuery
                 }, e);
             }
@@ -1748,7 +2050,20 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         
         let drilldownQuery = '';
         if (link.link_drilldown) {
-            drilldownQuery = link.link_drilldown;
+            let query = String(link.link_drilldown);
+            if (/<\/?script[^>]*>/i.test(query) || /^(javascript:|data:)/i.test(query.trim())) {
+                query = '';
+            } else {
+                query = query
+                    .replace(/\$sourceArn\$/g, sanitizeSplunkToken(link.source.arn || link.source.id))
+                    .replace(/\$targetArn\$/g, sanitizeSplunkToken(link.target.arn || link.target.id))
+                    .replace(/\$sourceId\$/g, sanitizeSplunkToken(link.source.id))
+                    .replace(/\$targetId\$/g, sanitizeSplunkToken(link.target.id))
+                    .replace(/\$label\$/g, sanitizeSplunkToken(link.label || ''))
+                    .replace(/\$sourceLabel\$/g, sanitizeSplunkToken(link.source.label || ''))
+                    .replace(/\$targetLabel\$/g, sanitizeSplunkToken(link.target.label || ''));
+            }
+            drilldownQuery = query;
         } else if (config.drilldownLinkTemplate) {
             drilldownQuery = config.drilldownLinkTemplate
                 .replace(/\$sourceArn\$/g, sanitizeSplunkToken(link.source.arn || link.source.id))
@@ -1763,14 +2078,14 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         if (onDrilldown) {
             onDrilldown({
                 action: 'click',
-                [config.tokenValue || 'tokenValue']: link.source.arn || link.source.id,
-                [config.tokenNode || 'tokenNode']: link.source.label,
-                [config.tokenToNode || 'tokenToNode']: link.target.label,
-                [config.tokenToolTip || 'tokenToolTip']: link.label,
+                [config.tokenValue || 'tokenValue']: sanitizeSplunkToken(link.source.arn || link.source.id),
+                [config.tokenNode || 'tokenNode']: sanitizeSplunkToken(link.source.label || ''),
+                [config.tokenToNode || 'tokenToNode']: sanitizeSplunkToken(link.target.label || ''),
+                [config.tokenToolTip || 'tokenToolTip']: sanitizeSplunkToken(link.label || ''),
                 // Native SPL column mappings so Splunk maps the correct row
-                from: link.source.arn || link.source.id,
-                to: link.target.arn || link.target.id,
-                edge_label: link.label || '',
+                from: sanitizeSplunkToken(link.source.arn || link.source.id),
+                to: sanitizeSplunkToken(link.target.arn || link.target.id),
+                edge_label: sanitizeSplunkToken(link.label || ''),
                 clicked_drilldown_search: drilldownQuery
             }, e);
         }
@@ -1983,7 +2298,21 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
             const hierarchy = stratify(stratNodes);
             
+            const planeOrder = {
+                [ZERO_TRUST_PLANES.POLICY]: 0,
+                [ZERO_TRUST_PLANES.IDENTITY]: 1,
+                [ZERO_TRUST_PLANES.CONTROL]: 2,
+                [ZERO_TRUST_PLANES.DATA]: 3
+            };
+            const getPlaneRank = (grp) => {
+                const p = resolveZeroTrustPlane(grp);
+                return p && planeOrder[p] !== undefined ? planeOrder[p] : 4;
+            };
+
             hierarchy.sort((a, b) => {
+                const rankA = getPlaneRank(a.data.group || a.data.label);
+                const rankB = getPlaneRank(b.data.group || b.data.label);
+                if (rankA !== rankB) return rankA - rankB;
                 if (a.data.group < b.data.group) return -1;
                 if (a.data.group > b.data.group) return 1;
                 return d3.ascending(a.data.label, b.data.label);
@@ -2255,6 +2584,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             };
         }
         
+        const isHierarchyLayout = (config?.layoutMode || '').toLowerCase() === 'hierarchy';
+        const isStrictPlanes = String(config?.strictPlanes || '').toLowerCase() === 'true' || config?.strictPlanes === true;
+        const defaultViewBoxH = (isHierarchyLayout && isStrictPlanes) ? 1400 : (isHierarchyLayout ? 1200 : 1000);
+
         return { 
             nodes: parsed.nodes, 
             links: parsed.links, 
@@ -2267,7 +2600,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             groupBounds: [],
             originalNodesCount,
             viewBoxWidth: 1200,
-            viewBoxHeight: 1000,
+            viewBoxHeight: defaultViewBoxH,
             globalAdapter
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
@@ -2477,8 +2810,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
         const rectCollide = () => {
             let localNodes = [];
-            const paddingX = 40;
-            const paddingY = 30;
+            const densityFactor = nodes.length > 20 ? 0.6 : (nodes.length > 10 ? 0.8 : 1.0);
+            const paddingX = Math.round(36 * densityFactor);
+            const paddingY = Math.round(24 * densityFactor);
             
             const force = (alpha) => {
                 const n = localNodes.length;
@@ -2529,13 +2863,28 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             simulationRef.current.stop();
         }
 
+        const isHierarchyMode = (layoutMode || '').toLowerCase() === 'hierarchy';
+        const isStrictPlanes = String(config?.strictPlanes || '').toLowerCase() === 'true' || config?.strictPlanes === true;
+
+        let effectiveCharge = chargeStrength;
+        if (isHierarchyMode) {
+            effectiveCharge = -800;
+        }
+
+        const isStrictHierarchy = isHierarchyMode && isStrictPlanes;
+        const xIsolatedStrength = isStrictHierarchy ? 0 : (d => d.degree === 0 ? 0.05 : 0);
+        const yIsolatedStrength = isStrictHierarchy ? 0 : (d => d.degree === 0 ? 0.05 : 0);
+
         const simulation = d3.forceSimulation(nodes)
             .force('link', d3.forceLink(links).id(d => d.id).distance(getDynamicLinkDistance))
-            .force('charge', d3.forceManyBody().strength(chargeStrength))
-            .force('center', d3.forceCenter(W / 2, H / 2))
+            .force('charge', d3.forceManyBody().strength(effectiveCharge))
             .force('collision', rectCollide())
-            .force('x-isolated', d3.forceX(W / 2).strength(d => d.degree === 0 ? 0.05 : 0))
-            .force('y-isolated', d3.forceY(H / 2).strength(d => d.degree === 0 ? 0.05 : 0));
+            .force('x-isolated', d3.forceX(W / 2).strength(xIsolatedStrength))
+            .force('y-isolated', d3.forceY(H / 2).strength(yIsolatedStrength));
+
+        if (!isHierarchyMode) {
+            simulation.force('center', d3.forceCenter(W / 2, H / 2));
+        }
 
         simulationRef.current = simulation;
 
@@ -2561,57 +2910,88 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             simulation.force('y-stack', d3.forceY(H / 2).strength(0.1));
         }
 
-        if (shake === 'center') {
-            simulation.force('shake-x', d3.forceX(W / 2).strength(0.15));
-            simulation.force('shake-y', d3.forceY(H / 2).strength(0.15));
-        } else if (shake === 'top') {
-            simulation.force('shake-y', d3.forceY(80).strength(0.2));
-        } else if (shake === 'bottom') {
-            simulation.force('shake-y', d3.forceY(H - 80).strength(0.2));
-        } else if (shake === 'left') {
-            simulation.force('shake-x', d3.forceX(80).strength(0.2));
-        } else if (shake === 'right') {
-            simulation.force('shake-x', d3.forceX(W - 80).strength(0.2));
+        if (!isStrictHierarchy) {
+            if (shake === 'center') {
+                simulation.force('shake-x', d3.forceX(W / 2).strength(0.15));
+                simulation.force('shake-y', d3.forceY(H / 2).strength(0.15));
+            } else if (shake === 'top') {
+                simulation.force('shake-y', d3.forceY(80).strength(0.2));
+            } else if (shake === 'bottom') {
+                simulation.force('shake-y', d3.forceY(H - 80).strength(0.2));
+            } else if (shake === 'left') {
+                simulation.force('shake-x', d3.forceX(80).strength(0.2));
+            } else if (shake === 'right') {
+                simulation.force('shake-x', d3.forceX(W - 80).strength(0.2));
+            }
         }
 
         if (layoutMode === 'hierarchy') {
-            const inDegree = new Map();
-            nodes.forEach(n => inDegree.set(n.id, 0));
-            links.forEach(l => {
-                const tId = typeof l.target === 'object' ? l.target.id : l.target;
-                inDegree.set(tId, (inDegree.get(tId) || 0) + 1);
-            });
-            
-            const depths = new Map();
-            let queue = nodes.filter(n => inDegree.get(n.id) === 0);
-            if (queue.length === 0 && nodes.length > 0) queue = [nodes[0]];
-            queue.forEach(n => depths.set(n.id, 0));
-            
-            let depth = 0;
-            while(queue.length > 0 && depth < 20) {
-                const nextQueue = [];
-                queue.forEach(n => {
-                    const children = links.filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === n.id).map(l => typeof l.target === 'object' ? l.target : nodes.find(x => x.id === l.target));
-                    children.forEach(c => {
-                        if (c && !depths.has(c.id)) {
-                            depths.set(c.id, depth + 1);
-                            nextQueue.push(c);
-                        }
-                    });
-                });
-                queue = nextQueue;
-                depth++;
-            }
-            nodes.forEach(n => { if(!depths.has(n.id)) depths.set(n.id, 0); });
-            const maxDepth = Math.max(...depths.values()) || 1;
+            const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
 
-            const hierarchyDir = config.hierarchyDirection || 'Top to Bottom';
-            if (hierarchyDir === 'Left to Right') {
-                simulation.force('x', d3.forceX(d => (W / (maxDepth + 1)) * (depths.get(d.id) + 0.5)).strength(1));
-                simulation.force('y', d3.forceY(H / 2).strength(0.1));
+            if (isStrictPlanes) {
+                const tierTargetsY = {
+                    [ZERO_TRUST_PLANES.POLICY]: 150,
+                    [ZERO_TRUST_PLANES.IDENTITY]: 380,
+                    [ZERO_TRUST_PLANES.CONTROL]: 620,
+                    [ZERO_TRUST_PLANES.DATA]: 920
+                };
+                const tierTargetsX = {
+                    [ZERO_TRUST_PLANES.POLICY]: 150,
+                    [ZERO_TRUST_PLANES.IDENTITY]: 380,
+                    [ZERO_TRUST_PLANES.CONTROL]: 650,
+                    [ZERO_TRUST_PLANES.DATA]: 950
+                };
+                if (hierarchyDir === 'Left to Right') {
+                    simulation.force('x', d3.forceX(d => {
+                        const plane = d.resolvedPlane || resolveNodePlane(d);
+                        return tierTargetsX[plane] || 950;
+                    }).strength(1.8));
+                    simulation.force('y', d3.forceY(H / 2).strength(0.08));
+                } else {
+                    simulation.force('y', d3.forceY(d => {
+                        const plane = d.resolvedPlane || resolveNodePlane(d);
+                        return tierTargetsY[plane] || 920;
+                    }).strength(1.8));
+                    simulation.force('x', d3.forceX(W / 2).strength(0.08));
+                }
             } else {
-                simulation.force('y', d3.forceY(d => (H / (maxDepth + 1)) * (depths.get(d.id) + 0.5)).strength(1));
-                simulation.force('x', d3.forceX(W / 2).strength(0.1));
+                const inDegree = new Map();
+                nodes.forEach(n => inDegree.set(n.id, 0));
+                links.forEach(l => {
+                    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+                    inDegree.set(tId, (inDegree.get(tId) || 0) + 1);
+                });
+                
+                const depths = new Map();
+                let queue = nodes.filter(n => inDegree.get(n.id) === 0);
+                if (queue.length === 0 && nodes.length > 0) queue = [nodes[0]];
+                queue.forEach(n => depths.set(n.id, 0));
+                
+                let depth = 0;
+                while(queue.length > 0 && depth < 20) {
+                    const nextQueue = [];
+                    queue.forEach(n => {
+                        const children = links.filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === n.id).map(l => typeof l.target === 'object' ? l.target : nodes.find(x => x.id === l.target));
+                        children.forEach(c => {
+                            if (c && !depths.has(c.id)) {
+                                depths.set(c.id, depth + 1);
+                                nextQueue.push(c);
+                            }
+                        });
+                    });
+                    queue = nextQueue;
+                    depth++;
+                }
+                nodes.forEach(n => { if(!depths.has(n.id)) depths.set(n.id, 0); });
+                const maxDepth = Math.max(...depths.values()) || 1;
+
+                if (hierarchyDir === 'Left to Right') {
+                    simulation.force('x', d3.forceX(d => (W / (maxDepth + 1)) * (depths.get(d.id) + 0.5)).strength(1.5));
+                    simulation.force('y', d3.forceY(H / 2).strength(0.1));
+                } else {
+                    simulation.force('y', d3.forceY(d => (H / (maxDepth + 1)) * (depths.get(d.id) + 0.5)).strength(1.5));
+                    simulation.force('x', d3.forceX(W / 2).strength(0.08));
+                }
             }
         } else if (clusterBy === 'group') {
             const numGroups = groupNames.length || 1;
@@ -2628,15 +3008,50 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             }).strength(0.7));
         }
 
+        const applyStrictPlaneBounds = () => {
+            if (layoutMode === 'hierarchy' && isStrictPlanes) {
+                const tierBoundsY = {
+                    [ZERO_TRUST_PLANES.POLICY]: [60, 240],
+                    [ZERO_TRUST_PLANES.IDENTITY]: [260, 490],
+                    [ZERO_TRUST_PLANES.CONTROL]: [510, 750],
+                    [ZERO_TRUST_PLANES.DATA]: [770, 1350]
+                };
+                const tierBoundsX = {
+                    [ZERO_TRUST_PLANES.POLICY]: [60, 240],
+                    [ZERO_TRUST_PLANES.IDENTITY]: [260, 490],
+                    [ZERO_TRUST_PLANES.CONTROL]: [530, 780],
+                    [ZERO_TRUST_PLANES.DATA]: [800, 1400]
+                };
+                const hierarchyDir = config?.hierarchyDirection || 'Top to Bottom';
+
+                nodes.forEach(n => {
+                    const plane = n.resolvedPlane || resolveNodePlane(n);
+                    if (hierarchyDir === 'Left to Right') {
+                        const bounds = tierBoundsX[plane] || [800, 1400];
+                        if (n.x < bounds[0]) n.x = bounds[0];
+                        if (n.x > bounds[1]) n.x = bounds[1];
+                    } else {
+                        const bounds = tierBoundsY[plane] || [770, 1350];
+                        if (n.y < bounds[0]) n.y = bounds[0];
+                        if (n.y > bounds[1]) n.y = bounds[1];
+                    }
+                });
+            }
+        };
+
         let active = true;
         if (enablePhysics && nodes.length < 100) {
             // "Zero-Latency" Layout Bypass for small graphs
             for (let i = 0; i < 300; ++i) {
                 simulation.tick();
             }
+            applyStrictPlaneBounds();
             setTickUpdate(Date.now());
             simulation.on('tick', () => {
-                if (active) setTickUpdate(Date.now());
+                if (active) {
+                    applyStrictPlaneBounds();
+                    setTickUpdate(Date.now());
+                }
             });
         } else if (!enablePhysics) {
             simulation.stop();
@@ -2645,6 +3060,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 for (let i = 0; i < totalTicks; ++i) {
                     simulation.tick();
                 }
+                applyStrictPlaneBounds();
                 setTickUpdate(Date.now());
             } else {
                 let currentTick = 0;
@@ -2660,6 +3076,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     if (currentTick < totalTicks) {
                         requestAnimationFrame(step);
                     } else {
+                        applyStrictPlaneBounds();
                         setIsCalculating(false);
                         setTickUpdate(Date.now());
                     }
@@ -2668,7 +3085,10 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             }
         } else {
             simulation.on('tick', () => {
-                if (active) setTickUpdate(Date.now());
+                if (active) {
+                    applyStrictPlaneBounds();
+                    setTickUpdate(Date.now());
+                }
             });
         }
 
@@ -2890,7 +3310,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.8.4 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                v2.8.5 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
                 <br/>
                 IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
             </div>
@@ -3105,14 +3525,14 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                             <rect x={2} y={2} width={viewBoxWidth - 4} height={196} fill="var(--plane-bg-fill-1)" fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke="var(--plane-stroke)" strokeWidth={1} rx={8} />
                             <text x={20} y={30} fill="var(--plane-label-fill)" fontSize={11} fontWeight="bold" letterSpacing="0.05em">{identityPlaneTitle.toUpperCase()}</text>
                             {unassociatedNodes.length === 0 && (
-                                <text x={viewBoxWidth / 2} y={110} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No {identityPlaneTitle} Assets (e.g. IAM, Users, Roles)</text>
+                                <text x={viewBoxWidth / 2} y={110} textAnchor="middle" fill={isDarkTheme ? "#94A3B8" : "#475569"} fontSize={14} fontStyle="italic" opacity={0.7}>No {identityPlaneTitle} Assets (e.g. IAM, Users, Roles)</text>
                             )}
 
                             {/* Plane 2: Policy & Control Plane */}
                             <rect x={2} y={202} width={viewBoxWidth - 4} height={196} fill="var(--plane-bg-fill-2)" fillOpacity={isDarkTheme ? 0.2 : 0.5} stroke="var(--plane-stroke)" strokeWidth={1} rx={8} />
                             <text x={20} y={230} fill="var(--plane-label-fill)" fontSize={11} fontWeight="bold" letterSpacing="0.05em">{controlPlaneTitle.toUpperCase()}</text>
                             {globalEdgeAssets.length === 0 && (
-                                <text x={viewBoxWidth / 2} y={310} textAnchor="middle" fill={isDarkTheme ? "#4b5563" : "#94a3b8"} fontSize={14} fontStyle="italic" opacity={0.7}>No {controlPlaneTitle} Assets (e.g. WAF, CloudFront)</text>
+                                <text x={viewBoxWidth / 2} y={310} textAnchor="middle" fill={isDarkTheme ? "#94A3B8" : "#475569"} fontSize={14} fontStyle="italic" opacity={0.7}>No {controlPlaneTitle} Assets (e.g. WAF, CloudFront)</text>
                             )}
 
                             {/* Plane 3: Infrastructure Plane */}

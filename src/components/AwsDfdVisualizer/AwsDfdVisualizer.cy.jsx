@@ -719,7 +719,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.subnet-container text').first().should('contain.text', 'Subnet (sub-web)');
         
         cy.get('g.node-card').contains('Web VM').parents('g.node-card').find('image')
-            .should('have.attr', 'href').and('contain', 'azure/compute/virtual-machine.svg');
+            .should('have.attr', 'href').and('match', /compute\/virtual-machine/i);
         cy.screenshot('azure_provider_layout');
     });
 
@@ -787,7 +787,7 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.vpc-container text').first().should('contain.text', 'VNet (vnet-1)');
         
         cy.get('g.node-card').contains('Azure VM').parents('g.node-card').find('image')
-            .should('have.attr', 'href').and('contain', 'azure/compute/virtual-machine.svg');
+            .should('have.attr', 'href').and('match', /compute\/virtual-machine/i);
         cy.get('g.node-card').contains('GCP VM').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('contain', 'gcp/compute/compute-engine.svg');
         
@@ -1282,5 +1282,519 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
         // and its rect should have the dashed stroke (stroke-dasharray="6,6")
         cy.get('g.node-card').first().should('have.attr', 'style').and('include', 'opacity: 0.6');
         cy.get('g.node-card rect').first().should('have.attr', 'stroke-dasharray', '6,6');
+    });
+
+    describe('TC-AUT-v2.8.5: Automatic SVG-to-Stencil Binding & Security Hardening', () => {
+        it('Spec A: type=AWS::DynamoDB::Table (previously unmapped) resolves to Arch_Amazon-DynamoDB icon', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'node_label' }],
+                rows: [['arn:aws:dynamodb:us-east-1:123456789012:table/Orders', null, 'AWS::DynamoDB::Table', 'OrdersTable']]
+            };
+
+            mount(
+                <AwsDfdVisualizer data={data} config={{ layoutMode: 'force', enablePhysics: 'false' }} isDarkTheme={false} />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card image')
+                .should('have.attr', 'href')
+                .and('include', 'Arch_Amazon-DynamoDB_64.svg');
+        });
+
+        it('Spec B: stencil=S3 alias resolves to Simple-Storage-Service SVG', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'node_label' }],
+                rows: [['DataBucket', null, 'S3', 'Data Bucket']]
+            };
+
+            mount(
+                <AwsDfdVisualizer data={data} config={{ layoutMode: 'force', enablePhysics: 'false' }} isDarkTheme={false} />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card image')
+                .should('have.attr', 'href')
+                .and('include', 'Arch_Amazon-Simple-Storage-Service_64.svg');
+        });
+
+        it('Spec C: stencil=FIREHOSE resolves to Arch_Amazon-Data-Firehose_64.svg (current on-disk name)', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'stencil' }, { name: 'node_label' }],
+                rows: [['DeliveryStream', null, 'FIREHOSE', 'Log Firehose']]
+            };
+
+            mount(
+                <AwsDfdVisualizer data={data} config={{ layoutMode: 'force', enablePhysics: 'false' }} isDarkTheme={false} />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card image')
+                .should('have.attr', 'href')
+                .and('include', 'Arch_Amazon-Data-Firehose_64.svg');
+        });
+
+        it('Spec D: type=AWS::Lambda::Function resolves to Arch_AWS-Lambda_64.svg (not generic)', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'node_label' }],
+                rows: [['OrderProcessor', null, 'AWS::Lambda::Function', 'Order Processor']]
+            };
+
+            mount(
+                <AwsDfdVisualizer data={data} config={{ layoutMode: 'force', enablePhysics: 'false' }} isDarkTheme={false} />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card image')
+                .should('have.attr', 'href')
+                .and('include', 'Arch_AWS-Lambda_64.svg');
+        });
+
+        it('Spec E: Azure VIRTUAL_MACHINE and GCP COMPUTE_ENGINE resolve cleanly without regression', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'stencil' }, { name: 'node_label' }],
+                rows: [
+                    ['AzureVM', null, 'Azure::Compute::VirtualMachine', 'VIRTUAL_MACHINE', 'Web VM'],
+                    ['GcpCompute', null, 'GCP::Compute::Instance', 'COMPUTE_ENGINE', 'App Engine']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer data={data} config={{ layoutMode: 'force', enablePhysics: 'false' }} isDarkTheme={false} />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card').contains('Web VM').parents('g.node-card').find('image')
+                .should('have.attr', 'href')
+                .and('match', /virtual-machine/i);
+
+            cy.get('g.node-card').contains('App Engine').parents('g.node-card').find('image')
+                .should('have.attr', 'href')
+                .and('include', 'gcp/compute/compute-engine.svg');
+        });
+
+        it('Spec F: missingImageURL=https://evil.example/x.svg is rejected and falls back to generic.svg', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'node_label' }],
+                rows: [['UnknownThing', null, 'Custom::UnknownType::Thing', 'Unknown Node']]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ 
+                        layoutMode: 'force', 
+                        enablePhysics: 'false',
+                        missingImageURL: 'https://evil.example/x.svg'
+                    }} 
+                    isDarkTheme={false} 
+                />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card image')
+                .should('have.attr', 'href')
+                .and('include', 'generic.svg')
+                .and('not.include', 'evil.example');
+        });
+
+        it('Spec G: node_drilldown containing | in an ARN is sanitized while preserving outer SPL keywords', () => {
+            const drilldownStub = cy.stub().as('onDrilldownStub');
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_drilldown' }, { name: 'node_label' }],
+                rows: [
+                    ['OrderApp|Payload', null, 'search index=aws arn=$arn$ | head 5', 'Order App']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force', enablePhysics: 'false', drilldownClick: 'singleOrDouble' }} 
+                    isDarkTheme={false}
+                    onDrilldown={drilldownStub} 
+                />
+            );
+            cy.wait(500);
+
+            // Click node card to trigger drilldown
+            cy.get('g.node-card').first().click({ force: true });
+
+            // The '|' inside the ARN parameter is sanitized to '_', while the outer '| head 5' pipeline keyword remains
+            cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
+                clicked_drilldown_search: 'search index=aws arn=OrderApp_Payload | head 5'
+            }));
+        });
+    });
+
+    describe('v2.8.5 Step 1 · Req-1: Hierarchy Vertical Stacking & Strict Zero-Trust Planes', () => {
+        it('Spec 1: verifies strictPlanes enforces distinct vertical tier stratification in Hierarchy layout', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'plane' }, { name: 'node_label' }],
+                rows: [
+                    ['ACAS_Scanner', 'AD_AuthServer', 'Policy_Control_Plane', 'ACAS Scanner'],
+                    ['AD_AuthServer', 'WAF_Gateway', 'Identity_Plane', 'Active Directory'],
+                    ['WAF_Gateway', 'Oracle_DB', 'Control_Plane', 'WAF Gateway'],
+                    ['Oracle_DB', null, 'Data_Plane', 'Oracle Database']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ 
+                        layoutMode: 'hierarchy', 
+                        hierarchyDirection: 'Top to Bottom',
+                        strictPlanes: 'true',
+                        enablePhysics: 'false'
+                    }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(600);
+
+            let yPolicy = 0, yIdentity = 0, yControl = 0, yData = 0;
+
+            cy.get('g.node-card').contains('ACAS Scanner').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yPolicy = parseFloat(match[2]);
+                expect(yPolicy).to.be.within(60, 250);
+            });
+
+            cy.get('g.node-card').contains('Active Directory').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yIdentity = parseFloat(match[2]);
+                expect(yIdentity).to.be.within(260, 490);
+                expect(yIdentity).to.be.greaterThan(yPolicy);
+            });
+
+            cy.get('g.node-card').contains('WAF Gateway').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yControl = parseFloat(match[2]);
+                expect(yControl).to.be.within(510, 750);
+                expect(yControl).to.be.greaterThan(yIdentity);
+            });
+
+            cy.get('g.node-card').contains('Oracle Database').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yData = parseFloat(match[2]);
+                expect(yData).to.be.within(770, 1350);
+                expect(yData).to.be.greaterThan(yControl);
+            });
+        });
+
+        it('Spec 2: verifies customer 4-plane dataset with group/vpcId plane assignments renders without vertical collapse', () => {
+            const customerData = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'node_label' }, 
+                    { name: 'edge_label' }, { name: 'group' }, { name: 'vpcId' }
+                ],
+                rows: [
+                    ['Trellix_HBSS', 'Policy Resources', 'Trellix / HBSS', 'Flows: 1,200', 'Policy_Control_Plane', 'Policy_Control_Plane'],
+                    ['Active_Directory', 'Identity Resources', 'Active Directory', 'Flows: 4,500', 'Identity_Plane', 'Identity_Plane'],
+                    ['Access_Gateways', 'Control Resources', 'Access Gateways', 'Flows: 8,100', 'Control_Plane', 'Control_Plane'],
+                    ['Application_Servers', 'Data Resources', 'Application Servers', 'Flows: 12,000', 'Business_Workloads', 'Business_Workloads']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={customerData} 
+                    config={{ 
+                        layoutMode: 'hierarchy', 
+                        hierarchyDirection: 'Top to Bottom',
+                        strictPlanes: 'true',
+                        enablePhysics: 'false'
+                    }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(600);
+
+            // Assert all nodes mount cleanly
+            cy.get('g.node-card').should('have.length.at.least', 4);
+
+            // Assert Policy resource is in top tier (Tier 0)
+            cy.get('g.node-card').contains('Trellix / HBSS').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                const y = parseFloat(match[2]);
+                expect(y).to.be.within(60, 250);
+            });
+
+            // Assert Application Servers / Data resource is in bottom tier (Tier 3)
+            cy.get('g.node-card').contains('Application Servers').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                const y = parseFloat(match[2]);
+                expect(y).to.be.within(770, 1350);
+            });
+        });
+
+        it('Spec 3: verifies explicit SPL plane field takes precedence over default type/keyword classification', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'plane' }, { name: 'node_label' }],
+                rows: [
+                    // Even though type is Compute/EC2, explicit plane assigns it to Control Plane
+                    ['AppServerSpecial', null, 'AWS::EC2::Instance', 'Control_Plane', 'Special Control AppServer']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ 
+                        layoutMode: 'hierarchy', 
+                        hierarchyDirection: 'Top to Bottom',
+                        strictPlanes: 'true',
+                        enablePhysics: 'false'
+                    }} 
+                    isDarkTheme={false} 
+                />
+            );
+            cy.wait(600);
+
+            cy.get('g.node-card').contains('Special Control AppServer').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                const y = parseFloat(match[2]);
+                // Must be in Control Plane band (510..750), not Data Plane band
+                expect(y).to.be.within(510, 750);
+            });
+        });
+
+        it('Spec 4: verifies standard Hierarchy layout (without strictPlanes) maintains monotonic depth levels and avoids center collapse', () => {
+            const treeData = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_label' }],
+                rows: [
+                    ['RootNode', 'Level1Node', 'Root Service'],
+                    ['Level1Node', 'Level2Node', 'Level 1 Service'],
+                    ['Level2Node', 'Level3Node', 'Level 2 Service']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={treeData} 
+                    config={{ 
+                        layoutMode: 'hierarchy', 
+                        hierarchyDirection: 'Top to Bottom',
+                        strictPlanes: 'false',
+                        enablePhysics: 'false'
+                    }} 
+                    isDarkTheme={false} 
+                />
+            );
+            cy.wait(600);
+
+            let yRoot = 0, yL1 = 0, yL2 = 0;
+
+            cy.get('g.node-card').contains('Root Service').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yRoot = parseFloat(match[2]);
+            });
+
+            cy.get('g.node-card').contains('Level 1 Service').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yL1 = parseFloat(match[2]);
+                expect(yL1).to.be.greaterThan(yRoot);
+            });
+
+            cy.get('g.node-card').contains('Level 2 Service').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                yL2 = parseFloat(match[2]);
+                expect(yL2).to.be.greaterThan(yL1);
+            });
+        });
+    });
+
+    describe('Release v2.8.5 Step 2: Semantic Schema Aliases, Category Fallback Hierarchy & Multi-Plane Container Badges (Specs S–X)', () => {
+        it('Spec S: verifies decoupled display_name renders on card while icon_id=S3 resolves Simple-Storage-Service icon', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'display_name' }, { name: 'icon_id' }
+                ],
+                rows: [
+                    ['FinanceBucket', null, 'Payment Gateway Storage', 'S3']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force' }} 
+                    isDarkTheme={false} 
+                />
+            );
+            cy.wait(400);
+
+            // Assert display_name renders on card text
+            cy.get('g.node-card text').contains('Payment Gateway Storage').should('be.visible');
+
+            // Assert icon resolved from S3 alias to Simple-Storage-Service SVG (not hijacked by label tokens)
+            cy.get('g.node-card image').should('have.attr', 'href').and('include', 'Simple-Storage-Service');
+        });
+
+        it('Spec T: verifies resource_type=AWS::DirectoryService::Directory resolves Arch_AWS-Directory-Service SVG', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'resource_type' }, { name: 'display_name' }
+                ],
+                rows: [
+                    ['CorpDirectory', null, 'AWS::DirectoryService::Directory', 'Enterprise Directory']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force' }} 
+                    isDarkTheme={false} 
+                />
+            );
+            cy.wait(400);
+
+            cy.get('g.node-card').should('contain.text', 'Enterprise Directory');
+            cy.get('g.node-card image').should('have.attr', 'href').and('include', 'Directory-Service');
+        });
+
+        it('Spec U: verifies icon=Elastic-Load-Balancing and icon=Shield resolve official AWS filenames', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'icon' }, { name: 'node_label' }
+                ],
+                rows: [
+                    ['AppELB', 'DDoSEdge', 'Elastic-Load-Balancing', 'Application Load Balancer'],
+                    ['DDoSEdge', null, 'Shield', 'AWS DDoS Shield Edge']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(400);
+
+            cy.get('g.node-card').contains('Application Load Balancer').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('include', 'Elastic-Load-Balancing');
+
+            cy.get('g.node-card').contains('AWS DDoS Shield Edge').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('include', 'Shield');
+        });
+
+        it('Spec V: verifies unknown Azure compute type falls back to category default Virtual-Machine SVG rather than generic.svg', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'node_label' }
+                ],
+                rows: [
+                    ['CustomHost', null, 'Azure::Compute::UnknownSpecialHost', 'Custom Azure Host']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force', cspStencilSet: 'azure' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(400);
+
+            cy.get('g.node-card').contains('Custom Azure Host').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('match', /virtual-machine/i);
+        });
+
+        it('Spec W: verifies plane=Policy_Control_Plane vs Identity_Plane hulls differ in stroke, fill, and header badges', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'group' }, { name: 'plane' }, { name: 'node_label' }
+                ],
+                rows: [
+                    ['PolicyEngine1', null, 'Policy_Control_Plane', 'Policy_Control_Plane', 'Policy Engine Server'],
+                    ['IdentityDir1', null, 'Identity_Plane', 'Identity_Plane', 'Corporate IAM Directory']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force', clusterBy: 'group' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(500);
+
+            // Assert 2 zones render
+            cy.get('g.zone').should('have.length', 2);
+
+            // Assert Policy plane zone has shield badge and indigo border
+            cy.get('g.zone text').contains('🛡️ POLICY_CONTROL_PLANE').should('be.visible');
+
+            // Assert Identity plane zone has key badge
+            cy.get('g.zone text').contains('🔑 IDENTITY_PLANE').should('be.visible');
+        });
+
+        it('Spec X: verifies Azure official tokens (VIRTUALMACHINE and MANAGEDIDENTITIES) resolve cleanly after V24 pack ingest', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'icon' }, { name: 'node_label' }
+                ],
+                rows: [
+                    ['AzureVM1', 'AzureMI1', 'VIRTUALMACHINE', 'Azure Worker VM'],
+                    ['AzureMI1', null, 'MANAGEDIDENTITIES', 'App Managed Identity']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force', cspStencilSet: 'azure' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(400);
+
+            cy.get('g.node-card').contains('Azure Worker VM').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('match', /virtual-machine/i);
+
+            cy.get('g.node-card').contains('App Managed Identity').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('match', /managed-identit/i);
+        });
+
+        it('Spec Y: verifies raw AWS Config schema fields (resourceType + resourceName -> icon + label without eval)', () => {
+            const configRawData = {
+                fields: [
+                    { name: 'resourceId' },
+                    { name: 'targetResourceId' },
+                    { name: 'resourceType' },
+                    { name: 'resourceName' },
+                    { name: 'relationshipName' }
+                ],
+                rows: [
+                    ['i-0123456789abcdef0', 'vol-0987654321fedcba0', 'AWS::EC2::Instance', 'Production-Web-01', 'Is attached to Volume'],
+                    ['vol-0987654321fedcba0', null, 'AWS::EC2::Volume', 'Prod-Web-EBS', '']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={configRawData} 
+                    config={{ layoutMode: 'force', cspStencilSet: 'aws' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(400);
+
+            // Verify node labels from raw resourceName
+            cy.get('g.node-card').contains('Production-Web-01').should('be.visible');
+            cy.get('g.node-card').contains('Prod-Web-EBS').should('be.visible');
+
+            // Verify icon resolution from raw resourceType without any icon column
+            cy.get('g.node-card').contains('Production-Web-01').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('match', /Arch_Amazon-EC2/i);
+
+            cy.get('g.node-card').contains('Prod-Web-EBS').parents('g.node-card').find('image')
+                .should('have.attr', 'href').and('match', /Arch_Amazon-Elastic-Block-Store/i);
+        });
     });
 });

@@ -2,6 +2,7 @@ import { awsAdapter } from './aws';
 import { azureAdapter } from './azure';
 import { gcpAdapter } from './gcp';
 import { genericAdapter } from './generic';
+import { ALIAS_REGISTRY, AWS_ALIASES, AZURE_ALIASES, GCP_ALIASES } from './aliases';
 
 export const CSP_REGISTRY = {
     aws: awsAdapter,
@@ -36,4 +37,13 @@ export const detectProvider = (nodes, defaultOverride = 'auto') => {
     return awsAdapter; // Default fallback
 };
 
-export { awsAdapter, azureAdapter, gcpAdapter, genericAdapter };
+export { 
+    awsAdapter, 
+    azureAdapter, 
+    gcpAdapter, 
+    genericAdapter, 
+    ALIAS_REGISTRY, 
+    AWS_ALIASES, 
+    AZURE_ALIASES, 
+    GCP_ALIASES 
+};

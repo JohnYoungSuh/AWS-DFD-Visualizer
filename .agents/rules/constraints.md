@@ -5,7 +5,7 @@ trigger: always_on
 # Hard Constraints: Things I Must Never Do
 
 ## Code Safety
-- **NEVER remove entries from `ICON_MAP_RAW`** — this silently breaks icon rendering for existing Splunk deployments
+- **NEVER remove entries from stencil catalogs or `aliases.js`** — breaking token mappings silently breaks icon rendering for existing Splunk deployments
 - **NEVER let D3 directly mutate React-managed DOM** — use D3 for math/physics only, React for rendering
 - **NEVER use positional column indexing** (`data.rows[3]`) for SPL parsing — always use named column access
 - **NEVER hardcode secrets, credentials, tokens, or environment-specific URLs** in any source file

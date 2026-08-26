@@ -40,12 +40,12 @@ Auto-refreshing dashboards running on operation center displays can easily lock 
 - **DoS Dataset Circuit Breaker**: If the incoming dataset size exceeds 5,000 rows/results, the visualizer refuses to parse or calculate D3 layouts, halting the physics engine entirely and rendering a full-screen "Dataset Too Large" warning.
 - **Watertight simulation cleaning**: Active D3 simulations are explicitly terminated inside React component hooks (`simulationRef.current.stop()`) on data refresh or component unmount.
 - **Batched calculating**: Large graphs ($\ge150$ nodes) split layout ticks into 30-frame batches via `requestAnimationFrame` yielding execution back to the browser.
-- **Safety caps**: Hard rendering limits (maximum 1,000 nodes rendered) prune dangling links to prevent D3 calculation crashes on visual loading.
+- **Uncapped Enterprise Scaling**: Starting with v2.8.4, rendering limits are uncapped up to the 5,000-row DoS circuit breaker, allowing large enterprise architectures to render without artificial truncation.
 
 ### 3. Supply Chain & Assets Integrity
 - **No Asset Inlining**: All SVG stencils are stored outside `visualization.js` and loaded dynamically via client-side HTTP requests, mitigating script/base64 payload injections.
-- **Dynamic URL Resolution**: Absolute app-relative path mapping using `window.Splunk.util.make_full_url` prevents cross-origin RequireJS resource lookup exploits.
-- **Export Script Scanning & Audit Logging**: Diagram download handlers (`exportToSvg`, `exportToDrawio`) scan generated XML/SVG content for `<script` tag signatures and block file downloads if any script block is detected. Downloading also triggers a `Splunk.util.trackEvent()` action to log architectural diagram exports for Splunk administrators.
+- **Dynamic URL Resolution & Allowlisted Fallbacks**: Absolute app-relative path mapping using `window.Splunk.util.make_full_url` prevents cross-origin RequireJS resource lookup exploits. The `missingImageURL` fallback option strictly allowlists app-relative paths under `/static/app/AWS-DFD-Visualizer/` and rejects external origins or unsafe URL schemes (`http:`, `https:`, `javascript:`, `data:`).
+- **Export Script Scanning & Client-Side Blob Exports**: Diagram download handlers (`exportToSvg`, `exportToDrawio`) scan generated XML/SVG content for `<script` tag signatures and block file downloads if any script block is detected. File downloads execute purely client-side via browser Blob memory URLs with local console diagnostic logging and zero outbound telemetry.
 - **Automated Validation**: Automated scans for secrets (TruffleHog), SAST vulnerabilities (Bandit), and licensing (CycloneDX SBOM) run on every release branch commit.
 - **Hardened GitHub Actions**: CI/CD pipelines enforce explicit least-privilege repository permissions (`contents: read`) at the workflow level to prevent token elevation exploits and secure the build pipeline.
 

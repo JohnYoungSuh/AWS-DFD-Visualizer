@@ -96,6 +96,79 @@
   </row>
 
   <row>
+    <panel title="🔍 Live Inspector: Force Layout Search Results">
+      <table>
+        <search>
+          <query><![CDATA[| makeresults count=5
+| streamstats count as id
+| eval from=case(id=1, "Internet", id=2, "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/app-alb/987654321", id=3, "arn:aws:lambda:us-east-1:123456789012:function:order-processor-fn", id=4, "arn:aws:rds:us-east-1:123456789012:db:production-db", id=5, "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/edge-waf/11223344")
+| eval to=case(id=1, "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/edge-waf/11223344", id=2, "arn:aws:lambda:us-east-1:123456789012:function:order-processor-fn", id=3, "arn:aws:rds:us-east-1:123456789012:db:production-db", id=5, "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/app-alb/987654321")
+| eval resource_type=case(id=1, "AWS::Resource", id=2, "AWS::ElasticLoadBalancingV2::LoadBalancer", id=3, "AWS::Lambda::Function", id=4, "AWS::RDS::DBInstance", id=5, "AWS::WAFv2::WebACL")
+| eval display_name=case(id=1, "Internet", id=2, "App Load Balancer", id=3, "Order Processor Function", id=4, "Production RDS Database", id=5, "App Edge WAF")
+| eval edge_label=case(id=1, "HTTPS/443", id=2, "HTTPS/8443", id=3, "MySQL/3306", id=5, "Forward")
+| eval group=case(id=1, "External Zone", id=2, "Security Boundary", id=3, "Compute Boundary", id=4, "Database Boundary", id=5, "Security Boundary")
+| eval status=case(id=4, "OK", id=3, "OK", id=2, "OK", id=5, "OK", id=1, "OK")
+| eval icon_id=case(id=1, "RESOURCE", id=2, "ALB", id=3, "LAMBDA", id=4, "RDS", id=5, "WAF")
+| table from to resource_type display_name edge_label group status icon_id]]></query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+    <panel title="🔍 Live Inspector: Hierarchy Layout Search Results">
+      <table>
+        <search>
+          <query><![CDATA[| makeresults 
+| eval from="ROOT_NODE", to="policy-plane-root", resource_type="AWS::IAM::Role", display_name="Zero-Trust Boundary", edge_label="", plane="Policy_Plane"
+| append [
+    | makeresults
+    | eval from="ROOT_NODE", to="data-plane-root", resource_type="AWS::IAM::Role", display_name="Zero-Trust Boundary", edge_label="", plane="Data_Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="ROOT_NODE", to="identity-plane-root", resource_type="AWS::IAM::Role", display_name="Zero-Trust Boundary", edge_label="", plane="Identity_Plane"
+  ]
+| append [
+    | makeresults
+    | eval from="policy-plane-root", to="pe-engine", resource_type="AWS::Resource", display_name="Policy Engine (PE)", edge_label="", group="Policy Plane", plane="Policy_Plane", icon_id="POLICYENGINE"
+  ]
+| append [
+    | makeresults
+    | eval from="pe-engine", to="pa-admin", resource_type="AWS::Resource", display_name="Policy Administrator (PA)", edge_label="Decision Channel", group="Policy Plane", plane="Policy_Plane", icon_id="IAM"
+  ]
+| append [
+    | makeresults
+    | eval from="identity-plane-root", to="developer-user", resource_type="AWS::IAM::User", display_name="Developer User", edge_label="", group="Identity Plane", plane="Identity_Plane", icon_id="IAM"
+  ]
+| append [
+    | makeresults
+    | eval from="developer-user", to="bastion-host", resource_type="AWS::EC2::Instance", display_name="Bastion Host", edge_label="Assume Role", group="Identity Plane", plane="Identity_Plane", icon_id="COMPUTE"
+  ]
+| append [
+    | makeresults
+    | eval from="data-plane-root", to="bastion-host", resource_type="AWS::EC2::Instance", display_name="Bastion Host", edge_label="", group="Data Plane", plane="Data_Plane", icon_id="COMPUTE"
+  ]
+| append [
+    | makeresults
+    | eval from="bastion-host", to="web-server", resource_type="AWS::EC2::Instance", display_name="Web Server", edge_label="SSH/22", group="Data Plane", plane="Data_Plane", icon_id="COMPUTE"
+  ]
+| append [
+    | makeresults
+    | eval from="web-server", to="db-server", resource_type="AWS::RDS::DBInstance", display_name="DB Server", edge_label="SQL/3306", group="Data Plane", plane="Data_Plane", icon_id="RDS"
+  ]
+| table from to resource_type display_name edge_label group plane status icon_id]]></query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
     <panel title="1. Query Schema &amp; Data Specification">
       <html>
         <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">

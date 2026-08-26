@@ -1,3 +1,5 @@
+import { GCP_TOKEN_MAP, GCP_CATEGORY_DEFAULT_MAP } from './gcp.catalog';
+
 export const gcpAdapter = {
     id: 'gcp',
     name: 'Google Cloud Platform',
@@ -20,20 +22,6 @@ export const gcpAdapter = {
         return type.includes('SUBNET');
     },
 
-    stencils: {
-        'COMPUTE_ENGINE':      'compute/compute-engine.svg',
-        'COMPUTE':             'compute/compute-engine.svg',
-        'CLOUD_STORAGE':       'storage/cloud-storage.svg',
-        'CLOUD_SQL':           'database/cloud-sql.svg',
-        'APP_ENGINE':          'compute/app-engine.svg',
-        'IAM':                 'identity/iam.svg',
-        'SERVICE_ACCOUNT':     'identity/service-account.svg',
-        'FIREWALL':            'security/firewall.svg',
-        'ROUTE':               'networking/route.svg',
-        'VPC_NETWORK':         'networking/vpc-network.svg',
-        'SUBNET':              'networking/subnet.svg',
-        'ARMOR':               'security/armor.svg',
-        'CDN':                 'networking/cdn.svg',
-        'LOAD_BALANCER':       'networking/load-balancer.svg'
-    }
+    catalogTokenMap: GCP_TOKEN_MAP,
+    categoryDefaultMap: GCP_CATEGORY_DEFAULT_MAP
 };

@@ -5,6 +5,15 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: August 26, 2026 (v2.8.5 Steps 2–7 · Semantic Schema Aliases, Category Fallback Hierarchy, Azure V24 Ingest, Multi-Plane Badges & Release Hygiene)
+- [x] **v2.8.5 Release Completion** — Addressed all 7 SA review items: unified data contract aliases (`display_name`, `resource_type`, `icon_id`) in `parseSplunkData` with label decoupling; ingested official Microsoft Azure V24 SVG icon pack under `appserver/static/icons/Azure-Service-Icons_V24/` across the 14 canonical categories (`compute`, `databases`, `storage`, `networking`, `security`, `identity`, `analytics`, `containers`, `integration`, `ai`, `management`, `devops`, `web`, `general`); sanitized all filenames to URL-safe lowercase kebab-case; upgraded `scripts/generate-stencil-catalog.js` to dynamically detect `Azure-Service-Icons_*` and emit $O(1)$ category defaults (enforcing 64px icons); synchronized `aliases.js` and `README_STENCILS.md`; enhanced `Zone` with 4 distinct theme-aware palettes and centered header badges (`🛡️`, `🔑`, `⚙️`, `💾`) with neutral fallback for generic groups; embedded live SPL `<table>` inspector panels in `default/data/ui/views/user_guide.xml`; synchronized all 5 version files to `2.8.5`; validated 100% test pass rate across 54 Cypress component tests and 0/0/0 AppInspect report.
+
+### ✅ Session: August 25, 2026 (v2.8.5 Step 1 · Req-1: Hierarchy Vertical Stacking, Hybrid Plane Precedence & Strict Zero-Trust Planes)
+- [x] **Hierarchy Vertical Stacking & Strict Zero-Trust Planes (Step 1)** — Implemented 3-stage hybrid Zero Trust plane precedence resolution (`plane`/`src_plane`/`dest_plane`/`group`/`vpcId`/`container`/`zone_name` $\to$ Stencil/Type $\to$ Data Plane fallback). Added "Enforce Strict Zero Trust Planes" (`strictPlanes`) toggle option to `formatter.html` and `default/visualizations.conf`. Reinforced Hierarchy layout physics: dampened lateral sprawl charge from -1800 to -800, disabled `forceCenter` to eliminate center collapse, and applied strong vertical tier forces (strength 1.8) and bounds clamping across 4 dedicated vertical bands (Policy $Y \in [60, 240]$, Identity $Y \in [260, 490]$, Control $Y \in [510, 750]$, Data $Y \in [770, 1350]$). Updated static hierarchy blueprint grouping to sort by Zero Trust tier rank. Added Specs 1–3 to `AwsDfdVisualizer.cy.jsx` (47/47 passing) and verified `make inspect` passes with 0 errors, 0 failures, 0 warnings.
+
+### ✅ Session: August 25, 2026 (v2.8.5 Step 0 · Req-0: Automatic SVG-to-Stencil Catalog Mapping & Security Hardening)
+- [x] **Automatic Stencil Mapping & Security Hardening (Step 0)** — Implemented build-time SVG catalog generation (`scripts/generate-stencil-catalog.js`) scanning 302 AWS 64px architecture icons + Azure/GCP icons, extracting tokens portably across Linux/Windows. Added `scripts/validate-stencils.js` to assert on-disk SVG paths and verify all alias overlay targets against generated catalogs. Decoupled provider adapters to use catalog token maps, created hand-curated alias overlay (`stencils/aliases.js`), and rewrote `getIconPath` in `AwsDfdVisualizer.jsx` for exact token and longest-token matching without generic keyword steals. Hardened `missingImageURL` with app-relative static path allowlist, and sanitized `$arn$`, `$id$`, `$label$`, `$type$` template substitutions and MVC tokens in `node_drilldown`/`link_drilldown` (CWE-79). Updated `SECURITY.md` and `README_STENCILS.md`. Added Specs A–G to `AwsDfdVisualizer.cy.jsx` (44/44 passing) and verified `make inspect` passes with 0 errors, 0 failures, 0 warnings.
+
 ### ✅ Session: August 6, 2026 (v2.8.4 Emergency Licensing Removal)
 - [x] **v2.8.4 Emergency Release** — Removed all commercial licensing enforcement constraints (50-node limit, block screen overlay, format menu licensing field, and local storage console inputs) and the 1,000-node safety cap to allow unlimited, restriction-free node layouts. Updated user documentation, Splunkbase listing details, and Cypress test specs. Confirmed clean Webpack build, 100% test pass rate across 37 specs, and clean Splunk AppInspect report (0 errors, 0 warnings, 0 failures).
 
@@ -90,6 +99,203 @@ This list is based on failure analysis against mock config and standard D3 force
 - [x] **User Guide Enhancement** — Added static layout verification panel to `user_guide.xml` and detailed ZTA Splunk SPL recipes/ROOT_NODE documentation.
 - [x] **Cypress Component Verification** — Added unit testing coverage to verify correct group boundary coordinate calculation and curve step link routing.
 - [x] **Global Edge Spacing Layout Fix** — Increased horizontal gap between global edge assets to prevent link label overlapping.
+
+---
+
+## 🚀 Release v2.8.5 (Hierarchy Stacking, Group Swimlanes, Density Scaling & Dark Mode Contrast)
+
+> **ER Review Date:** August 25, 2026 — Reviewed by PM + System Architect personas.
+> All enhancements below were approved via formal ER review. Execute in the order listed.
+
+### Step 0 · Req-0: Automatic SVG-to-Stencil Catalog Mapping & Security Hardening *(Priority: 🔴 Critical — Low Risk)*
+
+- [x] **Build-time Automatic Stencil Catalog Generation (`generate-stencil-catalog.js`)**
+    - *Context*: Visualizer ships 302 unique 64px AWS architecture SVGs, but hardcoded mappings in `aws.js` only mapped ~36 keys, causing frequent `generic.svg` fallback misses and pack date drift.
+    - *Action*:
+        1. Create `scripts/generate-stencil-catalog.js` to scan `appserver/static/icons/Architecture-Service-Icons_*/**/64/*.svg`, `azure/**/*.svg`, and `gcp/**/*.svg`.
+        2. Tokenize filenames (strip `Arch_`, size suffix, `Amazon-`/`AWS-` prefixes, hyphens/underscores) and emit `aws.catalog.js`, `azure.catalog.js`, `gcp.catalog.js`.
+        3. Create `scripts/validate-stencils.js` to verify every catalog entry exists on disk and all alias overlay targets are valid.
+        4. Hook both scripts into `package.json` `build` lifecycle.
+    - *Acceptance*: All 302 AWS icons + Azure/GCP icons generate valid token maps and pass on-disk path validation. *(Completed August 25, 2026)*
+
+- [x] **Alias Overlay & Longest-Token Resolver Rewrite (`aliases.js` & `getIconPath`)**
+    - *Context*: User shorthands like `S3`, `ALB`, `ASG`, `IAM`, `WAFV2` do not exist in filenames and must map to canonical catalog tokens (`SIMPLESTORAGESERVICE`, `ELASTICLOADBALANCING`, `EC2AUTOSCALING`, `IDENTITYANDACCESSMANAGEMENT`, `WAF`). Substring `indexOf` matching caused false positives.
+    - *Action*:
+        1. Create `stencils/aliases.js` mapping user shorthand tokens to catalog tokens (not filenames).
+        2. Remove hardcoded `stencils: { ... }` from `aws.js`, `azure.js`, `gcp.js` while preserving container/identity predicates.
+        3. Rewrite `getIconPath` in `AwsDfdVisualizer.jsx`:
+           - Exact alias/token matching
+           - Longest-token match for CFN/ARM/GCP type segments (preferring specific service tokens over generic keywords like `FUNCTION`, `TABLE`, `BUCKET`, `INSTANCE`)
+           - Tokenized ID/label match (avoiding substring collisions like `EC2` stealing `EC2AUTOSCALING`)
+    - *Acceptance*: `AWS::DynamoDB::Table`, `S3`, `FIREHOSE`, `AWS::Lambda::Function`, and cross-cloud stencils resolve to their exact architecture SVGs. *(Completed August 25, 2026)*
+
+- [x] **Security P0: Column Drilldown Template Sanitization & `missingImageURL` Allowlist**
+    - *Context*: Column `node_drilldown` and `link_drilldown` bypassed token sanitization, and `missingImageURL` accepted arbitrary external URLs.
+    - *Action*:
+        1. Treat `node.node_drilldown` and `link.link_drilldown` as query templates and sanitize `$arn$`, `$id$`, `$label$`, `$type$` substitutions via `sanitizeSplunkToken`. Sanitize all MVC tokens (`tokenNode`, `tokenToolTip`, etc.) emitted to Splunk.
+        2. Validate `config?.missingImageURL` with a strict allowlist (must be relative or under `/static/app/AWS-DFD-Visualizer/` or `/en-US/static/app/AWS-DFD-Visualizer/`, rejecting external schemes `https://`, `javascript:`, `data:`).
+    - *Acceptance*: `$arn$` substitutions with `|` or quotes are neutralized without destroying SPL query structure, and external `missingImageURL` falls back to `generic.svg`. *(Completed August 25, 2026)*
+
+- [x] **Documentation Honesty (`SECURITY.md` & `README_STENCILS.md`)**
+    - *Context*: `SECURITY.md` cited a 1,000-node limit removed in v2.8.4, and `README_STENCILS.md` lacked auto-catalog documentation.
+    - *Action*: Update `SECURITY.md` and `README_STENCILS.md` to document automatic stencil matching, alias overlay, and actual runtime limits.
+    - *Acceptance*: Security and stencil documentation precisely reflect shipped code. *(Completed August 25, 2026)*
+
+- [x] **Cypress Tests (Specs A–G)**
+    - Spec A: `type=AWS::DynamoDB::Table` resolves to `Arch_Amazon-DynamoDB` SVG.
+    - Spec B: `stencil=S3` alias resolves to `Simple-Storage-Service` SVG.
+    - Spec C: `stencil=FIREHOSE` resolves to `Arch_Amazon-Data-Firehose_64.svg`.
+    - Spec D: `type=AWS::Lambda::Function` resolves to `Arch_AWS-Lambda_64.svg`.
+    - Spec E: Azure `VIRTUAL_MACHINE` and GCP `COMPUTE_ENGINE` resolve cleanly.
+    - Spec F: `missingImageURL=https://evil.example/x.svg` is rejected and falls back to static `generic.svg`.
+    - Spec G: `node_drilldown` containing `|` in an ARN is sanitized while preserving outer SPL keywords.
+    *(All 7 specs passing in `AwsDfdVisualizer.cy.jsx` — August 25, 2026)*
+
+---
+
+### Step 1 · Req-1: Hierarchy Vertical Stacking & Strict Zero-Trust Planes *(Priority: 🔴 Critical — Low–Medium Risk)*
+
+- [x] **Reinforce Top-to-Bottom vertical separation and dampen horizontal sprawl** *(Completed August 25, 2026)*
+    - *Context*: When `layoutMode=hierarchy` and `hierarchyDirection=Top to Bottom`, default force parameters and `forceCenter` fight against vertical stratification, collapsing the four Zero Trust planes (Identity → Policy & Control → Control → Data).
+    - *Action*:
+        1. In `AwsDfdVisualizer.jsx`, increase `forceY` strength to 1.5 and reduce `chargeStrength` from -1800 to -800 when `layoutMode === 'hierarchy'`.
+        2. Disable `forceCenter` when `layoutMode === 'hierarchy'` to prevent center collapse.
+        3. In static hierarchy mode (`isStaticBlueprint`), ensure Y coordinate tier intervals are proportionally allocated and not compressed by wide child counts.
+    - *Acceptance*: Top-to-Bottom hierarchy displays clear, distinct vertical bands for each depth/plane level.
+
+- [x] **Add optional `strictPlanes` layout mode** *(Completed August 25, 2026)*
+    - *Action*:
+        1. Add `strictPlanes` boolean option to `formatter.html` under General and register default in `visualizations.conf`.
+        2. When `strictPlanes` is enabled (or when 4 ZTA planes are present in hierarchy mode), divide total canvas height into 4 distinct vertical tier sectors (Tier 0: Policy $Y \in [60, 240]$, Tier 1: Identity $Y \in [260, 490]$, Tier 2: Control $Y \in [510, 750]$, Tier 3: Data $Y \in [770, 1350]$).
+    - *Acceptance*: Nodes strictly adhere to their assigned vertical plane band without crossing tier lines.
+
+- [x] **Cypress Tests (Specs 1–3 in AwsDfdVisualizer.cy.jsx)** *(Completed August 25, 2026)*
+    - Spec 1: Mount hierarchy Top-to-Bottom → assert each depth level has monotonic increasing `y` coordinates.
+    - Spec 2: Mount with `strictPlanes: true` → assert nodes in distinct planes fall within designated vertical tier boundaries.
+    - Spec 3: Verify hybrid plane precedence (`plane`/`src_plane` $\to$ `group`/`zone_name` $\to$ `type` $\to$ Data Plane fallback).
+
+---
+
+### Step 2 · Req-2: Semantic Schema Aliases, Category Fallback Hierarchy, Azure V24 Ingest & Multi-Plane Container Styling *(Priority: 🔴 Critical / 🟡 High — Low Risk)*
+
+- [x] **Data Contract Schema Aliases & Decoupled Display Name (`parseSplunkData`)** *(Completed August 26, 2026)*
+    - *Context*: Real-world SPL emits `resource_type`, `component_type`, `icon_id`, `display_name` rather than `icon`/`node_label`.
+    - *Action*:
+        1. In `parseSplunkData` (both object mode and rows mode), support label precedence: `display_name` $\to$ `node_label` $\to$ `label` $\to$ ARN short name.
+        2. Support type/semantic identity: `resource_type` $\to$ `type` $\to$ `component_type` (defaulting to `AWS::Resource` only if all missing).
+        3. Support explicit visual keys: `icon_id` $\to$ `icon` $\to$ `stencil`.
+        4. Prevent `display_name` tokens from hijacking icon lookup when explicit `icon_id` or `resource_type`/`type` is present.
+    - *Acceptance*: Visualizer seamlessly maps diverse field names without requiring SPL rename statements.
+
+- [x] **Azure V24 Official Icon Pack Ingest & Catalog Normalizer** *(Completed August 26, 2026)*
+    - *Context*: The 13 hand-drawn SVGs under `appserver/static/icons/azure/` lack coverage of real Azure architecture diagrams.
+    - *Action*:
+        1. Ingest official Microsoft `Azure_Public_Service_Icons_V24` tree under `appserver/static/icons/Azure-Service-Icons_V24/` across the 14 canonical categories (`compute`, `databases`, `storage`, `networking`, `security`, `identity`, `analytics`, `containers`, `integration`, `ai`, `management`, `devops`, `web`, `general`).
+        2. Set permissions to 644 on files and 755 on directories. Document Microsoft ToS in `README_STENCILS.md`.
+        3. Extend `generate-stencil-catalog.js` with Azure normalizer (stripping `{nnnnn}-icon-service-`) and generate `CATEGORY_DEFAULT_MAP`.
+        4. Update `validate-stencils.js` to assert category default paths and alias targets.
+    - *Acceptance*: Azure catalog generated with full V24 icon coverage and category mapping.
+
+- [x] **Category-Level Fallback Hierarchy in `getIconPath`** *(Completed August 26, 2026)*
+    - *Context*: Unrecognized services currently fall back directly to `generic.svg`.
+    - *Action*:
+        1. Add $O(1)$ category default lookup (`CATEGORY_DEFAULT_MAP[category]`) before generic adapter fallback.
+        2. Extract category from folder classifications (`Arch_Networking-Content-Delivery` $\to$ `NETWORKING`, `Azure-Service-Icons_V24/compute` $\to$ `COMPUTE`, etc.) and CloudFormation prefixes.
+    - *Acceptance*: Unrecognized services fall back to category-level architecture icons rather than generic gray boxes.
+
+- [x] **Four-Plane Zone Container Styling & Badges** *(Completed August 26, 2026)*
+    - *Context*: ZTA requires visual distinction across Policy, Identity, Control, and Data planes.
+    - *Action*:
+        1. Extend `Zone` component with 4 distinct theme-aware palettes (`Policy_Plane`, `Identity_Plane`, `Control_Plane`, `Data_Plane`).
+        2. Add header badges (`🛡️ Policy Plane`, `🔑 Identity Plane`, `⚙️ Control Plane`, `💾 Data Plane`) and centered header geometry (`textAnchor="middle"`, safe $Y \ge 35$).
+    - *Acceptance*: Zero-Trust zones render with distinct, accessible container boundaries and centered headers.
+
+- [x] **Cypress Component Tests (Specs S–X)** *(Completed August 26, 2026)*
+    - Spec S: `display_name` renders; `icon_id=S3` resolves `Simple-Storage-Service` (decoupled).
+    - Spec T: `resource_type=AWS::DirectoryService::Directory` resolves `Arch_AWS-Directory-Service`.
+    - Spec U: `icon=Elastic-Load-Balancing` and `icon=Shield` resolve official filenames.
+    - Spec V: Unknown Azure compute type falls back to category default, not `generic.svg`.
+    - Spec W: `plane=Policy_Control_Plane` vs `Identity_Plane` hulls differ in stroke/fill/badge.
+    - Spec X: Azure official token (e.g. `VIRTUALMACHINE`) resolves cleanly after pack ingest.
+
+---
+
+### Step 3 · Req-3: Swimlane / Group Label Placement & Dynamic Bounds *(Priority: 🟡 High — Low Risk)*
+
+- [x] **Optimize `Zone` convex hull header anchor calculation & Dynamic ViewBox** *(Completed August 26, 2026)*
+    - *Context*: Labels positioned at the topmost single hull vertex skewed to vertices, overlap curved boundaries, and clip at canvas edges.
+    - *Action*:
+        1. In `Zone` component, calculate horizontal center: `textX = (minX + maxX) / 2`.
+        2. Clamp vertical position: `textY = Math.max(35, minY - 24)` and use `textAnchor="middle"`.
+        3. Factor hull bounding boxes and header margins into dynamic `viewBox` height/width in `AwsDfdVisualizer.jsx`.
+    - *Acceptance*: Swimlane group headers are centered, prominent, and never clipped.
+
+---
+
+### Step 4 · Req-4: Node Density Collision Tuning & Text-Wrapping Buffer *(Priority: 🟡 High — Low Risk)*
+
+- [x] **Expand text-wrapping character safety buffer to 25%** *(Completed August 26, 2026)*
+    - *Context*: Real-world ARNs and AWS resource names overflow the 15% buffer, causing clipping with type badges.
+    - *Action*: In `getNodeCardDimensions`, update `estimatedTextWidth` safety buffer calculation from `* 1.15` to `* 1.25` (25% safety margin).
+    - *Acceptance*: Extreme AWS resource names and ARNs wrap cleanly without colliding with type badges.
+
+- [x] **Implement density-adaptive collision padding in `rectCollide`** *(Completed August 26, 2026)*
+    - *Context*: Fixed 40px/30px collision padding causes excessive horizontal sprawl with 8–15 nodes per plane.
+    - *Action*: Dynamically scale `paddingX` and `paddingY` in `rectCollide`:
+      ```javascript
+      const densityFactor = nodes.length > 20 ? 0.6 : (nodes.length > 10 ? 0.8 : 1.0);
+      const paddingX = Math.round(36 * densityFactor);
+      const paddingY = Math.round(24 * densityFactor);
+      ```
+    - *Acceptance*: 8–15 nodes per tier remain tightly clustered without overlapping or triggering runaway horizontal expansion.
+
+---
+
+### Step 5 · Req-5: High-Contrast Dark Mode Text Standardization *(Priority: 🟡 High — Low Risk)*
+
+- [x] **Audit and upgrade dark mode SVG text color tokens** *(Completed August 26, 2026)*
+    - *Context*: Dark mode text in black or dark gray (`#4B5563`, `#232F3E`) lacks contrast against dark backgrounds and fails WCAG AA standards.
+    - *Action*:
+        1. Update `NodeCard` labels to high-contrast slate `#F8FAFC` (primary) and `#CBD5E1` (secondary/type badges) in dark theme.
+        2. Standardize `Zone` group header text fills to `#F1F5F9` in dark theme.
+        3. Brighten empty plane placeholder text in dark theme from `#4B5563` to `#94A3B8` (4.8:1 contrast).
+        4. Ensure `LinkLabel` capsule text and borders maintain clear readability across both dark and light modes.
+    - *Acceptance*: All text elements achieve WCAG AA contrast (≥4.5:1) in both Light and Dark themes.
+
+---
+
+### Step 6 · Req-6: Default View Embedded Dashboard Table for Live SPL Troubleshooting *(Priority: 🟡 High — Low Risk)*
+
+- [x] **Embed synchronized `<table>` inspector panels in `default/data/ui/views/user_guide.xml`** *(Completed August 26, 2026)*
+    - *Context*: Troubleshooting SPL queries currently requires switching back and forth between the visualizer view and the Search app.
+    - *Action*:
+        1. In `default/data/ui/views/user_guide.xml`, add synchronized raw data inspection `<table>` panels directly below each visualizer panel.
+        2. Ensure table panels render schema columns (`from`, `to`, `resource_type`, `display_name`, `edge_label`, `group`, `status`, `icon_id`) with `drilldown="none"`.
+    - *Acceptance*: Raw tabular SPL search output displays side-by-side with the diagram in the default landing view.
+
+---
+
+### Step 7 · Release Hygiene (v2.8.5)
+
+- [x] **Run `npm run build`** — Confirm `webpack compiled successfully` with 0 errors. *(Completed August 26, 2026)*
+- [x] **Run `npm run test:cy`** — Confirm 100% test pass rate across all Cypress specs (54/54 passed). *(Completed August 26, 2026)*
+- [x] **Run `make inspect`** — Confirm AppInspect passes with 0 errors, 0 failures, 0 warnings. *(Completed August 26, 2026)*
+- [x] **Synchronize all 5 version files** to `2.8.5`: *(Completed August 26, 2026)*
+    1. `package.json`
+    2. `splunk-app-manifest.json`
+    3. `Makefile`
+    4. `default/app.conf` (both `[launcher]` and `[id]` stanzas)
+    5. `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx` (UI header string `v2.8.5`)
+- [x] **Commit and push** using conventional commits: *(Completed August 26, 2026)*
+    ```
+    feat: support semantic field aliases and decoupled display_name
+    feat: ingest official Azure V24 icons with category fallback hierarchy
+    style: implement four-plane container palettes and centered hull headers
+    perf: refine density collision scaling and expand text buffer
+    style: upgrade dark mode text contrast tokens to WCAG AA
+    feat: add embedded SPL inspector tables to user guide dashboard
+    chore: bump version to 2.8.5 across all 5 config files
+    ```
 
 ---
 
