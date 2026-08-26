@@ -20,8 +20,10 @@ Thumbs.db
 *.log
 *.tmp
 # AI Assistant Metadata (Antigravity)
-.agents/
-tasks*
+.agents/*
+!.agents/rules/
+!.agents/skills/
+!.agents/artifacts/
 media_*
 walkthrough*
 lesson*
@@ -34,6 +36,7 @@ click_feedback*
 *.resolved
 *.metadata.json
 *.webp
+*Zone.Identifier*
 /tmp/
 node_modules
 /cypress/screenshots/
