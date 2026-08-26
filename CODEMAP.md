@@ -1,34 +1,30 @@
-# CODEMAP — AWS-DFD-Visualizer v2.6.0
+# CODEMAP — AWS-DFD-Visualizer v2.8.5
 # Read this instead of scanning full source files for orientation.
-# Est. ~400 tokens vs. ~5,400 tokens for the full component.
 
 ## Project Entry Points
 
-| File | Role | Tokens |
-|---|---|---|
-| `src/visualization_source.js` | RequireJS AMD entry point — mounts React into Splunk DOM | ~626 |
-| `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx` | **Primary source — all logic lives here** | ~5,400 |
-| `webpack.config.js` | Bundles src → appserver/static (AMD output) | ~190 |
-| `cypress.config.js` | Cypress component test config + Splunk mock shim | ~235 |
+| File | Role |
+|---|---|
+| `src/visualization_source.js` | RequireJS AMD entry point — mounts React into Splunk DOM |
+| `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx` | **Primary source — core component and rendering logic** |
+| `src/components/AwsDfdVisualizer/stencils/` | Multi-CSP stencil adapters (AWS, Azure, GCP), auto-generated catalogs, and `aliases.js` |
+| `scripts/generate-stencil-catalog.js` | Build-time catalog generator scanning SVG packs |
+| `scripts/validate-stencils.js` | Build-time validator verifying disk paths and alias targets |
+| `webpack.config.js` | Bundles src → appserver/static (AMD output) |
+| `cypress.config.js` | Cypress component test config + Splunk mock shim |
 
 ---
 
-## AwsDfdVisualizer.jsx — Section Map (467 lines)
+## AwsDfdVisualizer.jsx — Section Map
 
-| Lines | Symbol | Purpose |
+| Section | Symbol | Purpose |
 |---|---|---|
-| 1–3 | imports | React, D3 |
-| 4–6 | `ICON_BASE`, `ARCH_SVC` | Icon URL prefix constants |
-| 7–49 | `ICON_MAP_RAW` | AWS resource type → SVG filename (never remove entries) |
-| 50–51 | `ICON_MAP` | Map object from ICON_MAP_RAW |
-| 52–81 | `getIconPath()` | Priority-order icon resolution: explicit → type → id → label → generic |
-| 82–155 | `parseSplunkData()` | rows/results parser, edgeSet dedup, null label guard |
-| 156–194 | `<Link>` | SVG edge renderer — curved/straight paths, edge labels |
-| 195–236 | `<NodeCard>` | SVG node card — icon, label, status ring, click handlers |
-| 237–254 | `<Zone>` | VPC/subnet enclosure group placeholder |
-| 255–448 | `<AwsDfdVisualizer>` | Main component — D3 forceSimulation, zoom, drag, refs |
-| 449–464 | `ErrorBoundary` | React error boundary wrapper |
-| 465–467 | `export default` | AwsDfdVisualizerWrapper |
+| Imports & Constants | `stencils`, `aliases` | Provider adapters, theme constants |
+| Icon Engine | `getIconPath()` | Priority-order icon resolution: explicit → type → category default → ARN/ID → generic |
+| Data Parser | `parseSplunkData()` | rows/results parser, semantic schema aliases, edgeSet dedup, null label guard |
+| SVG Renderers | `<Link>`, `<NodeCard>`, `<Zone>` | React-rendered DOM nodes (orthogonal links, dynamic node cards, convex hull zones) |
+| Layout Engines | Force, Hierarchy, Blueprint | D3 physics simulation & deterministic zero-trust hierarchy tiers |
+| Main Component | `<AwsDfdVisualizer>` | Top-level visualizer lifecycle, zoom/pan transform, export utilities, and HUD overlay |
 
 ---
 

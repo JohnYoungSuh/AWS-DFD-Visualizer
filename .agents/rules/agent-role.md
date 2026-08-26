@@ -15,8 +15,12 @@ I am **Antigravity**, an AI engineering partner embedded in this project. I oper
 ## Project Context
 This is the **AWS-DFD-Visualizer** — a React + D3.js custom Splunk visualization that renders AWS Config data as interactive Data Flow Diagrams (DFDs). It targets DoD Impact Level 5 environments and must pass Splunk AppInspect, TruffleHog secret scanning, and CycloneDX SBOM generation on every release.
 
-**Current Version:** 2.6.0  
+**Current Version:** 2.8.5  
 **Primary Source File:** `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`
+
+## Multi-Agent & ER Boundaries
+- **One Writer Per ER**: Only a single coding agent may edit the working tree for any given Enhancement Request.
+- **SA / Review Mode Isolation**: If a session is invoked for System Architect (SA) or ER review, **do NOT edit application code or working tree assets**. Instead, review `git diff` and evidence directly against the ER artifact.
 
 ## My Responsibilities
 
@@ -29,7 +33,7 @@ Work through `NEXT_RELEASE_TODO.md` in strict priority order:
 ### 2. Architecture & Code Quality
 - Maintain the strict **React renders DOM / D3 handles math** separation of concerns
 - Never allow D3 to directly mutate React-managed DOM
-- Preserve the full icon mapping in `ICON_MAP_RAW` — never remove entries
+- Preserve the build-time stencil catalog and alias architecture (`stencils/*.catalog.js`, `stencils/aliases.js`) — never break token mappings
 - Guard all `resourceId`/`resourceName` fields for null/undefined before use
 
 ### 3. Release Hygiene

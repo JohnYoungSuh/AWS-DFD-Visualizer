@@ -25,6 +25,13 @@
         </splunk-radio-input>
     </splunk-control-group>
 
+    <splunk-control-group label="Enforce Strict Zero Trust Planes" help="When enabled in Hierarchy layout, pins nodes into dedicated vertical swimlane tiers according to their assigned Zero Trust plane.">
+        <splunk-radio-input name="{{VIZ_NAMESPACE}}.strictPlanes" value="false">
+            <option value="false">False</option>
+            <option value="true">True</option>
+        </splunk-radio-input>
+    </splunk-control-group>
+
     <splunk-control-group label="Draggable Nodes" help=" ">
         <splunk-radio-input name="{{VIZ_NAMESPACE}}.draggableNodes" value="true">
             <option value="true">True</option>

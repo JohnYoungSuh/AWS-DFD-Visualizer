@@ -50,12 +50,15 @@ const safeId = d => d.resourceId.replace(/[/:]/g, '-').toLowerCase();
 ```
 
 ## Icon Mapping System
-- `ICON_MAP_RAW` maps uppercase resource type keys → SVG/PNG file paths
-- **Never remove entries from `ICON_MAP_RAW`** — removal silently breaks icon rendering for existing deployments
-- Lookup is case-insensitive: input is normalized `.toUpperCase()` before map lookup
-- Priority: explicit `icon`/`stencil` column → `type` → `id` → `node_label` → generic fallback
+- Stencil catalogs (`aws.catalog.js`, `azure.catalog.js`, `gcp.catalog.js`) are auto-generated at build time via `npm run generate:stencils` (`scripts/generate-stencil-catalog.js`)
+- `aliases.js` provides a hand-curated synonym overlay for common SPL abbreviations and CloudFormation/ARM/GCP service names
+- **Never break token mappings in catalogs or `aliases.js`** — removal silently breaks icon rendering for existing deployments
+- Lookup is case-insensitive: input is normalized `.toUpperCase()` before token lookup
+- Priority: explicit `icon`/`icon_id`/`stencil` column → `resource_type`/`type`/`component_type` → category default (`CATEGORY_DEFAULT_MAP`) → `arn`/`id` tokens → generic fallback
 - Icon base path: `/en-US/static/app/AWS-DFD-Visualizer/icons/`
 - AWS architecture icons live under: `Architecture-Service-Icons_01302026/`
+- Azure architecture icons live under: `Azure-Service-Icons_V24/`
+- GCP architecture icons live under: `gcp/`
 
 ## Splunk Data Ingestion: Two Formats
 The visualizer must handle both Splunk output formats:
