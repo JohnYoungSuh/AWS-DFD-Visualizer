@@ -268,6 +268,21 @@ const resolveZeroTrustPlane = (candidateStr) => {
     const str = candidateStr.trim();
     if (!str || str.toLowerCase() === 'default' || str.toLowerCase() === 'unmapped') return null;
 
+    const lower = str.toLowerCase();
+    // 0. Canonical enum exact match (case-insensitive) before heuristic regex
+    if (lower === ZERO_TRUST_PLANES.POLICY.toLowerCase() || lower === 'policy_plane' || lower === 'policy plane') {
+        return ZERO_TRUST_PLANES.POLICY;
+    }
+    if (lower === ZERO_TRUST_PLANES.IDENTITY.toLowerCase() || lower === 'identity_plane' || lower === 'identity plane') {
+        return ZERO_TRUST_PLANES.IDENTITY;
+    }
+    if (lower === ZERO_TRUST_PLANES.CONTROL.toLowerCase() || lower === 'control_plane' || lower === 'control plane') {
+        return ZERO_TRUST_PLANES.CONTROL;
+    }
+    if (lower === ZERO_TRUST_PLANES.DATA.toLowerCase() || lower === 'data_plane' || lower === 'data plane') {
+        return ZERO_TRUST_PLANES.DATA;
+    }
+
     // 1. PEP belongs strictly to Control Plane
     if (/(pep|policy.*enforcement.*point)/i.test(str)) {
         return ZERO_TRUST_PLANES.CONTROL;

@@ -41,53 +41,19 @@
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.smoothEdges">true</option>
       </viz>
     </panel>
-    <panel title="Interactive Static Blueprint Demonstration (Hierarchy Layout)">
+    <panel title="Interactive Static Blueprint Demonstration (Zero-Trust Layout)">
       <viz type="AWS-DFD-Visualizer.AWS-DFD-Visualizer">
         <search>
-          <query><![CDATA[| makeresults 
-| eval from="ROOT_NODE", to="policy-plane-root", type="AWS::IAM::Role", node_label="Zero-Trust Boundary", edge_label=""
-| append [
-    | makeresults
-    | eval from="ROOT_NODE", to="data-plane-root", type="AWS::IAM::Role", node_label="Zero-Trust Boundary", edge_label=""
-  ]
-| append [
-    | makeresults
-    | eval from="ROOT_NODE", to="identity-plane-root", type="AWS::IAM::Role", node_label="Zero-Trust Boundary", edge_label=""
-  ]
-| append [
-    | makeresults
-    | eval from="policy-plane-root", to="pe-engine", type="AWS::Resource", node_label="Policy Engine (PE)", edge_label="", group="Policy Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="pe-engine", to="pa-admin", type="AWS::Resource", node_label="Policy Administrator (PA)", edge_label="Decision Channel", group="Policy Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="identity-plane-root", to="developer-user", type="AWS::IAM::User", node_label="Developer User", edge_label="", group="Identity Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="developer-user", to="bastion-host", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="Assume Role", group="Identity Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="data-plane-root", to="bastion-host", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="", group="Data Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="bastion-host", to="web-server", type="AWS::EC2::Instance", node_label="Web Server", edge_label="SSH/22", group="Data Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="web-server", to="db-server", type="AWS::RDS::DBInstance", node_label="DB Server", edge_label="SQL/3306", group="Data Plane"
-  ]
-| fields from to type node_label edge_label group status]]></query>
+          <query><![CDATA[| makeresults
+| eval from="10.0.1.10", to="10.0.2.20", display_name="App subnet host", edge_label="tcp/443", group="Data Plane", plane="Data_Plane", resource_type="AWS::EC2::Instance", icon_id="EC2"
+| append [| makeresults | eval from="idp.corp", to="10.0.1.10", display_name="IdP", edge_label="OIDC", group="Identity Plane", plane="Identity_Plane", resource_type="AWS::IAM::User", icon_id="IAM"]
+| append [| makeresults | eval from="waf.edge", to="10.0.1.10", display_name="WAF", edge_label="HTTPS/443", group="Control Plane", plane="Control_Plane", resource_type="AWS::WAFv2::WebACL", icon_id="WAF"]
+| table from to display_name edge_label group plane resource_type icon_id]]></query>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
         </search>
         <option name="height">600</option>
-        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.layoutMode">Hierarchy</option>
+        <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.layoutMode">zero-trust</option>
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.clusterBy">group</option>
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.draggableNodes">false</option>
         <option name="AWS-DFD-Visualizer.AWS-DFD-Visualizer.smoothEdges">false</option>
@@ -117,48 +83,14 @@
         <option name="count">10</option>
       </table>
     </panel>
-    <panel title="🔍 Live Inspector: Hierarchy Layout Search Results">
+    <panel title="🔍 Live Inspector: Zero-Trust Blueprint Search Results">
       <table>
         <search>
-          <query><![CDATA[| makeresults 
-| eval from="ROOT_NODE", to="policy-plane-root", resource_type="AWS::IAM::Role", display_name="Zero-Trust Boundary", edge_label="", plane="Policy_Plane"
-| append [
-    | makeresults
-    | eval from="ROOT_NODE", to="data-plane-root", resource_type="AWS::IAM::Role", display_name="Zero-Trust Boundary", edge_label="", plane="Data_Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="ROOT_NODE", to="identity-plane-root", resource_type="AWS::IAM::Role", display_name="Zero-Trust Boundary", edge_label="", plane="Identity_Plane"
-  ]
-| append [
-    | makeresults
-    | eval from="policy-plane-root", to="pe-engine", resource_type="AWS::Resource", display_name="Policy Engine (PE)", edge_label="", group="Policy Plane", plane="Policy_Plane", icon_id="POLICYENGINE"
-  ]
-| append [
-    | makeresults
-    | eval from="pe-engine", to="pa-admin", resource_type="AWS::Resource", display_name="Policy Administrator (PA)", edge_label="Decision Channel", group="Policy Plane", plane="Policy_Plane", icon_id="IAM"
-  ]
-| append [
-    | makeresults
-    | eval from="identity-plane-root", to="developer-user", resource_type="AWS::IAM::User", display_name="Developer User", edge_label="", group="Identity Plane", plane="Identity_Plane", icon_id="IAM"
-  ]
-| append [
-    | makeresults
-    | eval from="developer-user", to="bastion-host", resource_type="AWS::EC2::Instance", display_name="Bastion Host", edge_label="Assume Role", group="Identity Plane", plane="Identity_Plane", icon_id="COMPUTE"
-  ]
-| append [
-    | makeresults
-    | eval from="data-plane-root", to="bastion-host", resource_type="AWS::EC2::Instance", display_name="Bastion Host", edge_label="", group="Data Plane", plane="Data_Plane", icon_id="COMPUTE"
-  ]
-| append [
-    | makeresults
-    | eval from="bastion-host", to="web-server", resource_type="AWS::EC2::Instance", display_name="Web Server", edge_label="SSH/22", group="Data Plane", plane="Data_Plane", icon_id="COMPUTE"
-  ]
-| append [
-    | makeresults
-    | eval from="web-server", to="db-server", resource_type="AWS::RDS::DBInstance", display_name="DB Server", edge_label="SQL/3306", group="Data Plane", plane="Data_Plane", icon_id="RDS"
-  ]
-| table from to resource_type display_name edge_label group plane status icon_id]]></query>
+          <query><![CDATA[| makeresults
+| eval from="10.0.1.10", to="10.0.2.20", display_name="App subnet host", edge_label="tcp/443", group="Data Plane", plane="Data_Plane", resource_type="AWS::EC2::Instance", icon_id="EC2"
+| append [| makeresults | eval from="idp.corp", to="10.0.1.10", display_name="IdP", edge_label="OIDC", group="Identity Plane", plane="Identity_Plane", resource_type="AWS::IAM::User", icon_id="IAM"]
+| append [| makeresults | eval from="waf.edge", to="10.0.1.10", display_name="WAF", edge_label="HTTPS/443", group="Control Plane", plane="Control_Plane", resource_type="AWS::WAFv2::WebACL", icon_id="WAF"]
+| table from to display_name edge_label group plane resource_type icon_id]]></query>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
         </search>
@@ -312,35 +244,13 @@ PE_Engine,PIP_BehaviorAudit,AWS::Resource,Policy Engine (PE),Query Activity Logs
 | eval edge_label=if(edge_label="null", null(), edge_label)
 | table from to type node_label edge_label group icon status]]></pre>
 
-          <h3 style="color: #FF9900; margin-top: 25px;">Scenario C: Zero-Trust Static Layout &amp; Multi-Plane Compliance Interception</h3>
-          <p style="margin-bottom: 5px;">This scenario models elements across all three Zero-Trust planes (Identity, Policy &amp; Control, and Infrastructure). It features assumed roles, WAF-protected CDNs routing to VPC subnets, compliant/non-compliant security groups, and mid-flight compliance violations (SSH/22 rendered in dashed red):</p>
-          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| makeresults 
-| eval from="user-dev", to="audit-role", type="AWS::IAM::User", node_label="Developer User", edge_label="Assumes Role", subnetId="", vpcId="", securityGroups=""
-| append [
-    | makeresults
-    | eval from="audit-role", to="", type="AWS::IAM::Role", node_label="Audit Administrator Role", edge_label="", subnetId="", vpcId="", securityGroups=""
-  ]
-| append [
-    | makeresults
-    | eval from="edge-waf", to="cf-cdn", type="AWS::WAFV2::WebACL", node_label="Edge WAF WebACL", edge_label="Protects CDN", subnetId="", vpcId="", securityGroups=""
-  ]
-| append [
-    | makeresults
-    | eval from="cf-cdn", to="bastion-host", type="AWS::CloudFront::Distribution", node_label="CloudFront CDN", edge_label="Routes Traffic", subnetId="", vpcId="", securityGroups=""
-  ]
-| append [
-    | makeresults
-    | eval from="bastion-host", to="web-server", type="AWS::EC2::Instance", node_label="Bastion Host", edge_label="HTTPS/443", subnetId="subnet-2", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-3\",\"name\":\"bastion-sg\",\"is_compliant\":true}]"
-  ]
-| append [
-    | makeresults
-    | eval from="web-server", to="db-server", type="AWS::EC2::Instance", node_label="Web Server", edge_label="SSH/22", subnetId="subnet-1", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-1\",\"name\":\"web-sg\",\"is_compliant\":true}]"
-  ]
-| append [
-    | makeresults
-    | eval from="db-server", to="", type="AWS::RDS::DBInstance", node_label="DB Server", edge_label="", subnetId="subnet-1", vpcId="vpc-1", securityGroups="[{\"id\":\"sg-2\",\"name\":\"db-sg\",\"is_compliant\":false}]"
-  ]
-| fields from to type node_label edge_label subnetId vpcId securityGroups]]></pre>
+          <h3 style="color: #FF9900; margin-top: 25px;">Scenario C: Zero-Trust Multi-Plane Architecture (Identity, Control &amp; Data Planes)</h3>
+          <p style="margin-bottom: 5px;">This scenario models elements across all three Zero-Trust planes (Identity Plane, Control Plane, and Data Plane). It uses modern semantic field aliases (<code>display_name</code>, <code>resource_type</code>, <code>icon_id</code>, <code>plane</code>, <code>group</code>) to automatically position the Corporate IdP and Edge WAF communicating with an App subnet EC2 host in the Data Plane:</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| makeresults
+| eval from="10.0.1.10", to="10.0.2.20", display_name="App subnet host", edge_label="tcp/443", group="Data Plane", plane="Data_Plane", resource_type="AWS::EC2::Instance", icon_id="EC2"
+| append [| makeresults | eval from="idp.corp", to="10.0.1.10", display_name="IdP", edge_label="OIDC", group="Identity Plane", plane="Identity_Plane", resource_type="AWS::IAM::User", icon_id="IAM"]
+| append [| makeresults | eval from="waf.edge", to="10.0.1.10", display_name="WAF", edge_label="HTTPS/443", group="Control Plane", plane="Control_Plane", resource_type="AWS::WAFv2::WebACL", icon_id="WAF"]
+| table from to display_name edge_label group plane resource_type icon_id]]></pre>
 
           <h3 style="color: #FF9900; margin-top: 25px;">Scenario D: Live AWS Config Ingestion</h3>
           <p style="margin-bottom: 5px;">This query handles standard live-data ingestion from `sourcetype="aws:config:json"`. It extracts core resource attributes, formats them to the diagram schema, and uses `mvzip` and `mvexpand` to safely map parent-child relationships and association names without positional shifts:</p>

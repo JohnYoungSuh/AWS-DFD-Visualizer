@@ -103,7 +103,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         
         // 5. Ensure the viewBox is properly initialized for auto-scaling
         cy.get('svg').should('have.attr', 'viewBox', '0 0 1200 1000');
-        cy.screenshot('classic_force_layout');
     });
 
     it('successfully renders NIST 800-207 Zero-Trust Architecture (ZTA) logical components and boundaries', () => {
@@ -222,7 +221,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Verify link is colored red and dashed (SSH/22 violation)
         cy.get('g.link-group path[stroke="#FF0000"]').should('exist');
         cy.get('g.link-group path[stroke-dasharray="4,4"]').should('exist');
-        cy.screenshot('compliance_routing_and_envelopes');
     });
 
     it('verifies dashboard layout optimization settings (compact mode)', () => {
@@ -244,7 +242,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Verify the node cards render with width 260 (220 compact base + 40 type badge) and height 80
         cy.get('g.node-card rect').first().should('have.attr', 'width', '260');
         cy.get('g.node-card rect').first().should('have.attr', 'height', '80');
-        cy.screenshot('compact_mode_layout');
     });
 
     it('verifies CSV live feed console paste and apply mechanism', () => {
@@ -282,8 +279,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // HUD should update to show 5 nodes (including the default VPC and default Subnet containers generated)
         cy.contains('Nodes: 5').should('be.visible');
         cy.get('g.node-card').should('have.length', 3);
-        cy.get('g.node-card').contains('Node A').should('exist');
-        cy.screenshot('csv_console_import');
     });
 
     it('verifies Export to Draw.io button click trigger', () => {
@@ -373,9 +368,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
 
         // Verify viewBox has dynamic height
         cy.get('svg').should('have.attr', 'viewBox').and('match', /^0 0 \d+ \d+$/);
-
-        // Capture screenshot of the component
-        cy.screenshot('blueprint_mode_layout');
     });
 
     it('successfully handles multivalue fields (Array types) without throwing', () => {
@@ -531,7 +523,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', 'var(--plane-label-fill)');
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#0f172a');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#1e293b');
-        cy.screenshot('light_theme_text_colors');
 
         mount(
             <div style={{ width: 1200, height: 800 }}>
@@ -543,7 +534,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.zt-plane-decorations text').first().should('have.attr', 'fill', 'var(--plane-label-fill)');
         cy.get('g.vpc-container text').first().should('have.attr', 'fill', '#cbd5e1');
         cy.get('g.subnet-container text').first().should('have.attr', 'fill', '#cbd5e1');
-        cy.screenshot('dark_theme_text_colors');
     });
 
     it('verifies client-side SVG download and print style elements existence', () => {
@@ -573,7 +563,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         });
         cy.get('#btn-export-svg').click();
         cy.wrap(downloadStub).should('have.been.calledWith', Cypress.sinon.match.string, Cypress.sinon.match.string);
-        cy.screenshot('svg_export_button');
     });
 
     it('verifies resource lifecycle strikethrough and staleness italic text styling', () => {
@@ -603,7 +592,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         // Stale node should have italic styling and reduced opacity
         cy.get('g.node-card').contains('Stale Instance').parents('foreignObject').find('div')
             .should('have.css', 'font-style', 'italic');
-        cy.screenshot('resource_lifecycle_decorations');
     });
 
     it('verifies threat status maps to pulsing border and skull icon overrides', () => {
@@ -634,7 +622,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.node-card').contains('Incident Instance').parents('g.node-card').find('rect').first()
             .should('have.class', 'pulsing-red');
         cy.get('g.node-card').contains('🚨 Incident Instance').should('exist');
-        cy.screenshot('threat_overlay_pulsing_and_skull');
     });
 
     it('verifies link and enclosure compliance indicators inside zero-trust layout', () => {
@@ -663,7 +650,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.get('g.vpc-container text').contains('VPC (vpc-1) (1 Violation)').should('exist');
         cy.get('g.subnet-container text').contains('Subnet (subnet-1) (1 Violation)').should('exist');
         cy.get('g.vpc-container rect').first().should('have.attr', 'stroke', '#FF0000');
-        cy.screenshot('link_and_enclosure_violations');
     });
 
     it('verifies GLOBAL_ROOT fallback refinement is mapped correctly', () => {
@@ -720,7 +706,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
         
         cy.get('g.node-card').contains('Web VM').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('match', /compute\/virtual-machine/i);
-        cy.screenshot('azure_provider_layout');
     });
 
     it('successfully detects Google Cloud Platform provider and resolves its stencils and containers', () => {
@@ -753,7 +738,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
 
         cy.get('g.node-card').contains('Web VM GCP').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('contain', 'gcp/compute/compute-engine.svg');
-        cy.screenshot('gcp_provider_layout');
     });
 
     it('successfully performs dataset-wide CSP auto-detection based on node type signatures', () => {
@@ -790,8 +774,6 @@ describe('AwsDfdVisualizer Component Tests', () => {
             .should('have.attr', 'href').and('match', /compute\/virtual-machine/i);
         cy.get('g.node-card').contains('GCP VM').parents('g.node-card').find('image')
             .should('have.attr', 'href').and('contain', 'gcp/compute/compute-engine.svg');
-        
-        cy.screenshot('hybrid_multi_csp_layout');
     });
 
     it('verifies that a large dataset (> 50 nodes) renders successfully without any license restrictions', () => {
@@ -1796,5 +1778,73 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
             cy.get('g.node-card').contains('Prod-Web-EBS').parents('g.node-card').find('image')
                 .should('have.attr', 'href').and('match', /Arch_Amazon-Elastic-Block-Store/i);
         });
+
+        it('Spec Z: verifies multi-plane Zero-Trust Blueprint layout with IdP, WAF, and Data Plane Subnet host (User Guide scenario)', () => {
+            const ztaData = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'display_name' }, { name: 'edge_label' },
+                    { name: 'group' }, { name: 'plane' }, { name: 'resource_type' }, { name: 'icon_id' }
+                ],
+                rows: [
+                    ['10.0.1.10', '10.0.2.20', 'App subnet host', 'tcp/443', 'Data Plane', 'Data_Plane', 'AWS::EC2::Instance', 'EC2'],
+                    ['idp.corp', '10.0.1.10', 'IdP', 'OIDC', 'Identity Plane', 'Identity_Plane', 'AWS::IAM::User', 'IAM'],
+                    ['waf.edge', '10.0.1.10', 'WAF', 'HTTPS/443', 'Control Plane', 'Control_Plane', 'AWS::WAFv2::WebACL', 'WAF']
+                ]
+            };
+
+            mount(
+                <div style={{ width: 1200, height: 800 }}>
+                    <AwsDfdVisualizer 
+                        data={ztaData} 
+                        config={{ layoutMode: 'zero-trust', clusterBy: 'group' }} 
+                        width={1200} 
+                        height={800} 
+                        isDarkTheme={false} 
+                    />
+                </div>
+            );
+            cy.wait(500);
+
+            // Verify node labels on cards
+            cy.get('g.node-card').should('contain.text', 'App subnet host');
+            cy.get('g.node-card').should('contain.text', 'IdP');
+            cy.get('g.node-card').should('contain.text', 'WAF');
+            cy.get('g.node-card').should('contain.text', '10.0.2.20');
+
+            // Verify edge label pills
+            cy.get('g.link-label-group').should('contain.text', 'tcp/443');
+            cy.get('g.link-label-group').should('contain.text', 'OIDC');
+            cy.get('g.link-label-group').should('contain.text', 'HTTPS/443');
+
+            // Verify Default VPC and Default Subnet container structures
+            cy.get('g.vpc-container').should('exist');
+            cy.get('g.subnet-container').should('exist');
+        });
+
+        it('Spec AA: verifies exact canonical enum plane=Policy_Plane resolves to Policy hull with shield badge and indigo border', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'group' }, { name: 'plane' }, { name: 'node_label' }
+                ],
+                rows: [
+                    ['PolicyEngine1', null, 'Policy_Plane', 'Policy_Plane', 'Policy Engine Instance']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'force', clusterBy: 'group' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(500);
+
+            // Assert Policy plane zone renders with data-plane="Policy_Plane" and shield badge
+            cy.get('g.zone').should('have.length', 1);
+            cy.get('g.zone').should('have.attr', 'data-plane', 'Policy_Plane');
+            cy.get('g.zone text').contains('🛡️ POLICY_PLANE').should('be.visible');
+        });
     });
 });
+

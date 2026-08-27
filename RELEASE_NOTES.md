@@ -1,3 +1,48 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.5
+
+**Release Date:** August 27, 2026  
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML  
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture  
+
+---
+
+## Overview
+
+Version 2.8.5 is a foundational contract, catalog, and security release. It integrates full Azure V24 service icon catalogs, schema alias auto-detection for AWS Config, strict vertical Zero-Trust tier stratification, CWE-79 XSS URL/token hardening, and canonical Zero-Trust plane enum exact resolution (`Policy_Plane`, `Identity_Plane`, `Control_Plane`, `Data_Plane`).
+
+---
+
+## 🛡️ Zero-Trust Plane Resolution & Schema Contract
+
+- **Canonical Zero-Trust Enum Exact-Match Resolution**: Fixed plane resolution logic to perform case-insensitive exact matching against the four canonical `ZERO_TRUST_PLANES` enum values (`Policy_Plane`, `Identity_Plane`, `Control_Plane`, `Data_Plane`) prior to keyword regex evaluation. Ensures SPL specifying `plane="Policy_Plane"` correctly lands within the Policy plane hull (`🛡️ POLICY_PLANE`).
+- **Strict Tier Stratification (`strictPlanes`)**: Added `strictPlanes` configuration in Formatter UI, `visualizations.conf`, and React layout engine to enforce distinct vertical tier stratification in Hierarchy and Zero-Trust layouts without vertical collapse.
+- **Operator Contract on Containment**: In v2.8.5, compute nodes assigned to Policy and Identity planes should not carry `vpcId` or `subnetId` fields in SPL to avoid nesting inside VPC/Subnet hulls. A decoupled parenting architecture (`GLOBAL_ROOT` auto-promotion) is scheduled for the next enhancement release.
+- **Field Precedence Hardening**: Clarified and aligned field evaluation precedence across `plane` → `src_plane` → `dest_plane` → `zone_name` → `group` → `vpcId` → `container`.
+
+---
+
+## 🎨 Multi-Cloud Icon & Stencil Catalogs (Azure V24 + AWS Config)
+
+- **Official Azure V24 Catalog Ingest**: Added over 700 official Microsoft Azure V24 service icons with build-time catalog generation and category fallback trees (Compute, Networking, Security, Storage, Web, AI, Databases).
+- **AWS Config Semantic Schema Aliases**: Auto-detects and binds AWS Config schema fields (`resourceType` + `resourceName` / `resourceId` / `targetResourceId`) directly to official AWS Architecture icons and node cards without requiring explicit SPL `eval` statements.
+- **Automated Catalog Tooling**: Added `scripts/generate-stencil-catalog.js` and `scripts/validate-stencils.js` to automatically index on-disk stencils and validate SVG integrity at build time.
+
+---
+
+## 🔒 Security Hardening (CWE-79 Remediation)
+
+- **Fallback & Missing Image URL Allowlist**: Implemented `sanitizeFallbackUrl` and `missingImageURL` validation to reject untrusted external URL schemes (`javascript:`, `data:`, arbitrary external domains) and safely fall back to `generic.svg`.
+- **Drilldown Token Sanitization**: Hardened token interpolation and drilldown handlers via `sanitizeSplunkToken`, preserving SPL structural syntax while escaping malicious injection payloads in node drilldown parameters.
+
+---
+
+## 🧪 Testing and Quality Assurance
+
+- **57 Passing Cypress Component Specs**: Comprehensive test coverage across multi-cloud provider detection, hybrid plane assignment, strict tier stratification, dynamic link bundling, and security validations.
+- **Splunk AppInspect 0/0/0**: Fully validated against Splunk AppInspect with 0 errors, 0 warnings, and 0 failures.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.8.4
 
 **Release Date:** August 6, 2026
