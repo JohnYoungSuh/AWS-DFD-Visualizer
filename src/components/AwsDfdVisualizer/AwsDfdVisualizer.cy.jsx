@@ -1821,7 +1821,7 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
             cy.get('g.subnet-container').should('exist');
         });
 
-        it('Spec AA: verifies exact canonical enum plane=Policy_Plane resolves to Policy hull with shield badge and indigo border', () => {
+        it('Spec AA: verifies exact canonical enum plane=Policy_Plane resolves to Policy hull (Force) and Policy Y-band 60-250 (Hierarchy strictPlanes)', () => {
             const data = {
                 fields: [
                     { name: 'from' }, { name: 'to' }, { name: 'group' }, { name: 'plane' }, { name: 'node_label' }
@@ -1831,6 +1831,7 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
                 ]
             };
 
+            // 1. Force layout: verify cluster zone hull, data-plane, data-stroke, and shield badge
             mount(
                 <AwsDfdVisualizer 
                     data={data} 
@@ -1840,11 +1841,41 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
             );
             cy.wait(500);
 
-            // Assert Policy plane zone renders with data-plane="Policy_Plane", indigo stroke, and shield badge
             cy.get('g.zone').should('have.length', 1);
             cy.get('g.zone').should('have.attr', 'data-plane', 'Policy_Plane');
             cy.get('g.zone').should('have.attr', 'data-stroke', '#818cf8');
             cy.get('g.zone text').contains('🛡️ POLICY_PLANE').should('be.visible');
+
+            // 2. Hierarchy layout with strictPlanes: verify node translates to Policy Y-band (60–250)
+            const fourPlaneData = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'plane' }, { name: 'node_label' }],
+                rows: [
+                    ['PolicyEngine1', 'AD_Auth1', 'Policy_Plane', 'Policy Engine Instance'],
+                    ['AD_Auth1', 'WAF_GW1', 'Identity_Plane', 'Corporate IAM'],
+                    ['WAF_GW1', 'DB_Host1', 'Control_Plane', 'WAF Gateway'],
+                    ['DB_Host1', null, 'Data_Plane', 'Database Host']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={fourPlaneData} 
+                    config={{ 
+                        layoutMode: 'hierarchy', 
+                        hierarchyDirection: 'Top to Bottom',
+                        strictPlanes: 'true',
+                        enablePhysics: 'false'
+                    }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(600);
+
+            cy.get('g.node-card').contains('Policy Engine Instance').parents('g.node-card').invoke('attr', 'transform').then(t => {
+                const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(t);
+                const yPolicy = parseFloat(match[2]);
+                expect(yPolicy).to.be.within(60, 250);
+            });
         });
     });
 });

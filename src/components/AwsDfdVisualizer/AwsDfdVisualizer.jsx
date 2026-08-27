@@ -522,6 +522,7 @@ const parseSplunkData = (data) => {
                 component_type: type,
                 group, 
                 plane: plane || null,
+                dest_plane: ensureString(rawDestPlane) || null,
                 icon, 
                 icon_id: icon,
                 status, 
@@ -574,6 +575,9 @@ const parseSplunkData = (data) => {
             if (rawZoneName && !existingNode.zone_name) {
                 existingNode.zone_name = ensureString(rawZoneName);
             }
+            if (rawDestPlane && !existingNode.dest_plane) {
+                existingNode.dest_plane = ensureString(rawDestPlane);
+            }
             if (parsedSGs && parsedSGs.length && (!existingNode.security_groups || !existingNode.security_groups.length)) {
                 existingNode.security_groups = parsedSGs;
             }
@@ -597,6 +601,7 @@ const parseSplunkData = (data) => {
                     component_type: 'AWS::Resource',
                     group: ensureString(rawDestPlane) || group, 
                     plane: ensureString(rawDestPlane) || null,
+                    dest_plane: ensureString(rawDestPlane) || null,
                     icon: '', 
                     icon_id: '',
                     captureTime: null, 
@@ -609,6 +614,7 @@ const parseSplunkData = (data) => {
                 const existingToNode = nodesMap.get(safeToId);
                 if (rawDestPlane && !existingToNode.plane) {
                     existingToNode.plane = ensureString(rawDestPlane);
+                    existingToNode.dest_plane = ensureString(rawDestPlane);
                     existingToNode.resolvedPlane = resolveNodePlane(existingToNode);
                 }
             }
