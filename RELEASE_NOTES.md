@@ -16,7 +16,7 @@ Version 2.8.5 is a foundational contract, catalog, and security release. It inte
 
 - **Canonical Zero-Trust Enum Exact-Match Resolution**: Fixed plane resolution logic to perform case-insensitive exact matching against the four canonical `ZERO_TRUST_PLANES` enum values (`Policy_Plane`, `Identity_Plane`, `Control_Plane`, `Data_Plane`) prior to keyword regex evaluation. Ensures SPL specifying `plane="Policy_Plane"` correctly lands within the Policy plane hull (`🛡️ POLICY_PLANE`).
 - **Strict Tier Stratification (`strictPlanes`)**: Added `strictPlanes` configuration in Formatter UI, `visualizations.conf`, and React layout engine to enforce distinct vertical tier stratification in Hierarchy and Zero-Trust layouts without vertical collapse.
-- **Operator Contract on Containment**: In v2.8.5, compute nodes assigned to Policy and Identity planes should not carry `vpcId` or `subnetId` fields in SPL to avoid nesting inside VPC/Subnet hulls. A decoupled parenting architecture (`GLOBAL_ROOT` auto-promotion) is scheduled for the next enhancement release.
+- **Zero-Trust Containment Decoupling**: Hardened `resolveHierarchy` so that Policy and Identity plane compute nodes automatically parent directly to `GLOBAL_ROOT` regardless of `subnetId` or `vpcId` values. Prevents policy/identity resources from nesting inside subnet/VPC container hulls and suppresses unintended dummy subnet generation.
 - **Field Precedence Hardening**: Clarified and aligned field evaluation precedence across `plane` → `src_plane` → `dest_plane` → `zone_name` → `group` → `vpcId` → `container`.
 
 ---

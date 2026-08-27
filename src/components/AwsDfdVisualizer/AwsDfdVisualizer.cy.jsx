@@ -1877,6 +1877,33 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
                 expect(yPolicy).to.be.within(60, 250);
             });
         });
+        it('Spec AB: verifies Policy/Identity nodes with subnetId parent to GLOBAL_ROOT and do not spawn dummy subnet containers', () => {
+            const data = {
+                fields: [
+                    { name: 'from' }, { name: 'to' }, { name: 'group' }, { name: 'plane' }, { name: 'subnetId' }, { name: 'node_label' }
+                ],
+                rows: [
+                    ['PolicyEngine1', 'DataHost1', 'Policy_Plane', 'Policy_Plane', 'subnet-2', 'Policy Engine Server'],
+                    ['DataHost1', null, 'Data_Plane', 'Data_Plane', 'subnet-1', 'Data App Server']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ layoutMode: 'zero-trust' }} 
+                    isDarkTheme={true} 
+                />
+            );
+            cy.wait(500);
+
+            // Data node spawns subnet-1 container
+            cy.get('g.subnet-container').should('have.length', 1);
+            cy.get('g.subnet-container text').should('contain.text', 'Subnet (subnet-1)');
+
+            // Policy node card exists but subnet-2 container is NOT created
+            cy.get('g.node-card').contains('Policy Engine Server').should('be.visible');
+            cy.get('g.subnet-container text').should('not.contain.text', 'subnet-2');
+        });
     });
 });
-

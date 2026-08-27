@@ -1469,7 +1469,8 @@ const resolveHierarchy = (nodes, adapter) => {
     const dummyNodes = [];
     
     computes.forEach(node => {
-        if (node.subnetId) {
+        const isPolicyOrIdentity = node.resolvedPlane === ZERO_TRUST_PLANES.POLICY || node.resolvedPlane === ZERO_TRUST_PLANES.IDENTITY;
+        if (node.subnetId && !isPolicyOrIdentity) {
             const safeSubnetId = String(node.subnetId).replace(/[/:]/g, '-').toLowerCase();
             if (!nodeMap.has(safeSubnetId)) {
                 const newSub = {
@@ -1503,7 +1504,8 @@ const resolveHierarchy = (nodes, adapter) => {
         }
     });
 
-    if (computes.length > 0 && vpcs.length === 0 && subnets.length === 0) {
+    const nonZtComputes = computes.filter(n => n.resolvedPlane !== ZERO_TRUST_PLANES.POLICY && n.resolvedPlane !== ZERO_TRUST_PLANES.IDENTITY);
+    if (nonZtComputes.length > 0 && vpcs.length === 0 && subnets.length === 0) {
         const defaultVpc = {
             id: 'default-vpc',
             label: `Default ${adapter.networkContainerName}`,
@@ -1542,10 +1544,15 @@ const resolveHierarchy = (nodes, adapter) => {
     });
 
     computes.forEach(node => {
-        const parentId = node.subnetId 
-            ? String(node.subnetId).replace(/[/:]/g, '-').toLowerCase() 
-            : (subnets[0] ? subnets[0].id : (vpcs[0] ? vpcs[0].id : "GLOBAL_ROOT"));
-        node.parentId = nodeMap.has(parentId) ? parentId : "GLOBAL_ROOT";
+        const isPolicyOrIdentity = node.resolvedPlane === ZERO_TRUST_PLANES.POLICY || node.resolvedPlane === ZERO_TRUST_PLANES.IDENTITY;
+        if (isPolicyOrIdentity) {
+            node.parentId = "GLOBAL_ROOT";
+        } else {
+            const parentId = node.subnetId 
+                ? String(node.subnetId).replace(/[/:]/g, '-').toLowerCase() 
+                : (subnets[0] ? subnets[0].id : (vpcs[0] ? vpcs[0].id : "GLOBAL_ROOT"));
+            node.parentId = nodeMap.has(parentId) ? parentId : "GLOBAL_ROOT";
+        }
         stratifiedNodes.push(node);
     });
 
