@@ -1840,9 +1840,10 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
             );
             cy.wait(500);
 
-            // Assert Policy plane zone renders with data-plane="Policy_Plane" and shield badge
+            // Assert Policy plane zone renders with data-plane="Policy_Plane", indigo stroke, and shield badge
             cy.get('g.zone').should('have.length', 1);
             cy.get('g.zone').should('have.attr', 'data-plane', 'Policy_Plane');
+            cy.get('g.zone').should('have.attr', 'data-stroke', '#818cf8');
             cy.get('g.zone text').contains('🛡️ POLICY_PLANE').should('be.visible');
         });
     });
