@@ -577,6 +577,7 @@ const parseSplunkData = (data) => {
             }
             if (rawDestPlane && !existingNode.dest_plane) {
                 existingNode.dest_plane = ensureString(rawDestPlane);
+                existingNode.resolvedPlane = resolveNodePlane(existingNode);
             }
             if (parsedSGs && parsedSGs.length && (!existingNode.security_groups || !existingNode.security_groups.length)) {
                 existingNode.security_groups = parsedSGs;
@@ -612,9 +613,11 @@ const parseSplunkData = (data) => {
                 nodesMap.set(safeToId, toNode);
             } else {
                 const existingToNode = nodesMap.get(safeToId);
+                if (rawDestPlane && !existingToNode.dest_plane) {
+                    existingToNode.dest_plane = ensureString(rawDestPlane);
+                }
                 if (rawDestPlane && !existingToNode.plane) {
                     existingToNode.plane = ensureString(rawDestPlane);
-                    existingToNode.dest_plane = ensureString(rawDestPlane);
                     existingToNode.resolvedPlane = resolveNodePlane(existingToNode);
                 }
             }
