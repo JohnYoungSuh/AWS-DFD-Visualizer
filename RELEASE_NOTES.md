@@ -38,7 +38,7 @@ Version 2.8.5 is a foundational contract, catalog, and security release. It inte
 
 ## 🧪 Testing and Quality Assurance
 
-- **57 Passing Cypress Component Specs**: Comprehensive test coverage across multi-cloud provider detection, hybrid plane assignment, strict tier stratification, dynamic link bundling, and security validations.
+- **58 Passing Cypress Component Specs**: Comprehensive test coverage across multi-cloud provider detection, hybrid plane assignment, strict tier stratification, dynamic link bundling, and security validations.
 - **Splunk AppInspect 0/0/0**: Fully validated against Splunk AppInspect with 0 errors, 0 warnings, and 0 failures.
 
 ---
