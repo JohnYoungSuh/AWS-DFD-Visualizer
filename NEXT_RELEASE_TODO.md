@@ -15,6 +15,7 @@ This list is based on failure analysis against mock config and standard D3 force
   6. Hardened SVG and Draw.io exporters against case-insensitive `<SCRIPT>` / `<sCrIpT>` injection with DOM validation.
   7. Synchronized all 5 version files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`) plus CI workflows to `2.8.6`.
   8. Hardened CI workflow with unignored Bandit scans (`-x ./.venv,./node_modules,./dist -ll`), production `npm audit --omit=dev --audit-level=high` (0 vulnerabilities), `@splunk/webpack-configs` pin (`^7.0.3`), `browserslist` override (`^4.28.7`), and `check_for_updates = 0` in `app.conf`. Verified 100% Cypress component test pass rate across 66 specs and 0/0/0 Splunk AppInspect report.
+  9. Formally rolled up planned marketplace alignment, documentation, and the LTS freeze into v2.8.6, eliminating v2.8.7 entirely from the roadmap.
 
 ### ✅ Session: August 26, 2026 (v2.8.5 Steps 2–7 · Semantic Schema Aliases, Category Fallback Hierarchy, Azure V24 Ingest, Multi-Plane Badges & Release Hygiene)
 - [x] **v2.8.5 Release Completion** — Addressed all 7 SA review items: unified data contract aliases (`display_name`, `resource_type`, `icon_id`) in `parseSplunkData` with label decoupling; ingested official Microsoft Azure V24 SVG icon pack under `appserver/static/icons/Azure-Service-Icons_V24/` across the 14 canonical categories (`compute`, `databases`, `storage`, `networking`, `security`, `identity`, `analytics`, `containers`, `integration`, `ai`, `management`, `devops`, `web`, `general`); sanitized all filenames to URL-safe lowercase kebab-case; upgraded `scripts/generate-stencil-catalog.js` to dynamically detect `Azure-Service-Icons_*` and emit $O(1)$ category defaults (enforcing 64px icons); synchronized `aliases.js` and `README_STENCILS.md`; enhanced `Zone` with 4 distinct theme-aware palettes and centered header badges (`🛡️`, `🔑`, `⚙️`, `💾`) with neutral fallback for generic groups; embedded live SPL `<table>` inspector panels in `default/data/ui/views/user_guide.xml`; synchronized all 5 version files to `2.8.5`; validated 100% test pass rate across 54 Cypress component tests and 0/0/0 AppInspect report.
@@ -113,33 +114,36 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 
-## 🛑 Strategic Pivot: v2.8.7 Traction Sprint Cancelled & Portfolio Freeze
+## 🚀 Release v2.8.6 (Security Hardening, Portfolio Alignment & LTS Freeze)
 
-> **Executive & PM Strategic Decision:** September 18, 2026  
-> **Status:** CANCELLED — No feature development for Visualizer v2.8.7 or Companion v1.2.  
-> **Core Mandate:** Engineering has outrun public pull. End the minor-version treadmill; separate concerns cleanly across both apps; publish the unreleased security drop immediately; freeze development.
+> **Release Date:** September 18, 2026  
+> **Strategic Realignment:** Version 2.8.7 has been dissolved and rolled up entirely into v2.8.6. There will be no v2.8.7 release.  
+> **Status:** Released & Frozen. Ready for Splunkbase submission.
 
-### Strategic Directives & Portfolio Realignment:
+### Rolled-Up Scope & Release Summary:
 
-1. **Publish Visualizer v2.8.6 As-Is (Immediate Operational Release)**
-   - *Status*: Ready for Splunkbase submission.
-   - *Rationale*: v2.8.6 contains critical security fixes (SPL injection denylist, path traversal prevention, DoS circuit breaker, sanitization). Splunkbase installers are still on v2.8.5. Publishing 2.8.6 is an operational release milestone, not a build task. It must not be delayed or gated by onboarding UX, sample dashboards, or macros.
+1. **Security Hardening & Vulnerability Remediation** *(Completed)*
+   - Implemented high-risk SPL command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and macro execution blocking on drilldown fields.
+   - Decoupled secrets from testing harnesses (`test-drilldown.py`, `test-spl.py`), reading from environment variables with TLS verification.
+   - Hardened URI path traversal (`decodeURIComponent`), case-insensitive DOM script sanitization on SVG/Draw.io exports, and DoS circuit breaker at 5,000 rows.
+   - Resolved CSV middle-column indexing shift in Live Feed console; gated debug HUD logging behind `isDebug`.
+   - Enforced non-zero exit codes on Bandit SAST, production `npm audit --omit=dev --audit-level=high` (0 vulnerabilities), and verified Splunk AppInspect (0 errors, 0 failures).
 
-2. **Strict Architectural Separation of Concerns (Two Jobs, Two Apps)**
-   - **AWS-DFD-Companion (Project 1)**: ETL engine. Responsible for turning raw AWS Config / VPC Flow / inventory telemetry into normalized DFD table rows (`from`, `to`, `edge_label`, `status`). All CIM/TA-AWS macros belong exclusively here.
-   - **AWS-DFD-Visualizer (Project 2)**: Diagram engine. Responsible for rendering normalized DFD table rows into an interactive Zero-Trust / DoD IL5 DFD on canvas. Packaging telemetry-mapping macros inside the visualizer violates single-responsibility boundaries and pollutes the visualization artifact.
+2. **Portfolio & Ecosystem Alignment (Companion + Visualizer)** *(Completed)*
+   - Synchronized Splunkbase listing copy, user documentation (`README.MD`), and `splunk-app-manifest.json` for v2.8.6.
+   - Formalized the Two-App solution boundary:
+     - **AWS-DFD-Companion (v1.1.6)**: The data engineering utility. Ingests raw AWS telemetry and normalizes via CIM/TA-AWS macros into standard DFD table rows (`from`, `to`, `edge_label`, `status`). Telemetry macros belong exclusively here.
+     - **AWS-DFD-Visualizer (v2.8.6)**: The presentation canvas. Renders normalized rows into audit-ready Zero-Trust diagrams.
+     - Core positioning: *"Companion produces the table; Visualizer draws the diagram."*
 
-3. **LTS Maintenance & Code Freeze Post-2.8.6**
-   - **Companion**: Pinned at current release **v1.1.6**.
-   - **Visualizer**: Frozen at **v2.8.6** upon publication.
-   - **Permitted Scope**: Zero new feature sprints. Work is strictly confined to:
-     - Splunk core compatibility maintenance.
-     - Splunk AppInspect zero-defect compliance (0 errors, 0 warnings, 0 failures).
+3. **LTS Maintenance Mode & Code Freeze** *(Active)*
+   - Both apps are frozen at their current releases (**Visualizer v2.8.6**, **Companion v1.1.6**).
+   - Planned roadmap items previously contemplated for 2.8.7 (in-viz CIM macros, demo showcase version bump) are closed: data macros belong in Companion, and no minor-version treadmill will be run.
+   - Active maintenance is strictly restricted to:
+     - Splunk core platform version compatibility.
+     - Splunk AppInspect zero-defect certification (0 errors, 0 failures, 0 warnings).
      - Critical / CVE security fixes.
-   - **Trigger for New Code**: No further code will be written until a verified, named operator running v2.8.6 in production submits an explicit requirement or bug report.
-
-4. **Go-To-Market Alignment**
-   - Market the pair as a unified solution across documentation and Splunkbase listing copy: *"Companion prepares the table; Visualizer renders the diagram."*
+   - **Operator Engagement Gate**: No further code will be written until a verified, named operator with an active v2.8.6 production installation requests a concrete change.
 
 ---
 
