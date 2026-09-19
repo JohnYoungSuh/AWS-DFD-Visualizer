@@ -113,49 +113,33 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 
-## 🚀 Release v2.8.7 (60-Day Traction Sprint: Frictionless Onboarding & Ecosystem Ingestion)
+## 🛑 Strategic Pivot: v2.8.7 Traction Sprint Cancelled & Portfolio Freeze
 
-> **Sprint Duration:** 2 Weeks (Targeting Release: October 2, 2026)  
-> **Evaluation Window:** 60 Days Post-Release (Review Date: December 2, 2026)  
-> **Strategic Intent:** Overcome the "first 5 minutes" onboarding drop-off and test external discovery channels.
+> **Executive & PM Strategic Decision:** September 18, 2026  
+> **Status:** CANCELLED — No feature development for Visualizer v2.8.7 or Companion v1.2.  
+> **Core Mandate:** Engineering has outrun public pull. End the minor-version treadmill; separate concerns cleanly across both apps; publish the unreleased security drop immediately; freeze development.
 
-### Committed Scope:
+### Strategic Directives & Portfolio Realignment:
 
-- [ ] **First-Run Experience: Interactive Onboarding & Demo Showcase** *(Priority: 🔴 Critical)*
-    - *Context*: Users currently encounter a blank canvas upon installing and drop off without configuring SPL.
-    - *Action*:
-        1. Create `default/data/ui/views/demo_showcase.xml` with pre-baked mock VPC/Config data and one-click interactive toggle.
-        2. Implement interactive empty-state canvas fallback when a search returns zero rows (`"No topology data detected. Expected columns: from, to. [Click to view sample SPL]"`).
-    - *Acceptance*: A newly installed app provides a working topology diagram within 60 seconds without manual query authoring.
+1. **Publish Visualizer v2.8.6 As-Is (Immediate Operational Release)**
+   - *Status*: Ready for Splunkbase submission.
+   - *Rationale*: v2.8.6 contains critical security fixes (SPL injection denylist, path traversal prevention, DoS circuit breaker, sanitization). Splunkbase installers are still on v2.8.5. Publishing 2.8.6 is an operational release milestone, not a build task. It must not be delayed or gated by onboarding UX, sample dashboards, or macros.
 
-- [ ] **CIM/TA-AWS Macros Packaging (`default/macros.conf`)** *(Priority: 🟡 High)*
-    - *Context*: Users struggle to write complex `eval`/`rex`/`stats` queries against raw AWS flow logs or config sourcetypes.
-    - *Action*:
-        1. Add `aws_dfd_vpc_flows` macro mapping standard CIM / `sourcetype="aws:cloudwatchlogs:vpcflow"` events into `from`, `to`, `edge_label`, `status`.
-        2. Add `aws_topology_from_config` macro mapping `sourcetype="aws:config"` relationships into topology rows.
-    - *Acceptance*: Users running ``| `aws_dfd_vpc_flows` `` or ``| `aws_topology_from_config` `` get immediate, valid topology visualization.
+2. **Strict Architectural Separation of Concerns (Two Jobs, Two Apps)**
+   - **AWS-DFD-Companion (Project 1)**: ETL engine. Responsible for turning raw AWS Config / VPC Flow / inventory telemetry into normalized DFD table rows (`from`, `to`, `edge_label`, `status`). All CIM/TA-AWS macros belong exclusively here.
+   - **AWS-DFD-Visualizer (Project 2)**: Diagram engine. Responsible for rendering normalized DFD table rows into an interactive Zero-Trust / DoD IL5 DFD on canvas. Packaging telemetry-mapping macros inside the visualizer violates single-responsibility boundaries and pollutes the visualization artifact.
 
-- [ ] **Splunkbase Marketplace Metadata & SEO Alignment** *(Priority: 🟢 Medium)*
-    - *Context*: 85% of traffic is in-product; marketplace search terms must capture high-intent buyers.
-    - *Action*: Update Splunkbase metadata, tags (`Zero Trust`, `NIST 800-53`, `VPC Flow Logs`, `Multi-Cloud`, `Lateral Movement`), and summary copy.
-    - *Acceptance*: Splunkbase listing copy and tags updated in `SPLUNKBASE_LISTING.md` and submitted to Splunkbase portal.
+3. **LTS Maintenance & Code Freeze Post-2.8.6**
+   - **Companion**: Pinned at current release **v1.1.6**.
+   - **Visualizer**: Frozen at **v2.8.6** upon publication.
+   - **Permitted Scope**: Zero new feature sprints. Work is strictly confined to:
+     - Splunk core compatibility maintenance.
+     - Splunk AppInspect zero-defect compliance (0 errors, 0 warnings, 0 failures).
+     - Critical / CVE security fixes.
+   - **Trigger for New Code**: No further code will be written until a verified, named operator running v2.8.6 in production submits an explicit requirement or bug report.
 
-- [ ] **External GTM Walkthrough Publication** *(Priority: 🟢 Medium)*
-    - *Context*: Zero external referral traffic requires driving top-of-funnel discovery.
-    - *Action*: Publish technical walkthrough article ("Visualizing Zero Trust & Lateral Movement in Splunk") on Splunk Community Blog and Reddit `r/splunk`.
-    - *Acceptance*: Article live with link to Splunkbase and GitHub repository.
-
----
-
-### 🛑 Decision Gate (T + 60 Days: December 2, 2026)
-
-| Metric / Signal | Target for GO (Active Enterprise Roadmap) | Signal for NO-GO (LTS Maintenance Mode) |
-|---|---|---|
-| **Weekly Downloads** | $\ge 25$ downloads/week sustained on Splunkbase | $< 10$ downloads/week |
-| **Enterprise Inbound Leads** | $\ge 3$ qualified enterprise inquiries via contact email / GitHub | 0 inquiries across 60 days |
-| **Community Traction** | Active discussion/mentions in Splunk Community Slack / Reddit | Minimal or zero community interaction |
-
-*If NO-GO criteria are met, the project will be locked to LTS Maintenance Mode (DoD IL5 compliance, critical bug fixes, and Splunk core version compatibility only).*
+4. **Go-To-Market Alignment**
+   - Market the pair as a unified solution across documentation and Splunkbase listing copy: *"Companion prepares the table; Visualizer renders the diagram."*
 
 ---
 
