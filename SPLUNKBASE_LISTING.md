@@ -209,7 +209,7 @@ All options are accessible via the **Format** button in the dashboard panel edit
 | **Export to Draw.io** | Click "Export to Draw.io" button in the HUD console | Standard uncompressed `mxGraphModel` XML — import directly into draw.io for editable engineering diagrams |
 | **CSV Live Console** | Toggle the CSV console overlay in the HUD | Paste a raw edge-list CSV (`from,to,node_label,edge_label,vpcId,subnetId,securityGroups`) to render a topology without running a Splunk search |
 
-> **Security note:** All SVG and Draw.io exports are scanned for embedded `<script>` tags before download. Files containing script injection are blocked and logged via `Splunk.util.trackEvent()`.
+> **Security note:** All SVG and Draw.io exports are scanned for embedded `<script>` tags before download. Files containing script injection are blocked and logged locally, executing entirely in client-side memory without outbound telemetry.
 
 ---
 

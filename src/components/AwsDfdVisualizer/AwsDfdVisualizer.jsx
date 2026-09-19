@@ -1140,13 +1140,23 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
         if (/^(https?:|\/\/|javascript:|data:)/i.test(trimmed)) {
             return getAppStaticUrl('icons/generic.svg');
         }
-        // Allow app-relative static paths
-        if (trimmed.startsWith('/static/app/AWS-DFD-Visualizer/') || 
-            trimmed.startsWith('/en-US/static/app/AWS-DFD-Visualizer/')) {
-            return trimmed;
+        // STIG / CWE-22 Hardening: Decode URL encoding first, then reject traversal, backslashes, or lingering percent signs
+        let decoded = trimmed;
+        try {
+            decoded = decodeURIComponent(trimmed);
+        } catch (e) {
+            return getAppStaticUrl('icons/generic.svg');
         }
-        if (trimmed.startsWith('icons/')) {
-            return getAppStaticUrl(trimmed);
+        if (decoded.includes('..') || decoded.includes('\\') || decoded.includes('%') || trimmed.includes('..') || trimmed.includes('\\')) {
+            return getAppStaticUrl('icons/generic.svg');
+        }
+        // Allow app-relative static paths
+        if (decoded.startsWith('/static/app/AWS-DFD-Visualizer/') || 
+            decoded.startsWith('/en-US/static/app/AWS-DFD-Visualizer/')) {
+            return decoded;
+        }
+        if (decoded.startsWith('icons/')) {
+            return getAppStaticUrl(decoded);
         }
         return getAppStaticUrl('icons/generic.svg');
     };
@@ -1232,7 +1242,6 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
            onMouseEnter={() => setIsHovered(true)}
            onMouseLeave={() => setIsHovered(false)}
            onClickCapture={(e) => {
-               console.log("AWS-DFD-Visualizer: onClickCapture fired!", node.id);
                onNodeClick(e, node, 'click');
            }}
            onDoubleClick={(e) => onNodeDoubleClick(e, node)} 
@@ -1876,8 +1885,18 @@ const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter, planeT
     xml += `  </diagram>\n`;
     xml += `</mxfile>\n`;
 
-    // STIG Hardening: Ensure exported Draw.io XML doesn't contain embedded <script> tags
-    if (xml.includes('<script')) {
+    // STIG Hardening: Ensure exported Draw.io XML doesn't contain embedded <script> tags (case-insensitive + DOM parser)
+    let hasScript = /<script/i.test(xml);
+    if (!hasScript && typeof DOMParser !== 'undefined') {
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xml, 'text/xml');
+            hasScript = xmlDoc.getElementsByTagName('script').length > 0;
+        } catch (e) {
+            // fallback to regex result
+        }
+    }
+    if (hasScript) {
         console.error("AWS-DFD-Visualizer: Draw.io export blocked due to unauthorized script elements.");
         return;
     }
@@ -1921,6 +1940,40 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         // All other characters (e.g. quotes, semicolons, pipe characters) are neutralized to underscores to prevent SPL injection.
         return rawToken.replace(/[^a-zA-Z0-9\-_:/. ]/g, '_');
     };
+
+    const isDebug = config?.debug === 'true' || (typeof window !== 'undefined' && window.__AWS_DFD_DEBUG__);
+    const debugLog = (...args) => {
+        if (isDebug) {
+            console.log(...args);
+        }
+    };
+
+    // STIG / IL5 Hardening: High-risk SPL command denylist for untrusted column-driven queries
+    // Commands that can delete data, exfiltrate data, invoke OS scripts, or run arbitrary REST endpoints
+    const DANGEROUS_SPL_COMMANDS = /(?:^|[|\n])\s*(?:delete|sendemail|outputcsv|outputlookup|collect|mcollect|meventcollect|tscollect|outputtext|rest|runshellscript|script|dump|sendalert|map|run|crawl|dbxoutput)\b/im;
+
+    const validateColumnSpl = (query) => {
+        if (!query || typeof query !== 'string') return '';
+        const trimmed = query.trim();
+        // XSS / URL schemes guard
+        if (/<\/?script[^>]*>/i.test(trimmed) || /^(javascript:|data:)/i.test(trimmed)) {
+            return '';
+        }
+        // Block backtick macro expansions in untrusted column-driven SPL
+        if (/`/.test(trimmed)) {
+            console.warn("AWS-DFD-Visualizer: Blocked macro expansion in column-driven drilldown query.");
+            return '';
+        }
+        // Check for high-risk SPL commands (preceded by beginning of string, pipe, or newline)
+        if (DANGEROUS_SPL_COMMANDS.test(trimmed)) {
+            console.warn("AWS-DFD-Visualizer: Blocked high-risk SPL command in column-driven drilldown query.");
+            return '';
+        }
+        return query;
+    };
+
+    const allowColumnDrilldown = String(config?.allowColumnDrilldown ?? 'true') === 'true';
+    const enableCsvConsole = String(config?.enableCsvConsole ?? 'true') === 'true';
 
     const drilldownClick = config?.drilldownClick || 'singleOrDouble';
     const clusterBy = (config?.clusterBy || 'none').toLowerCase();
@@ -2007,7 +2060,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         return params;
     }, [designLayout, config?.linkTextSize]);
 
-    console.log("AWS-DFD-Visualizer: Config values read from props:", {
+    debugLog("AWS-DFD-Visualizer: Config values read from props:", {
         config,
         drilldownClick,
         clusterBy,
@@ -2019,31 +2072,30 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     // High 6: Advanced Token Integration
     const handleNodeClick = (e, node, actionType = 'click') => {
-        console.log(`AWS-DFD-Visualizer: handleNodeClick ENTERED! actionType=${actionType}, nodeId=${node.id || node.arn}`);
+        debugLog(`AWS-DFD-Visualizer: handleNodeClick ENTERED! actionType=${actionType}, nodeId=${node.id || node.arn}`);
         
         if (drilldownClick !== 'singleOrDouble' && actionType === 'click') {
-            console.log("AWS-DFD-Visualizer: Click ignored because drilldownClick is NOT singleOrDouble. It is:", drilldownClick);
+            debugLog("AWS-DFD-Visualizer: Click ignored because drilldownClick is NOT singleOrDouble. It is:", drilldownClick);
             return;
         }
         if (actionType === 'click' && clickTimeoutRef.current) {
-            console.log("AWS-DFD-Visualizer: Click ignored because of double-click timeout guard!");
+            debugLog("AWS-DFD-Visualizer: Click ignored because of double-click timeout guard!");
             return;
         }
         
-        console.log("AWS-DFD-Visualizer: Click validated! Executing drilldown...", { actionType, nodeId: node.id || node.arn });
+        debugLog("AWS-DFD-Visualizer: Click validated! Executing drilldown...", { actionType, nodeId: node.id || node.arn });
         
         const executeDrilldown = () => {
             let drilldownQuery = '';
-            if (node.node_drilldown) {
-                let query = String(node.node_drilldown);
-                if (/<\/?script[^>]*>/i.test(query) || /^(javascript:|data:)/i.test(query.trim())) {
-                    query = '';
-                } else {
+            if (allowColumnDrilldown && node.node_drilldown) {
+                let query = validateColumnSpl(String(node.node_drilldown));
+                if (query) {
                     query = query
                         .replace(/\$arn\$/g, sanitizeSplunkToken(node.arn || node.id))
                         .replace(/\$id\$/g, sanitizeSplunkToken(node.id))
                         .replace(/\$label\$/g, sanitizeSplunkToken(node.label || ''))
                         .replace(/\$type\$/g, sanitizeSplunkToken(node.type || ''));
+                    query = validateColumnSpl(query);
                 }
                 drilldownQuery = query;
             } else if (config.drilldownNodeTemplate) {
@@ -2077,14 +2129,12 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     };
 
     const handleLinkClick = (e, link) => {
-        console.log("AWS-DFD-Visualizer: Click received on link!", { source: link.source.id, target: link.target.id });
+        debugLog("AWS-DFD-Visualizer: Click received on link!", { source: link.source.id, target: link.target.id });
         
         let drilldownQuery = '';
-        if (link.link_drilldown) {
-            let query = String(link.link_drilldown);
-            if (/<\/?script[^>]*>/i.test(query) || /^(javascript:|data:)/i.test(query.trim())) {
-                query = '';
-            } else {
+        if (allowColumnDrilldown && link.link_drilldown) {
+            let query = validateColumnSpl(String(link.link_drilldown));
+            if (query) {
                 query = query
                     .replace(/\$sourceArn\$/g, sanitizeSplunkToken(link.source.arn || link.source.id))
                     .replace(/\$targetArn\$/g, sanitizeSplunkToken(link.target.arn || link.target.id))
@@ -2093,6 +2143,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     .replace(/\$label\$/g, sanitizeSplunkToken(link.label || ''))
                     .replace(/\$sourceLabel\$/g, sanitizeSplunkToken(link.source.label || ''))
                     .replace(/\$targetLabel\$/g, sanitizeSplunkToken(link.target.label || ''));
+                query = validateColumnSpl(query);
             }
             drilldownQuery = query;
         } else if (config.drilldownLinkTemplate) {
@@ -2150,20 +2201,26 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             return result;
         };
 
-        const headers = parseCsvLine(lines[0]).map(h => h.replace(/^["']|["']$/g, '').toLowerCase().trim());
+        const rawHeaders = parseCsvLine(lines[0])
+            .map(h => h.replace(/^["']|["']$/g, '').toLowerCase().trim());
         const results = [];
 
         for (let i = 1; i < lines.length; i++) {
             const rowValues = parseCsvLine(lines[i]).map(v => v.replace(/^["']|["']$/g, ''));
             const rowObj = {};
-            headers.forEach((header, idx) => {
+            rawHeaders.forEach((header, idx) => {
                 rowObj[header] = rowValues[idx] || '';
             });
+            // Untrusted CSV Live Feed: neutralize column-driven drilldowns
+            delete rowObj.node_drilldown;
+            delete rowObj.link_drilldown;
             results.push(rowObj);
         }
 
+        const filteredHeaders = rawHeaders.filter(h => h !== 'node_drilldown' && h !== 'link_drilldown');
+
         setLocalData({
-            fields: headers.map(h => ({ name: h })),
+            fields: filteredHeaders.map(h => ({ name: h })),
             results: results
         });
     };
@@ -2448,7 +2505,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 if (hNode) {
                     n.x = hNode.x;
                     n.y = hNode.y;
-                    console.log(`HIERARCHY NODE: ${n.id} (${n.label}) -> x: ${n.x}, y: ${n.y}`);
+                    debugLog(`HIERARCHY NODE: ${n.id} (${n.label}) -> x: ${n.x}, y: ${n.y}`);
                 }
                 return n;
             });
@@ -2638,7 +2695,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     const isLicenseExceeded = false;
 
-    console.log("AWS-DFD-Visualizer: layout determination result:", {
+    debugLog("AWS-DFD-Visualizer: layout determination result:", {
         isZeroTrustLayout,
         isZeroTrust,
         isStaticBlueprint
@@ -3190,8 +3247,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const serializer = new XMLSerializer();
             let svgString = serializer.serializeToString(clone);
 
-            // STIG Hardening: Ensure exported SVG doesn't contain embedded <script> tags
-            const hasScript = clone.getElementsByTagName('script').length > 0 || svgString.includes('<script');
+            // STIG Hardening: Ensure exported SVG doesn't contain embedded <script> tags (case-insensitive + DOM)
+            const hasScript = clone.getElementsByTagName('script').length > 0 || /<script/i.test(svgString);
             if (hasScript) {
                 console.error("AWS-DFD-Visualizer: SVG export blocked due to unauthorized script elements.");
                 return;
@@ -3341,9 +3398,13 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                 `}
             </style>
             <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 10, color: isDarkTheme ? '#838e9c' : '#545b64', fontSize: 10 }}>
-                v2.8.5 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
-                <br/>
-                IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
+                v2.8.6 | Nodes: {nodes.length} | Links: {links.length} | W: {width} H: {height} | NaN: {nanNodes}
+                {isDebug && (
+                    <>
+                        <br/>
+                        IDs: {nodes.slice(0,5).map(n => n.id).join(', ')}...
+                    </>
+                )}
             </div>
             
             {/* Control Panel overlay: Draw.io Export and CSV Import Console */}
@@ -3394,6 +3455,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     </button>
                 </div>
                 
+                {enableCsvConsole && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                     <div style={{ display: 'flex', gap: '10px' }}>
 
@@ -3489,6 +3551,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     )}
 
                 </div>
+                )}
             </div>
 
             {originalNodesCount > 500 && (
@@ -3766,6 +3829,8 @@ class ErrorBoundary extends React.Component {
     }
 }
 
+export { exportToDrawio };
 export default function AwsDfdVisualizerWrapper(props) {
     return <ErrorBoundary><AwsDfdVisualizer {...props} /></ErrorBoundary>;
 }
+

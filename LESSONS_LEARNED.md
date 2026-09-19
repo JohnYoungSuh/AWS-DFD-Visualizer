@@ -4,6 +4,37 @@
 
 ---
 
+## 📌 LL-008 — Architecture & Market Positioning: Agentless Microsegmentation (Illumio CloudSecure & Cisco Secure Workload Parity)
+
+**Date Documented:** September 4, 2026  
+**Context:** Competitive and architectural evaluation against commercial agentless cloud microsegmentation platforms (**Illumio CloudSecure** / **Cisco Secure Workload**).
+
+### Core Mechanism Comparison
+Both commercial solutions operate in two stages:
+1. **Discovery / Telemetry (Passive):** Ingest cloud-native VPC/NSG/GCP flow logs and metadata tags without host agents to map East-West dependencies.
+2. **Enforcement (Active):** Because flow logs are passive audit streams, the platform programs the cloud provider's native firewall APIs (AWS Security Groups, Azure NSGs, GCP Cloud Firewalls).
+
+### Where AWS-DFD-Visualizer Stands (v2.8.5)
+* **Agentless Telemetry (Parity+):** Ingests this exact flow telemetry natively inside the customer's existing Splunk deployment (`aws:cloudwatchlogs:vpcflow`, `aws:config`, `azure:nsg:flow`). Zero additional host agents, zero new collector infrastructure, and zero third-party SaaS data egress.
+* **Dependency Mapping (Parity+):** Visualizes dependencies via interactive D3 force physics and deterministic NIST 800-207 Zero-Trust Blueprint layouts (Policy, Identity, Control, and Data planes). Features volume-weighted stroke widths (`count` $\to \log_2$), multi-CSP rendering (AWS, Azure V24, GCP), and mid-flight violation interception (Port 22/3389 dashed red paths).
+* **Air-Gap & DoD IL5 Compliance (Advantage):** 100% client-side, zero outbound network requests, AppInspect-clean (0/0/0). Ready for sovereign, classified, and high-assurance environments.
+
+### The Enforcement Architectural Divergence
+* **Why We Avoid Direct Cloud API Rule Programming:**
+  Illumio and Cisco act as active controllers requiring high-privilege cloud IAM write credentials (`ec2:AuthorizeSecurityGroupIngress`, `network:networkSecurityGroups/write`). In DoD IL5 and Zero Trust architectures, granting live firewall write access to an analytics/visualization layer creates severe supply chain risk and violates separation of audit and control planes.
+* **Our GitOps / Generative IaC Enforcement Model:**
+  Rather than unvetted live API writes from a dashboard UI, our enforcement bridge is **declarative GitOps**:
+  1. *Observe & Model:* Visualize live dependencies and flag policy drift directly in Splunk.
+  2. *Compile to IaC (Roadmap v4.0.0):* Use `HclCompiler.js` to serialize the target microsegmentation state into clean Terraform (`main.tf`) security group definitions.
+  3. *Audited GitOps Release:* Security group changes pass through standard code review, linting, and automated CI/CD pipelines before deployment.
+
+### Strategic Roadmap Alignment
+* **v3.5.x (`Splunk_TA_DFD_TKU`):** Add signature-based application role discovery (Oracle DB, Vault, F5 APM, Cisco ISE).
+* **v3.8.x (Canvas Cognition):** Semantic metanode clustering and Architect Mode drawer ("As-Is" vs "To-Be" modeling).
+* **v4.0.0 (Generative IaC):** Terraform compiler for auditable, zero-risk microsegmentation enforcement.
+
+---
+
 ## 📌 LL-007 — Diverging Implementation Logic Drift
 
 **Date Resolved:** July 9, 2026

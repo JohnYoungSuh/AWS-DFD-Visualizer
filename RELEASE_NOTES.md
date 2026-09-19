@@ -1,3 +1,24 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.6
+
+**Release Date:** September 18, 2026  
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML  
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture  
+
+---
+
+## Overview
+
+Version 2.8.6 is a comprehensive security hardening and vulnerability remediation release. It addresses all findings from third-party and internal DoD IL5 security evaluations:
+- **Column-Driven Drilldown Protection**: Implemented a comprehensive high-risk SPL command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro execution blocking (`...`) on search-driven `node_drilldown` and `link_drilldown` fields across pipes and newlines, while preserving trusted dashboard SimpleXML templates and legitimate query pipelines (e.g. `| head 5`). Added an `allowColumnDrilldown` visualizer option.
+- **Zero Secrets Policy Enforced**: Removed hardcoded lab credentials and Base64 tokens from all internal script harnesses (`test-drilldown.py`, `test-spl.py`), migrating to environment-driven authentication (`SPLUNK_USER`, `SPLUNK_PASSWORD`) with graceful offline handling and strict TLS verification defaults.
+- **Path Traversal Hardening (CWE-22)**: Upgraded `sanitizeFallbackUrl` to decode URI components prior to validation, strictly rejecting directory traversal sequences (`..`), backslashes (`\`), and lingering percent characters.
+- **Case-Insensitive Script Export Protection**: Hardened Draw.io XML and SVG exporters with case-insensitive `/<script/i` regex pattern scanning and DOM tree inspection, preventing bypasses using uppercase or mixed-case script tags.
+- **CSV Live Feed Isolation & Fix**: Fixed CSV header/column mapping order in `handleApplyCsv` to eliminate index-shift bugs when drilldown columns appear mid-table, and neutralized `node_drilldown`/`link_drilldown` columns to prevent client-side trust bypasses. Added `enableCsvConsole` option.
+- **Console Privacy & HUD Hardening**: Gated verbose debug logging in `visualization_source.js` and `AwsDfdVisualizer.jsx` behind `config.debug` and removed node ID listings from the production HUD canvas.
+- **Supply Chain & CI Gate Hardening**: Enforced non-zero exit codes on Bandit SAST scans, added production `npm audit --omit=dev --audit-level=high` gates, pinned `@splunk/webpack-configs` to `^7.0.3`, added `browserslist` override to `package.json`, and set `check_for_updates = 0` in `app.conf`.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.8.5
 
 **Release Date:** August 27, 2026  
@@ -181,7 +202,7 @@ A fully deterministic, physics-free layout engine for producing reproducible, au
 - **Text-Only DOM Rendering Policy:** Formally documented and enforced a strict `dangerouslySetInnerHTML` and D3 `.html()` ban. All dynamic strings are set via React standard string interpolation to prevent DOM-Based XSS (CWE-79).
 - **SPL Injection Sanitization:** `sanitizeSplunkToken` now applies a strict regex allow-list query check (rather than blocklist), hardening drilldown token interpolation against SPL injection payloads.
 - **DoS Circuit Breaker:** A client-side guard blocks rendering and displays a full-screen warning if raw row count exceeds 5,000 records, preventing browser thread exhaustion from adversarial or misconfigured queries.
-- **SVG & Draw.io Export Scanning:** Exported SVG and Draw.io XML files are scanned for embedded `<script>` tags before download. Any file containing dynamic script injection is blocked and triggers a Splunk audit log event via `Splunk.util.trackEvent()`.
+- **SVG & Draw.io Export Scanning:** Exported SVG and Draw.io XML files are scanned for embedded `<script>` tags before download. Any file containing dynamic script injection is blocked with local diagnostic audit reporting and zero outbound telemetry.
 - **Dependency Remediations:** Upgraded `shell-quote` to `1.8.4` (CVE patch), `form-data` to `4.0.6` (GHSA-hmw2-7cc7-3qxx), and added `uuid` override to `11.1.1`. All packages pass `npm audit` clean.
 - **CI/CD Hardening:** Pinned TruffleHog to `v3.95.5` stable tag; added explicit `contents: read` permissions to GitHub Actions workflow to resolve CodeQL workflow permission alerts.
 

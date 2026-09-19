@@ -5,6 +5,17 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: September 18, 2026 (v2.8.6 Release · Security Hardening, SPL Injection Denylist, Zero Secrets, CSV Middle-Column Indexing & CI Gates)
+- [x] **v2.8.6 Release Completion** — Addressed all 7 security review findings and strict DoD IL5 compliance requirements:
+  1. Implemented comprehensive high-risk SPL command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro execution blocking (`...`) across pipes and newlines on column-driven `node_drilldown` and `link_drilldown`, while preserving trusted dashboard SimpleXML templates (`drilldownNodeTemplate`) and legitimate query pipelines (e.g. `| head 5`).
+  2. Fixed CSV Live Feed column scrambling bug by mapping all raw columns by original header index first before neutralizing drilldown keys; added `allowColumnDrilldown` and `enableCsvConsole` visualizer options.
+  3. Removed hardcoded credentials in `test-drilldown.py` and `test-spl.py`, reading from `SPLUNK_USER` and `SPLUNK_PASSWORD` with graceful offline exits and secure TLS defaults.
+  4. Gated verbose console logs and canvas node IDs behind debug mode (`isDebug`) to prevent HUD data leakage.
+  5. Hardened `missingImageURL` against path traversal via `decodeURIComponent` first, rejecting `..`, `\`, and lingering `%`.
+  6. Hardened SVG and Draw.io exporters against case-insensitive `<SCRIPT>` / `<sCrIpT>` injection with DOM validation.
+  7. Synchronized all 5 version files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`) plus CI workflows to `2.8.6`.
+  8. Hardened CI workflow with unignored Bandit scans (`-x ./.venv,./node_modules,./dist -ll`), production `npm audit --omit=dev --audit-level=high` (0 vulnerabilities), `@splunk/webpack-configs` pin (`^7.0.3`), `browserslist` override (`^4.28.7`), and `check_for_updates = 0` in `app.conf`. Verified 100% Cypress component test pass rate across 66 specs and 0/0/0 Splunk AppInspect report.
+
 ### ✅ Session: August 26, 2026 (v2.8.5 Steps 2–7 · Semantic Schema Aliases, Category Fallback Hierarchy, Azure V24 Ingest, Multi-Plane Badges & Release Hygiene)
 - [x] **v2.8.5 Release Completion** — Addressed all 7 SA review items: unified data contract aliases (`display_name`, `resource_type`, `icon_id`) in `parseSplunkData` with label decoupling; ingested official Microsoft Azure V24 SVG icon pack under `appserver/static/icons/Azure-Service-Icons_V24/` across the 14 canonical categories (`compute`, `databases`, `storage`, `networking`, `security`, `identity`, `analytics`, `containers`, `integration`, `ai`, `management`, `devops`, `web`, `general`); sanitized all filenames to URL-safe lowercase kebab-case; upgraded `scripts/generate-stencil-catalog.js` to dynamically detect `Azure-Service-Icons_*` and emit $O(1)$ category defaults (enforcing 64px icons); synchronized `aliases.js` and `README_STENCILS.md`; enhanced `Zone` with 4 distinct theme-aware palettes and centered header badges (`🛡️`, `🔑`, `⚙️`, `💾`) with neutral fallback for generic groups; embedded live SPL `<table>` inspector panels in `default/data/ui/views/user_guide.xml`; synchronized all 5 version files to `2.8.5`; validated 100% test pass rate across 54 Cypress component tests and 0/0/0 AppInspect report.
 

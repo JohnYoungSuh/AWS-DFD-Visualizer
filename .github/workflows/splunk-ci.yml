@@ -12,7 +12,8 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   APP_NAME: AWS-DFD-Visualizer
-  VERSION: "2.8.5"
+  VERSION: "2.8.6"
+  SPL_FILE: "AWS-DFD-Visualizer-2.8.6.spl"
 
 jobs:
   # STAGE 1: Build, Security Scanning & AppInspect Validation
@@ -46,14 +47,16 @@ jobs:
       - name: Python Security Scan (Bandit)
         run: |
           pip install bandit
-          # Ignore exit code for initial pass to allow report upload
-          bandit -r . -x ./tests -ll || true
+          bandit -r . -x ./.venv,./node_modules,./dist -ll
 
       # Build the webpack bundle and package the .spl BEFORE AppInspect.
       # AppInspect requires a valid gzip-compressed Splunk app archive (.spl).
       # Passing app_path: . (repo root) causes it to inspect the Makefile and fail.
       - name: Install Dependencies
         run: npm install
+
+      - name: Production Dependency Audit
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Build webpack bundle
         run: npm run build

@@ -1,5 +1,7 @@
 <nav color="#232F3E">
   <view name="user_guide" default="true" />
   <view name="zero_trust_executive_blueprint" />
+  <view name="dashboards" />
   <view name="search" />
 </nav>
+
