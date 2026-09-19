@@ -113,7 +113,53 @@ This list is based on failure analysis against mock config and standard D3 force
 
 ---
 
-## 🚀 Release v2.8.5 (Hierarchy Stacking, Group Swimlanes, Density Scaling & Dark Mode Contrast)
+## 🚀 Release v2.8.7 (60-Day Traction Sprint: Frictionless Onboarding & Ecosystem Ingestion)
+
+> **Sprint Duration:** 2 Weeks (Targeting Release: October 2, 2026)  
+> **Evaluation Window:** 60 Days Post-Release (Review Date: December 2, 2026)  
+> **Strategic Intent:** Overcome the "first 5 minutes" onboarding drop-off and test external discovery channels.
+
+### Committed Scope:
+
+- [ ] **First-Run Experience: Interactive Onboarding & Demo Showcase** *(Priority: 🔴 Critical)*
+    - *Context*: Users currently encounter a blank canvas upon installing and drop off without configuring SPL.
+    - *Action*:
+        1. Create `default/data/ui/views/demo_showcase.xml` with pre-baked mock VPC/Config data and one-click interactive toggle.
+        2. Implement interactive empty-state canvas fallback when a search returns zero rows (`"No topology data detected. Expected columns: from, to. [Click to view sample SPL]"`).
+    - *Acceptance*: A newly installed app provides a working topology diagram within 60 seconds without manual query authoring.
+
+- [ ] **CIM/TA-AWS Macros Packaging (`default/macros.conf`)** *(Priority: 🟡 High)*
+    - *Context*: Users struggle to write complex `eval`/`rex`/`stats` queries against raw AWS flow logs or config sourcetypes.
+    - *Action*:
+        1. Add `aws_dfd_vpc_flows` macro mapping standard CIM / `sourcetype="aws:cloudwatchlogs:vpcflow"` events into `from`, `to`, `edge_label`, `status`.
+        2. Add `aws_topology_from_config` macro mapping `sourcetype="aws:config"` relationships into topology rows.
+    - *Acceptance*: Users running ``| `aws_dfd_vpc_flows` `` or ``| `aws_topology_from_config` `` get immediate, valid topology visualization.
+
+- [ ] **Splunkbase Marketplace Metadata & SEO Alignment** *(Priority: 🟢 Medium)*
+    - *Context*: 85% of traffic is in-product; marketplace search terms must capture high-intent buyers.
+    - *Action*: Update Splunkbase metadata, tags (`Zero Trust`, `NIST 800-53`, `VPC Flow Logs`, `Multi-Cloud`, `Lateral Movement`), and summary copy.
+    - *Acceptance*: Splunkbase listing copy and tags updated in `SPLUNKBASE_LISTING.md` and submitted to Splunkbase portal.
+
+- [ ] **External GTM Walkthrough Publication** *(Priority: 🟢 Medium)*
+    - *Context*: Zero external referral traffic requires driving top-of-funnel discovery.
+    - *Action*: Publish technical walkthrough article ("Visualizing Zero Trust & Lateral Movement in Splunk") on Splunk Community Blog and Reddit `r/splunk`.
+    - *Acceptance*: Article live with link to Splunkbase and GitHub repository.
+
+---
+
+### 🛑 Decision Gate (T + 60 Days: December 2, 2026)
+
+| Metric / Signal | Target for GO (Active Enterprise Roadmap) | Signal for NO-GO (LTS Maintenance Mode) |
+|---|---|---|
+| **Weekly Downloads** | $\ge 25$ downloads/week sustained on Splunkbase | $< 10$ downloads/week |
+| **Enterprise Inbound Leads** | $\ge 3$ qualified enterprise inquiries via contact email / GitHub | 0 inquiries across 60 days |
+| **Community Traction** | Active discussion/mentions in Splunk Community Slack / Reddit | Minimal or zero community interaction |
+
+*If NO-GO criteria are met, the project will be locked to LTS Maintenance Mode (DoD IL5 compliance, critical bug fixes, and Splunk core version compatibility only).*
+
+---
+
+## 🏛️ Release v2.8.5 (Hierarchy Stacking, Group Swimlanes, Density Scaling & Dark Mode Contrast)
 
 > **ER Review Date:** August 25, 2026 — Reviewed by PM + System Architect personas.
 > All enhancements below were approved via formal ER review. Execute in the order listed.
