@@ -1,7 +1,24 @@
-# AWS DFD Visualizer — v2.8.3
+# AWS DFD Visualizer — v2.8.6
 
 > [!IMPORTANT]
 > **Multi-Cloud Interactive Security Data Flow Diagram (DFD) for Splunk** — A high-performance, D3.js + React powered visualization engine. Renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, audit-ready Zero-Trust topology blueprints. Designed for **DoD Impact Level 5 (IL5)** and **NIST 800-53 / NIST 800-207** environments.
+
+---
+
+## 🤝 The Solution Architecture: Two Apps, One Workflow
+
+The complete Zero-Trust cloud topology solution inside Splunk operates across two distinct, complementary apps:
+
+> **"Companion produces the table; Visualizer draws the diagram."**
+
+| Component | Repository / Splunkbase App | Primary Responsibility |
+|---|---|---|
+| **Data Engine (ETL)** | **AWS-DFD-Companion** (v1.1.6) | Ingests raw AWS Config, CloudWatch VPC Flow Logs, and multi-cloud asset inventory. Normalizes telemetry via pre-packaged CIM/TA-AWS macros into standard DFD table rows (`from`, `to`, `edge_label`, `status`). |
+| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.8.6) | Ingests normalized DFD table rows and renders interactive, audit-ready Zero-Trust blueprints with DoD IL5 compliance boundaries, nested VPC/Subnet containers, and drilldown capabilities. |
+
+Separating data normalization (Companion) from diagram rendering (Visualizer) keeps the visualization engine lightweight, compliant, and decoupled from underlying log ingestion schemas.
+
+---
 
 ## Security & Compliance (NIST 800-53 / IL5 / Zero Trust)
 
@@ -12,35 +29,20 @@ This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Ar
 - **SBOM (CycloneDX)**: Every build generates a CycloneDX software bill of materials (`bom.json`) via Syft for supply chain integrity (NIST 800-53 SA-4).
 - **Secret Scanning**: TruffleHog actively validates and blocks commits containing sensitive credentials (SC-28).
 - **SAST**: Python packaging scripts are validated via Bandit (SI-2).
-- **AppInspect**: Automated validation against Splunk Cloud and Enterprise AppInspect guidelines ensures 0 errors, 0 warnings.
+- **AppInspect**: Automated validation against Splunk Cloud and Enterprise AppInspect guidelines ensures 0 errors, 0 warnings, 0 failures.
 
 ---
 
-## Key Features (v2.8.3)
+## Key Features (v2.8.6)
 
-
-### ☁️ Multi-Cloud Service Provider (CSP) Support
-- **Modular Stencils**: Mappings decoupled into modular stencil libraries (`aws.js`, `azure.js`, `gcp.js`, `generic.js`).
-- **CSP Auto-Detection**: Dataset voting count auto-detects the dominant provider (AWS vs. Azure vs. GCP) based on type signatures and resource identifiers, with manual options panel overrides (`cspStencilSet`).
-- **JIT Node-Level Adapters**: Resolves specific stencils dynamically per card, allowing hybrid multi-cloud systems to render side-by-side on the same canvas.
-- **Recursive Container Nesting**: Processes arbitrary nesting depth (Subscription → Resource Group → VNet → Subnet) using recursive post-order/pre-order traversal.
-
-### 🏛️ Zero-Trust Static Layout ("Blueprint Mode")
-- **Deterministic Enclosures**: Recursive Bottom-Up dimension calculator and Top-Down coordinate assigner draws nested VPCs/Subnets (AWS), VNets/Subnets (Azure), and VPC Networks/Subnets (GCP) with orthogonal Manhattan routing.
-- **NIST 800-207 Three-Plane Swimlanes**: Automatically sorts assets into Identity Plane (IAM, Users, Roles), Policy & Control Plane (WAF, CDN, Policy Engines), and Infrastructure/Data Plane (VPC, Compute, Database).
-- **Dynamic Node Card Spacing**: Bounding boxes are computed dynamically (`getNodeCardDimensions`) with a 15% text-wrapping buffer, expanding card sizes dynamically for extreme labels while maintaining size-aware link distances (clamped to a 1.5× baseGap threshold).
-- **Decoupled Plane Renaming & SPL Overrides**: Text inputs in the formatting options support customized terminology (defaulting to emojis like ⚙️ for the control plane). Prioritizes dynamic `zone_name` and `zone` fields returned via SPL to dynamically group and label ZTA swimlanes.
-- **SSH/22 Compliance Interception**: Automatically routes Port 22 connections to non-compliant nodes as dashed Vibrant Red paths — providing instant visual audit signals for open SSH ingress violations.
-- **Concentric Security Group Envelopes**: Draws green/red concentric rings around compute node cards to visually map assigned security group compliance state.
-- **Two-Pass SVG Rendering**: Link paths and label capsules render in separate SVG passes — label backgrounds always occlude lines beneath them.
-
-### 🔒 STIG Hardening & Security Compliance
-- **Text-Only DOM Policy**: `dangerouslySetInnerHTML` and D3 `.html()` are explicitly banned. All dynamic strings use React standard interpolation (CWE-79 / XSS prevention).
-- **SPL Injection Sanitization**: `sanitizeSplunkToken` applies a strict regex allow-list before interpolating drilldown tokens.
-- **Custom Plane Regex Sanitization**: Inputs for plane renaming (via SPL and visual controls) are recursively sanitized using a strict allow-list regex (`a-zA-Z0-9\s\-_:/.⚙️⚠️🚨`) to prevent XSS (CWE-79).
-- **DoS Circuit Breaker**: Blocks rendering and displays a warning if raw row count exceeds 5,000 records.
-- **Export Script Scanning**: SVG and Draw.io XML downloads are scanned for embedded `<script>` tags before export.
-- **Supply Chain**: TruffleHog secret scanning + Bandit SAST + CycloneDX SBOM on every build.
+### 🔒 Security Hardening & Vulnerability Remediation (v2.8.6)
+- **SPL Injection Denylist & Macro Guarding**: Implemented an explicit high-risk command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro blocking on column-driven `node_drilldown`/`link_drilldown` fields. Added `allowColumnDrilldown` visualizer option.
+- **Zero Secrets Enforcement**: Removed hardcoded credentials across test harnesses (`test-drilldown.py`, `test-spl.py`), migrating to environment variables (`SPLUNK_USER`, `SPLUNK_PASSWORD`) with graceful offline exits and strict TLS defaults.
+- **URI Traversal Defense (CWE-22)**: Decodes URI components prior to validation in `sanitizeFallbackUrl`, rejecting directory traversal sequences (`..`), backslashes (`\`), and lingering `%` encodings.
+- **Case-Insensitive Script Sanitization**: Hardened SVG and Draw.io exporters against `/<script/i` injection vectors with DOM tree inspection prior to download.
+- **CSV Middle-Column Indexing Fix**: Resolved column-scrambling bug in Live Feed console by mapping raw columns by header index before drilldown neutralization; added `enableCsvConsole` option.
+- **Console Privacy & HUD Hardening**: Gated verbose debug logging behind `config.debug` and removed raw node ID strings from the production HUD canvas.
+- **Supply Chain Hardening**: CI gate enforces non-zero exit codes on Bandit SAST scans, zero high-severity production vulnerabilities (`npm audit --omit=dev --audit-level=high`), pinned `@splunk/webpack-configs` (`^7.0.3`), and `browserslist` overrides.
 ### ⚡ Performance & Physics Optimization
 - **Rectangular Collision Force (`rectCollide`)**: Custom D3 force mapped directly to card dimensions (`280×100`px) prevents text overlaps and horizontal stacking.
 - **Zero-Latency Layout Bypass**: Pre-ticks 300 physics cycles synchronously for graphs < 100 nodes — renders fully settled instantly.

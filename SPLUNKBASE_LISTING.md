@@ -1,7 +1,7 @@
 # AWS DFD Visualizer — Splunkbase Listing Copy
 
 > **Copy-paste reference for the Splunkbase submission portal.**
-> All values verified against `formatter.html`, `visualizations.conf`, and stencil registries as of v2.8.3.
+> All values verified against `formatter.html`, `visualizations.conf`, and stencil registries as of v2.8.6.
 
 ---
 
@@ -18,6 +18,15 @@
 Auditing complex cloud infrastructure for compliance — DoD Impact Level 5 (IL5), NIST 800-53, or NIST 800-207 Zero-Trust Architectures — is extremely challenging. While cloud accounts (AWS, Azure, GCP) generate high-volume telemetry from AWS Config, Azure Resource Manager, GCP Asset Inventory, VPC Flow Logs, and GuardDuty, reviewing these configurations in flat Splunk tables makes it difficult for security teams, system auditors, and DevSecOps engineers to analyze isolation boundaries, spot structural gaps, or verify access routes.
 
 **AWS DFD Visualizer** transforms your live Splunk search results into interactive, audit-ready Data Flow Diagrams directly inside Splunk — no external tools required.
+
+### 🤝 The Complete Solution: Companion + Visualizer
+
+The AWS Zero-Trust topology solution consists of two complementary apps designed to work seamlessly together:
+
+> **"Companion produces the table; Visualizer draws the diagram."**
+
+- **AWS-DFD-Companion (v1.1.6)**: The data preparation utility. Ingests raw AWS Config, CloudWatch VPC Flow Logs, and inventory telemetry, packaging pre-built CIM macros to produce normalized DFD table rows (`from`, `to`, `edge_label`, `status`).
+- **AWS-DFD-Visualizer (v2.8.6)**: The presentation canvas. Renders those rows into interactive, audit-ready Zero-Trust blueprints with DoD IL5 compliance boundaries, nested VPC/Subnet containers, and drilldown capabilities.
 
 ### What It Does
 
@@ -230,6 +239,8 @@ All options are accessible via the **Format** button in the dashboard panel edit
 
 | Version | Date | Highlights |
 |---|---|---|
+| **2.8.6** | Sep 18, 2026 | Comprehensive security hardening: SPL injection denylist (`delete`, `sendemail`, etc.) and macro blocking across drilldowns, middle-column CSV Live Feed index preservation, URI traversal defense (`decodeURIComponent`), case-insensitive DOM script sanitization on SVG/Draw.io exports, zero secrets enforcement in test scripts, and hardened CI Bandit / npm audit gates. |
+| **2.8.5** | Aug 26, 2026 | Azure V24 icon pack integration (14 categories), build-time automatic stencil catalog generator, longest-token alias overlay (`aliases.js`), strict Zero-Trust 4-tier vertical physics clamping, and theme-aware Zone header badges (`🛡️`, `🔑`, `⚙️`, `💾`). |
 | **2.8.4** | Aug 6, 2026 | Removed all commercial licensing constraints (50-node limit, block overlay, Format panel inputs) and the 1,000-node safety cap to allow unlimited node layouts. |
 | **2.8.3** | Jul 9, 2026 | Log-weighted native edge bundling (Req-1), custom status palette configuration mapping (Req-2), unified highlighting helper, 5 Cypress integration specs, XSS inputs validation |
 | **2.8.0** | Jun 18, 2026 | Multi-cloud (AWS/Azure/GCP), Zero-Trust Blueprint Engine, STIG hardening, commercial licensing, dynamic edge label sizing |
