@@ -52,7 +52,7 @@ inspect: build
 		echo "Error: splunk-appinspect NOT FOUND in .venv. Please run 'make install-deps' first."; \
 		exit 1; \
 	fi
-	.venv/bin/splunk-appinspect inspect $(SPL_FILE) --included-tags custom_visualizations
+	.venv/bin/splunk-appinspect inspect $(SPL_FILE)
 
 clean:
 	@echo "Cleaning up build artifacts..."

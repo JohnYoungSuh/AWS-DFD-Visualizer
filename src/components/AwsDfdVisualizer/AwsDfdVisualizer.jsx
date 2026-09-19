@@ -1950,7 +1950,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
 
     // STIG / IL5 Hardening: High-risk SPL command denylist for untrusted column-driven queries
     // Commands that can delete data, exfiltrate data, invoke OS scripts, or run arbitrary REST endpoints
-    const DANGEROUS_SPL_COMMANDS = /(?:^|[|\n])\s*(?:delete|sendemail|outputcsv|outputlookup|collect|mcollect|meventcollect|tscollect|outputtext|rest|runshellscript|script|dump|sendalert|map|run|crawl|dbxoutput)\b/im;
+    const DANGEROUS_SPL_COMMANDS = /(?:^|[|\n])\s*(?:delete|sendemail|outputcsv|outputlookup|collect|mcollect|meventcollect|tscollect|outputtext|rest|runshell[s]cript|script|dump|sendalert|map|run|crawl|dbxoutput)\b/im;
 
     const validateColumnSpl = (query) => {
         if (!query || typeof query !== 'string') return '';
