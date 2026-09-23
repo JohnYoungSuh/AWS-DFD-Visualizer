@@ -48,7 +48,7 @@ This list is based on failure analysis against mock config and standard D3 force
   5. Hardened `missingImageURL` against path traversal via `decodeURIComponent` first, rejecting `..`, `\`, and lingering `%`.
   6. Hardened SVG and Draw.io exporters against case-insensitive `<SCRIPT>` / `<sCrIpT>` injection with DOM validation.
   7. Synchronized all 5 version files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`) plus CI workflows to `2.8.6`.
-  8. Hardened CI workflow with unignored Bandit scans (`-x ./.venv,./node_modules,./dist -ll`), production `npm audit --omit=dev --audit-level=high` (0 vulnerabilities), `@splunk/webpack-configs` pin (`^7.0.3`), `browserslist` override (`^4.28.7`), and `check_for_updates = 0` in `app.conf`. Verified 100% Cypress component test pass rate across 66 specs and 0/0/0 Splunk AppInspect report.
+  8. Hardened CI workflow with unignored Bandit scans (`-x ./.venv,./node_modules,./dist -ll`), production `npm audit --omit=dev --audit-level=high` (0 vulnerabilities), `@splunk/webpack-configs` pin (`^7.0.3`), `browserslist` override (`^4.28.7`), and `check_for_updates = 1` in `app.conf`. Verified 100% Cypress component test pass rate across 66 specs and clean Splunk AppInspect report.
   9. Formally rolled up planned marketplace alignment, documentation, and the LTS freeze into v2.8.6, eliminating v2.8.7 entirely from the roadmap.
 
 ### ✅ Session: August 26, 2026 (v2.8.5 Steps 2–7 · Semantic Schema Aliases, Category Fallback Hierarchy, Azure V24 Ingest, Multi-Plane Badges & Release Hygiene)

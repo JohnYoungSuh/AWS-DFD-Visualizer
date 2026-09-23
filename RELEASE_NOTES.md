@@ -15,7 +15,7 @@ Version 2.8.6 is a comprehensive security hardening and vulnerability remediatio
 - **Case-Insensitive Script Export Protection**: Hardened Draw.io XML and SVG exporters with case-insensitive `/<script/i` regex pattern scanning and DOM tree inspection, preventing bypasses using uppercase or mixed-case script tags.
 - **CSV Live Feed Isolation & Fix**: Fixed CSV header/column mapping order in `handleApplyCsv` to eliminate index-shift bugs when drilldown columns appear mid-table, and neutralized `node_drilldown`/`link_drilldown` columns to prevent client-side trust bypasses. Added `enableCsvConsole` option.
 - **Console Privacy & HUD Hardening**: Gated verbose debug logging in `visualization_source.js` and `AwsDfdVisualizer.jsx` behind `config.debug` and removed node ID listings from the production HUD canvas.
-- **Supply Chain & CI Gate Hardening**: Enforced non-zero exit codes on Bandit SAST scans, added production `npm audit --omit=dev --audit-level=high` gates, pinned `@splunk/webpack-configs` to `^7.0.3`, added `browserslist` override to `package.json`, and set `check_for_updates = 0` in `app.conf`.
+- **Supply Chain & CI Gate Hardening**: Enforced non-zero exit codes on Bandit SAST scans, added production `npm audit --omit=dev --audit-level=high` gates, pinned `@splunk/webpack-configs` to `^7.0.3`, added `browserslist` override to `package.json`, and ensured `check_for_updates = 1` in `app.conf`.
 
 ---
 
