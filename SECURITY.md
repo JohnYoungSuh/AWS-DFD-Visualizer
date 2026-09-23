@@ -28,7 +28,7 @@ We will acknowledge receipt of your report within 48 hours and provide a timelin
 
 ---
 
-## Hardened Security Controls (v2.8.5+ Hardening)
+## Hardened Security Controls (v2.8.6 Hardening)
 
 ### 1. Dynamic JIT Token Sanitization & Column-Driven SPL Guardrails (SPL Injection Prevention)
 Users can configure dynamic drilldowns that generate Splunk Search Processing Language (SPL) queries on node click. To prevent malicious data ingestion from executing unauthorized search queries (SPL Injection):

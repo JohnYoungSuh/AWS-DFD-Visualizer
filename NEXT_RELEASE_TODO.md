@@ -5,6 +5,40 @@ This list is based on failure analysis against mock config and standard D3 force
 ---
 ## 📍 Session Log
 
+### ✅ Session: September 22, 2026 — v2.8.6 Splunkbase Release Readiness, Cloud Compatibility & Hygiene
+- [x] **v2.8.6 Release Readiness & Final Certification**:
+  - Resolved Splunk Cloud role access warning by granting `sc_admin` write permissions in `metadata/default.meta` (`access = read : [ * ], write : [ admin, sc_admin ]`).
+  - Synchronized Draw.io export XML header version stamp to `2.8.6` in `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`.
+  - Updated version declarations across documentation (`CODEMAP.md`, `SESSION_START.md`, `SECURITY.md`, and `.agents/rules/agent-role.md`).
+  - Verified 100% pass rate across all 66 Cypress component tests (`npm run test:cy`).
+  - Verified clean production build (`npm run build`) and Splunk AppInspect precertification with 0 errors and 0 failures. Ready for Splunkbase submission.
+
+### ✅ Session: September 21, 2026 (night) — UI freeze / pipeline heat vs PM decoupled-intelligence plan
+- [x] **Balance locked.** Artifact: `.agents/artifacts/er_review_2.8.6_decoupled_mvp.md`
+  - **Yes:** freeze viz 2.8.6; put Prompt-1 identity + `| stats` collapse + `status=violation` in Companion/TA SPL. That is the PM/SA compromise.
+  - **No:** Prompt 2 `/proc`; viz version 3.0.0; `icon=oracle`; `drift_state=SHADOW_IT`; Autonomous Control Plane / Terraform / AI as this MVP; `trackEvent` this sprint.
+  - **Contract:** `stencil=ORACLEDATABASEATAWS` or `F5 BIG-IP`; `display_name` like `Oracle [x500]`; 0.9 in `| where`, not in React.
+
+### ✅ Session: September 21, 2026 (late) — MVP vs feature balance
+- [x] **MVP locked as v2.8.6.** Core job: agentless Splunk ZTA/VPC diagram from an edge table (Companion optional), User Guide demo, Draw.io/SVG, IL5 hardening. Goliath rows (TKU 0.9, metanodes, HCL, AI, `/proc`) stay post-MVP and still require the operator-engagement gate. Four tests before any new feature: job, evidence (named install), wedge (no new agent), layer (diagram not enforcement).
+
+### ✅ Session: September 21, 2026 (evening) — Goliath / Tetration pitch vs v2.8.6 · PM + SA
+- [x] **Review only — Prompt 2 DNA Extractor not implemented.** Artifact: `.agents/artifacts/er_review_2.8.6_goliath.md`
+  - The PM table labeled **v3.0.0** vs Illumio / Cisco Secure Workload / Gigamon. **Shipped code is still 2.8.6.** Nothing in that table landed since the morning review.
+  - **True today:** agentless edge-table ingest; `governancePreset=zta` PAP/PDP/PEP *titles*; nested VPC/SG; weighted edges; 5,000-row DoS stop; SVG/Draw.io.
+  - **Not in repo:** TKU / `dfd_identify` / `confidence_score`, metanodes, `zta-functional`, `HclCompiler.js`, AI consensus, `/proc` DNA.
+  - **Prompt 2 (`/proc` harvester): REJECTED.** It is an agent and contradicts zero-touch. Oracle-on-RDS has no `/proc`.
+  - **Cisco pitch:** rewrite as Splunk ZTA *diagram*, not Tetration-without-agents-plus-Terraform. Unfreeze sequence (TKU 3.5 → metanodes 3.8 → HCL 4.0) is documented below and **must not be executed on 2.8.6**.
+
+### ✅ Session: September 21, 2026 (v2.8.6 Competitive Fitness & Hardening Review · PM + SA)
+- [x] **Review only — no application code changes.** Dual-persona review of whether v2.8.6 is hardened and has the planned features to compete with VPC / network-diagram software the PM listed.
+  - Artifact: `.agents/artifacts/er_review_2.8.6.md`
+  - **Hardening:** ✅ Shipped. All 7 IL5 must-controls are in `AwsDfdVisualizer.jsx` / test harnesses / `splunk-ci.yml`. Residual honesty nits (Cypress not in CI, export uses `console.log` not `Splunk.util.trackEvent()`, Draw.io XML still stamps `2.8.1`) do **not** reopen a sprint.
+  - **Network Diagram Viz parity (the competitor named in this backlog):** ✅ 7/7 shipped (hierarchy, tokens, hulls, arrows, physics, models, density).
+  - **VPC diagram plan:** ✅ Nested VPC/Subnet, SG rings, SSH/22 dashed paths, weighted flow-shaped edges, SVG/Draw.io export. PM GTM Shot 4 stands: edge-list *shape*, not a Flow parser.
+  - **Cloudcraft / Lucidscale / Hava auto-scan:** ❌ Not in the 2.8.6 plan. Do not claim. Do not implement under the freeze.
+  - **LTS freeze unchanged:** No v2.8.7. No pickup of v2.9–v4.0 epics until a named operator with an active v2.8.6 production install requests a change.
+
 ### ✅ Session: September 18, 2026 (v2.8.6 Release · Security Hardening, SPL Injection Denylist, Zero Secrets, CSV Middle-Column Indexing & CI Gates)
 - [x] **v2.8.6 Release Completion** — Addressed all 7 security review findings and strict DoD IL5 compliance requirements:
   1. Implemented comprehensive high-risk SPL command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro execution blocking (`...`) across pipes and newlines on column-driven `node_drilldown` and `link_drilldown`, while preserving trusted dashboard SimpleXML templates (`drilldownNodeTemplate`) and legitimate query pipelines (e.g. `| head 5`).
@@ -144,6 +178,59 @@ This list is based on failure analysis against mock config and standard D3 force
      - Splunk AppInspect zero-defect certification (0 errors, 0 failures, 0 warnings).
      - Critical / CVE security fixes.
    - **Operator Engagement Gate**: No further code will be written until a verified, named operator with an active v2.8.6 production installation requests a concrete change.
+
+### Post-unfreeze sequence (Illumio / Tetration / Gigamon) — DO NOT EXECUTE ON 2.8.6
+
+> **Gate:** Operator-engagement freeze above still wins. These steps exist so a future sprint does not start with Prompt 2 (`/proc`) or a fake v3.0.0 bump. ER 21 Sep 2026: `.agents/artifacts/er_review_2.8.6_goliath.md`.
+
+#### Step 0 · Honest Goliath table + 2.8.6 demo recipe *(copy only)*
+- *Context*: The v3.0.0 comparison table is not the shipped product. A bake-off must use what 2.8.6 can draw.
+- *Action*:
+    1. Public/Cisco copy: version **2.8.6**; columns **Shipped** vs **Roadmap**.
+    2. Demo: User Guide Scenario A/B, `governancePreset=zta`, nested `vpcId`/`subnetId`, SSH/22, `stats`-aggregated Flow edges, Draw.io. No TKU/HCL/AI claims.
+    3. Scale: aggregate in SPL; do not promise 10k metanodes (DoS cap is 5,000 rows).
+- *Acceptance*: Pitch no longer says v3.0.0 or “0.9 confidence / Terraform / AI closed loop” as current.
+- Cypress: none (docs).
+
+#### Step 1 · Thin viz aliases for TKU output fields *(first code patch after unfreeze)*
+- *Context*: `parseSplunkData` does not read `icon_key`, `product_name`, `zta_role`, `confidence_score`. Customers cannot inject identity from their own lookups.
+- *Action*:
+    1. Alias `icon_key` onto the existing `icon` cascade; `product_name` onto label after `display_name`; store `zta_role` on the node.
+    2. Do **not** filter on 0.9 in React — `where confidence_score >= 0.9` stays in SPL.
+    3. Do **not** add `dfd_identify` to this app’s `macros.conf`.
+- *Acceptance*: SPL `| eval icon_key="F5 BIG-IP", product_name="F5 APM"` renders without a TA.
+- Spec A: `icon_key` follows `icon` path. Spec B: missing TKU fields do not crash (2.8.6 compat).
+
+#### Step 2 · `Splunk_TA_DFD_TKU` (v3.5.x) — identity, not a host agent
+- *Context*: Port 1521 → Oracle is the real Tetration-killer. It is a lookup TA, not `/proc`.
+- *Action*:
+    1. Separate `.spl`. Lookup columns: `signature_id, port, protocol, traffic_regex, product_name, vendor, category, zta_role, icon_key, confidence_score`.
+    2. Seed Oracle TNS, F5 APM + URI witness, Cisco ASA, Vault, ISE. Do not invent PeopleSoft.
+    3. Macro `dfd_identify`. Filter 0.9 in SPL (Trigger + Witness).
+    4. Icons only at `appserver/static/icons/vendors/<kebab-product>.svg`.
+- *Acceptance*: dest_port=1521 + TNS witness → `product_name=Oracle DB Cluster` at ≥0.9; port 443 alone is not F5 APM.
+- Spec C: vendor SVG href. Spec D: 443 without URI stays unidentified.
+
+#### Step 3 · Metanodes + `zta-functional` (v3.8.x)
+- *Context*: Hairball fix needs `product_name`. 5k DoS cap loses a 10k Illumio bake-off today.
+- *Action*: Collapse by `product_name` in a pure function; React expand; D3 does not mutate cards. Then `layoutMode=zta-functional` from `zta_role`.
+- *Acceptance*: 20 Oracle rows → one `×20` metanode; expand restores cards; default off = 2.8.6 behavior.
+- Spec E: collapse/expand. Spec F: default off.
+
+#### Step 4 · Generative HCL export only (v4.0.0)
+- *Context*: DevOps bridge vs Tetration push. Not enforcement.
+- *Action*: Client-side `HclCompiler.js` Blob download; same `<script>` scan as Draw.io; **no apply**.
+- *Acceptance*: Downloadable `main.tf` sketch; AppInspect 0/0/0.
+- Spec G: export blocked if script nodes present.
+
+#### Step 5 · Release hygiene (any unfreeze drop)
+- *Context*: Five-file version sync remains mandatory. Do not jump 2.8.6 → 3.0.0 just to match a pitch slide.
+- *Action*: `npm run build`; `npm run test:cy`; `make inspect`; bump only the files required for that drop; conventional commits (`feat:` / `docs:`).
+- *Acceptance*: AppInspect 0 errors, 0 failures, 0 warnings.
+
+#### Rejected (do not schedule)
+- Prompt 2 `/proc` Digital DNA extractor inside this visualization app.
+- AI-agent consensus / world-model claims against 2.8.6.
 
 ---
 

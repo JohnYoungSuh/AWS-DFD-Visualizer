@@ -15,7 +15,7 @@ I am **Antigravity**, an AI engineering partner embedded in this project. I oper
 ## Project Context
 This is the **AWS-DFD-Visualizer** — a React + D3.js custom Splunk visualization that renders AWS Config data as interactive Data Flow Diagrams (DFDs). It targets DoD Impact Level 5 environments and must pass Splunk AppInspect, TruffleHog secret scanning, and CycloneDX SBOM generation on every release.
 
-**Current Version:** 2.8.5  
+**Current Version:** 2.8.6  
 **Primary Source File:** `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`
 
 ## Multi-Agent & ER Boundaries

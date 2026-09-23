@@ -1,4 +1,4 @@
-# CODEMAP — AWS-DFD-Visualizer v2.8.5
+# CODEMAP — AWS-DFD-Visualizer v2.8.6
 # Read this instead of scanning full source files for orientation.
 
 ## Project Entry Points

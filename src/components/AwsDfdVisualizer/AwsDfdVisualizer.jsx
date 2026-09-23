@@ -1740,7 +1740,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, l
 
 const exportToDrawio = (nodes, links, isZeroTrust, config, globalAdapter, planeTitles = {}) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.8.1" type="device">\n`;
+    xml += `<mxfile host="Electron" modified="${new Date().toISOString()}" agent="AWS-DFD-Visualizer" version="2.8.6" type="device">\n`;
     xml += `  <diagram id="aws-dfd-diagram" name="AWS DFD Diagram">\n`;
     xml += `    <mxGraphModel dx="1200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">\n`;
     xml += `      <root>\n`;
