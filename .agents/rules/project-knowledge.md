@@ -109,3 +109,6 @@ The Makefile handles this automatically. Never commit these files.
 - **CycloneDX SBOM** is generated via Syft on every production build
 - Run `npm audit` before committing any new dependency
 - Never add a new dependency without validating it first
+- **DevDependency Attack Surface**: Although `.spl` packages omit `node_modules/`, dev tooling (`webpack-dev-server`, `launch-editor`, `fast-uri`, `shell-quote`) executes directly on developer workstations and CI runners. Maintain devDependencies without unaddressed high/critical vulnerabilities.
+- **Phantom Dependency Hygiene**: Periodically verify that top-level dependencies declared in `package.json` are actively imported in `src/`. Avoid carrying unused dependencies (e.g. `@splunk/react-ui`) that introduce transitive debt (`moment`).
+- **Continuous CVE Discovery**: Security hardening is point-in-time while CVE discovery is continuous. Always execute a live pre-flight check against the GitHub Dependabot alerts API before finalizing a release candidate.

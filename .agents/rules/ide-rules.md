@@ -25,6 +25,7 @@ These rules are loaded by the agent to maintain configuration parameters, coding
 * **Zero Secrets**: Do not commit secrets, API tokens, or hardcoded credentials.
 * **AppInspect Compliance**: Every build must pass `make inspect` with **0 errors, 0 warnings, 0 failures**.
 * **Permissions Validation**: Staged files must have permissions: `755` for directories, `644` for files. The Makefile enforces this automatically during compilation.
+* **Supply Chain & Dependabot Hygiene**: Keep runtime dependencies at 0 vulnerabilities (`npm audit --omit=dev`). Keep dev tooling patched and verify 0 open actionable Dependabot alerts prior to release.
 
 ---
 

@@ -41,5 +41,6 @@ Whenever a new capability, cloud provider, or feature is successfully implemente
 Before declaring a goal complete:
 1. **Compilation**: Run `npm run build` and ensure the webpack bundle compiles with 0 errors.
 2. **AppInspect**: Run `make inspect` and verify Splunk AppInspect passes with `error: 0, failure: 0, warning: 0`.
-3. **Release Hygiene**: If a version bump occurs, synchronize all 5 version files simultaneously (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, and `AwsDfdVisualizer.jsx`).
-4. **Git Push**: Stage, commit using conventional commits (`feat:`, `fix:`, `test:`, `docs:`), and push to `master`.
+3. **Dependency & Vulnerability Audit**: Verify `npm audit --omit=dev` reports 0 vulnerabilities and check `gh api /repos/JohnYoungSuh/AWS-DFD-Visualizer/dependabot/alerts` for 0 open actionable alerts.
+4. **Release Hygiene**: If a version bump occurs, synchronize all 5 version files simultaneously (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, and `AwsDfdVisualizer.jsx`).
+5. **Git Push**: Stage, commit using conventional commits (`feat:`, `fix:`, `test:`, `docs:`), and push to `master`.
