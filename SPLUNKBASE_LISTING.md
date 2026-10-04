@@ -14,7 +14,6 @@
 ## 📄 App Details (Long Description — paste into Splunkbase "Details" tab)
 
 ### Purpose & Background
-
 Auditing complex cloud infrastructure for compliance — DoD Impact Level 5 (IL5), NIST 800-53, or NIST 800-207 Zero-Trust Architectures — is extremely challenging. While cloud accounts (AWS, Azure, GCP) generate high-volume telemetry from AWS Config, Azure Resource Manager, GCP Asset Inventory, VPC Flow Logs, and GuardDuty, reviewing these configurations in flat Splunk tables makes it difficult for security teams, system auditors, and DevSecOps engineers to analyze isolation boundaries, spot structural gaps, or verify access routes.
 
 **AWS DFD Visualizer** transforms your live Splunk search results into interactive, audit-ready Data Flow Diagrams directly inside Splunk — no external tools required.
