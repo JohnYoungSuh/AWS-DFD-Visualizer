@@ -1,4 +1,4 @@
-# AWS DFD Visualizer — v2.8.6
+# AWS DFD Visualizer — v2.8.7
 
 > [!IMPORTANT]
 > **Multi-Cloud Interactive Security Data Flow Diagram (DFD) for Splunk** — A high-performance, D3.js + React powered visualization engine. Renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, audit-ready Zero-Trust topology blueprints. Designed for **DoD Impact Level 5 (IL5)** and **NIST 800-53 / NIST 800-207** environments.
@@ -14,7 +14,7 @@ The complete Zero-Trust cloud topology solution inside Splunk operates across tw
 | Component | Repository / Splunkbase App | Primary Responsibility |
 |---|---|---|
 | **Data Engine (ETL)** | **AWS-DFD-Companion** (v1.1.6) | Ingests raw AWS Config, CloudWatch VPC Flow Logs, and multi-cloud asset inventory. Normalizes telemetry via pre-packaged CIM/TA-AWS macros into standard DFD table rows (`from`, `to`, `edge_label`, `status`). |
-| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.8.6) | Ingests normalized DFD table rows and renders interactive, audit-ready Zero-Trust blueprints with DoD IL5 compliance boundaries, nested VPC/Subnet containers, and drilldown capabilities. |
+| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.8.7) | Ingests normalized DFD table rows and renders interactive, audit-ready Zero-Trust blueprints with DoD IL5 compliance boundaries, nested VPC/Subnet containers, and drilldown capabilities. |
 
 Separating data normalization (Companion) from diagram rendering (Visualizer) keeps the visualization engine lightweight, compliant, and decoupled from underlying log ingestion schemas.
 
@@ -87,3 +87,10 @@ If you do not see the new Multi-CSP features, Zero-Trust Blueprint layouts, or o
 1. **Clear Browser Cache**: Hard refresh the page (`Ctrl + F5` or `Cmd + Shift + R`). Splunk aggressively caches RequireJS files.
 2. **Private/Incognito Mode**: Open the dashboard in an Incognito window to force a direct static asset fetch from Splunk.
 3. **Verify File Permissions**: Staged directory permissions must be `755` for folders and `644` for files (enforced automatically in `make build`).
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

@@ -1,3 +1,23 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.7
+
+**Release Date:** October 13, 2026  
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML  
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture  
+**License:** MIT (Copyright (c) 2026 suhlabs)
+
+---
+
+## Overview
+
+Version 2.8.7 delivers visual asset parity, AppInspect cloud operations compliance, and formal open-source licensing:
+- **Splunk 10.4.x Apps Menu Icons (`appIconAlt.png`)**: Added dedicated 36×36 and 72×72 `appIconAlt.png` and `appIconAlt_2x.png` assets to both `static/` and `appserver/static/` to resolve blank/missing icons in the Splunk Web top navigation Apps dropdown.
+- **High-Contrast Visualization Tab Preview (`preview.png`)**: Restored the high-contrast vector icon preview in `appserver/static/visualizations/AWS-DFD-Visualizer/preview.png` and `src/main/webapp/visualizations/AWS-DFD-Visualizer/preview.png`, replacing the washed-out full-screen diagram screenshot that degraded legibility in the Splunk Visualization Picker.
+- **User Guide Interactive Hierarchy Blueprint Restoration**: Restored the comprehensive Zero-Trust Hierarchy layout demonstration in `default/data/ui/views/user_guide.xml` featuring `Developer User` (`AWS::IAM::User`) in the Identity Plane with its companion live inspector table panel.
+- **Splunk Cloud Operations AppInspect Compliance**: Enforced strict root `static/` directory hygiene by removing nested subdirectories, achieving a clean 0 errors, 0 failures AppInspect certification gate.
+- **Official MIT Open-Source License**: Ingested the standard MIT `LICENSE` file (Copyright (c) 2026 suhlabs) and synchronized licensing metadata across `package.json`, `splunk-app-manifest.json`, and `README.MD`.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.8.6
 
 **Release Date:** September 18, 2026  

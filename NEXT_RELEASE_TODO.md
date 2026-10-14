@@ -30,12 +30,14 @@ This list is based on failure analysis against mock config and standard D3 force
   - **Prompt 2 (`/proc` harvester): REJECTED.** It is an agent and contradicts zero-touch. Oracle-on-RDS has no `/proc`.
   - **Cisco pitch:** rewrite as Splunk ZTA *diagram*, not Tetration-without-agents-plus-Terraform. Unfreeze sequence (TKU 3.5 → metanodes 3.8 → HCL 4.0) is documented below and **must not be executed on 2.8.6**.
 
-### ✅ Session: October 13, 2026 (Splunk 10.4.x App Navigation Icon Assets, Visualizer Picker Preview Restoration & User Guide ZTA Identity Plane Demo)
-- [x] **Splunk 10.4.x App Dropdown Menu Icons & Preview Restoration** — 
+### ✅ Session: October 13, 2026 — v2.8.7 Release (Splunk 10.4.x App Navigation Icon Assets, Visualizer Picker Preview Restoration, AppInspect Cloud Standards & MIT License)
+- [x] **v2.8.7 Release Finalization**:
   1. Restored the high-contrast v2.8.4 visualizer picker thumbnail (`preview.png`) in `appserver/static/visualizations/AWS-DFD-Visualizer/` and `src/main/webapp/visualizations/AWS-DFD-Visualizer/`, eliminating the washed-out screenshot that appeared illegible in Splunk's visualization selector.
   2. Ingested the required `appIconAlt.png` (36×36), `appIconAlt_2x.png` (72×72), `appLogo.png` (160×40), and `appLogo_2x.png` (320×80) assets across both `static/` and `appserver/static/`, fixing the missing/blank icon in the Splunk 10.4.x top navigation Apps dropdown menu.
   3. Restored the interactive Hierarchy layout demonstration featuring `Developer User` (`AWS::IAM::User`) in the Identity Plane in `default/data/ui/views/user_guide.xml` along with its matching live inspector panel.
-  4. Preserved version at 2.8.6 without build increments per operator requirement. Validated with 66/66 passing Cypress component tests, clean AppInspect (0 errors, 0 failures), and deployed directly to `splunk-emass`.
+  4. Ingested official MIT `LICENSE` file for `suhlabs` and synchronized licensing across `package.json`, `splunk-app-manifest.json`, and `README.MD`.
+  5. Cleaned root `static/` directory to meet Splunk Cloud Operations AppInspect standards (no nested subdirectories under `static/`), confirming 0 errors and 0 failures in `make inspect`.
+  6. Synchronized version `2.8.7` simultaneously across all 5 core configuration files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`), plus `package-lock.json` and Draw.io export XML header. Validated with 66/66 passing Cypress tests and deployed to `splunk-emass`.
 
 ### ✅ Session: September 21, 2026 (v2.8.6 Competitive Fitness & Hardening Review · PM + SA)
 - [x] **Review only — no application code changes.** Dual-persona review of whether v2.8.6 is hardened and has the planned features to compete with VPC / network-diagram software the PM listed.
