@@ -213,25 +213,40 @@ const dynamicBgWidth = Math.max(80, Math.ceil(displayLabel.length * charWidth) +
 
 ---
 
-## 📌 LL-004 — "Same Feedback Yesterday, Same Result" — How to Avoid Recycling Fixes
+## 📌 LL-005 — Splunk 10.4.x App Dropdown Menus vs. Visualization Picker Assets & Browser Caching
 
-**Date:** June 18, 2026
+**Date Resolved:** October 13, 2026
+**Symptom:** 
+1. In Splunk Enterprise 10.4.x, the top navigation "Apps" dropdown menu displayed a blank empty circle for "AWS DFD Visualizer".
+2. In the Search & Reporting "Splunk Visualizations" tab picker ("More" section), the custom visualization thumbnail was washed out and illegible compared to v2.8.4.
+3. Even after updating the asset on the server, the browser continued showing the old washed-out thumbnail.
 
-This session highlighted a recurring pattern: the same user feedback appearing across multiple sessions without a durable fix. Here is what distinguishes a durable fix from a cosmetic one:
+### What Happened (Root Cause Analysis)
 
-| ❌ Cosmetic Fix (Fails Again) | ✅ Durable Fix (Sticks) |
-|---|---|
-| Adjusts a symptom (e.g. increase node spacing) | Addresses the root cause (e.g. pill width is not data-driven) |
-| Verifies fix visually during the session only | Adds a diagnostic rule / playbook so future agents know to check this first |
-| Updates one file but misses sibling copies | Searches for ALL copies across the repo before editing |
-| Assumes writing a file = success | Verifies pixel dimensions / rendered output after writing |
-| Relies on memory of what was done | Documents the root cause in `LESSONS_LEARNED.md` and agent rules |
+1. **Splunk 10 Menu Asset Divergence (`appIconAlt.png`)**:
+   - Splunk Web home page uses `static/appIcon.png` (36×36) and `static/appIcon_2x.png` (72×72).
+   - Splunk 9+ and 10+ top navigation **Apps dropdown menus** specifically request **`appIconAlt.png`** (36×36) and **`appIconAlt_2x.png`** (72×72).
+   - Our app only contained `appIcon.png`, leaving the dropdown menu without an icon to render (resulting in a blank space).
 
-### The Three-Question Root Cause Checklist
-Before closing a visual bug as "fixed," the agent must answer:
-1. **Is the fix data-driven?** (Are computed values driven by actual content, or are they hardcoded?)
-2. **Are all copies updated?** (Does this asset/config exist in multiple locations? Were all of them changed?)
-3. **Was the output verified?** (Was the actual rendered output — dimensions, text, layout — confirmed, not just the file write?)
+2. **Visualization Picker Thumbnail Regression (`preview.png`)**:
+   - In v2.8.4, `preview.png` was a clean, high-contrast stylized network diagram with AWS hexagon and surrounding service nodes.
+   - During the v2.8.5 release cycle, `preview.png` was replaced with a 1024×470 full-screen screenshot of an entire Splunk dashboard. Scaled down to the 116×76 thumbnail box in the picker, the screenshot became washed-out, pale, and unreadable.
+
+3. **Browser Asset Caching Without Build Bump**:
+   - When retaining the exact version and build number (`2.8.6` without increment), Splunk's static cache URL (`/en-US/static/@<build>/...`) remains identical.
+   - Web browsers (Edge, Chrome) aggressively cache static images locally on disk/memory. Even when `make deploy` replaces `preview.png` on the Splunk server (serving the new hash with HTTP 200), a standard browser reload (`F5`) or tab click reuses the locally cached image instead of requesting the new one from the server.
+   - To see the updated thumbnail without incrementing the app version, the browser cache must be bypassed via a **Hard Refresh** (`Ctrl + F5` or `Ctrl + Shift + R`).
+
+### Fix & Prevention Playbook
+
+1. **Maintain Full Asset Suite in Both Locations**:
+   Ensure `appIcon.png`, `appIcon_2x.png`, `appIconAlt.png`, `appIconAlt_2x.png`, `appLogo.png`, and `appLogo_2x.png` exist in **both** `appserver/static/` and `static/`.
+2. **Never Use Full Dashboard Screenshots for `preview.png`**:
+   The custom visualization picker container is approximately 116×76px. Always use high-contrast, bold vector/stencil imagery rather than complex full-screen application screenshots.
+3. **Dual Pathing for Visualizations**:
+   Place `preview.png` and `icon.png` in both `appserver/static/visualizations/AWS-DFD-Visualizer/` and `static/visualizations/AWS-DFD-Visualizer/`.
+4. **Client-Side Cache Invalidation Notice**:
+   When hotfixing static images without a version/build bump, always instruct the user to perform a hard browser refresh (`Ctrl + F5` or `Ctrl + Shift + R`).
 
 ---
 

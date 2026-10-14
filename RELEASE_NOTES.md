@@ -16,6 +16,9 @@ Version 2.8.6 is a comprehensive security hardening and vulnerability remediatio
 - **CSV Live Feed Isolation & Fix**: Fixed CSV header/column mapping order in `handleApplyCsv` to eliminate index-shift bugs when drilldown columns appear mid-table, and neutralized `node_drilldown`/`link_drilldown` columns to prevent client-side trust bypasses. Added `enableCsvConsole` option.
 - **Console Privacy & HUD Hardening**: Gated verbose debug logging in `visualization_source.js` and `AwsDfdVisualizer.jsx` behind `config.debug` and removed node ID listings from the production HUD canvas.
 - **Supply Chain & CI Gate Hardening**: Enforced non-zero exit codes on Bandit SAST scans, added production `npm audit --omit=dev --audit-level=high` gates, pinned `@splunk/webpack-configs` to `^7.0.3`, added `browserslist` override to `package.json`, and ensured `check_for_updates = 1` in `app.conf`.
+- **Splunk 10.4.x Navigation Menu Assets (`appIconAlt.png`)**: Ingested dedicated 36×36 and 72×72 `appIconAlt.png` and `appIconAlt_2x.png` assets across both `static/` and `appserver/static/` to resolve blank icons in the Splunk Web top navigation Apps dropdown.
+- **Visualizer Picker Thumbnail Restoration (`preview.png`)**: Restored the high-contrast v2.8.4 vector preview icon under `appserver/static/visualizations/AWS-DFD-Visualizer/` and `static/visualizations/AWS-DFD-Visualizer/`, replacing the washed-out full-screen diagram screenshot that degraded legibility in the Splunk Search Visualization Picker.
+- **User Guide Interactive Hierarchy Blueprint Restoration**: Restored the comprehensive Zero-Trust Hierarchy layout demonstration in `default/data/ui/views/user_guide.xml` featuring `Developer User` (`AWS::IAM::User`) in the Identity Plane with its companion live inspector table panel.
 
 ---
 
