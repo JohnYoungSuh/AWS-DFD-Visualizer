@@ -252,6 +252,19 @@ Full release notes: [RELEASE_NOTES.md](https://github.com/JohnYoungSuh/AWS-DFD-V
 
 ---
 
+## 📸 Splunkbase Screenshots (Curated 4-Image Set)
+
+The submission portal allows up to 4 screenshots. High-resolution 1280×816 captures generated automatically via Cypress are saved in `docs/splunkbase_screenshots/`:
+
+| # | Image File | Splunkbase Caption / Title | Key Visual Features |
+|---|---|---|---|
+| **1** | [`01_zero_trust_blueprint.png`](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/docs/splunkbase_screenshots/01_zero_trust_blueprint.png) | **Zero-Trust Architecture Blueprint Mode (NIST 800-207 & DoD IL5 Compliance)** | 3-plane vertical stratification (`Identity`, `Control`, `Data`), nested VPC/Subnet boundary boxes, concentric Security Group rings, and dashed red `⚠️ SSH/22` ingress violation highlight. |
+| **2** | [`02_multi_cloud_topology.png`](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/docs/splunkbase_screenshots/02_multi_cloud_topology.png) | **Unified Multi-Cloud Topology Canvas (AWS + Azure V24 + GCP)** | Multi-CSP provider hulls with official architecture icons (AWS Lambda/S3, Azure Entra ID/VM, GCP Cloud Armor/SQL), cross-cloud peering links (`gRPC`, `mTLS`, `HTTPS`). |
+| **3** | [`03_soc_threat_investigation.png`](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/docs/splunkbase_screenshots/03_soc_threat_investigation.png) | **Interactive Threat Hunting & Lateral Movement Attack Pathing** | Perimeter C2 exploit chain, compromised Bastion proxy, lateral exfiltration path to sensitive database target, and isolated KMS/Identity core. |
+| **4** | [`04_architecture_export_console.png`](file:///home/suhlabs/projects/suhlabs/AWS-DFD-Visualizer/docs/splunkbase_screenshots/04_architecture_export_console.png) | **Enterprise Architecture Export (Draw.io XML, SVG) & Live Feed Console** | Hierarchy layout tree with clean protocol capsules, HUD buttons for Download SVG & Export to Draw.io, and the interactive Live CSV sandboxing console overlay. |
+
+---
+
 ## 📞 Support
 
 - **GitHub Issues:** https://github.com/JohnYoungSuh/AWS-DFD-Visualizer/issues
