@@ -61,6 +61,9 @@ jobs:
       - name: Build webpack bundle
         run: npm run build
 
+      - name: Run Cypress Component Tests (drilldowns, exports, stencils)
+        run: npm run test:cy
+
       - name: Package Splunk App (.spl)
         run: |
           SPL_FILE="${APP_NAME}-${VERSION}.spl"
