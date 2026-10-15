@@ -1,12 +1,12 @@
-# Session Orientation — AWS-DFD-Visualizer v2.8.6
+# Session Orientation — AWS-DFD-Visualizer v2.8.7
 > Read this first. ~200 tokens. Saves thousands.
 
 ## Current State
 | Item | Status |
 |---|---|
-| **Version** | 2.8.6 (all 5 files in sync) |
+| **Version** | 2.8.7 (all 5 files in sync) |
 | **Branch** | `master` |
-| **Next priority** | 🚀 **Release v2.8.6 to Splunkbase & LTS Freeze** (see NEXT_RELEASE_TODO.md) |
+| **Next priority** | 🚀 **Release v2.8.7 to Splunkbase & LTS Freeze** (see NEXT_RELEASE_TODO.md) |
 | **CI** | Green on last push |
 
 ## Where Things Live
