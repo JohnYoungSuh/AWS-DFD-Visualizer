@@ -8,7 +8,7 @@
         <div class="user-guide-welcome" style="padding: 15px; background-color: #1e2832; border-radius: 6px; border: 1px solid #2d3e50; margin-bottom: 20px;">
           <h1 style="color: #FF9900; margin-top: 0; font-weight: 500; font-size: 28px;">AWS Security Data Flow Diagram (DFD) Visualizer</h1>
           <p style="font-size: 15px; line-height: 1.6; color: #dcdcdc;">
-            Welcome to the <strong>AWS-DFD-Visualizer</strong>, a React-based custom visualization for Splunk built to render complex multi-cloud relationships (supporting **AWS**, **Microsoft Azure**, and **Google Cloud Platform**) as dynamic, interactive Data Flow Diagrams. This app is architected with DoD Impact Level 5 (IL5) environments, Risk Management Framework (RMF) audits, and Zero-Trust architecture (ZTA) in mind.
+            Welcome to the <strong>AWS-DFD-Visualizer</strong>, a React-based custom visualization for Splunk built to render complex multi-cloud relationships (supporting **AWS**, **Microsoft Azure**, and **Google Cloud Platform**) as dynamic, interactive Data Flow Diagrams. This app is architected with DoD Impact Level 5 (IL5) environments, Risk Management Framework (RMF) audits, and Zero-Trust architecture (ZTA) in mind. Section 1.3 keeps three lists apart: allowed flows, planned changes, and the actual rows. The app does not include an allow list.
           </p>
         </div>
       </html>
@@ -253,6 +253,151 @@
             <li><strong>Audience-Centric Labels:</strong> Never output raw AWS IDs in the <code>node_label</code> unless explicitly required for a Tier 3 Troubleshooting view. Always use the <code>coalesce</code> pattern to ensure readability by leadership: <code>| eval node_label = coalesce(Name, Role, resourceId)</code>.</li>
             <li><strong>Explicit Edge Typing:</strong> Unlabeled links ("ghost arrows") are prohibited in Tier 1 and Tier 2 views. Always populate <code>edge_label</code>. If the link represents structure or containment (e.g., EC2 instance inside a Subnet), use: <code>| eval edge_label = "Contained In"</code>.</li>
           </ul>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel title="1.3. Allowed, planned, and actual — column contract and source recipes">
+      <html>
+        <div style="font-size: 14px; color: #dcdcdc; line-height: 1.6;">
+          <p>The diagram draws the rows your search returns. It does not ship an allow list, and it does not allow or deny packets. Keep three lists, and keep them apart:</p>
+          <ul style="padding-left: 20px;">
+            <li><strong>Allowed</strong> (<code>&lt;your_allowed_flows&gt;</code>) is what is approved. A flow may run because the authorization says so.</li>
+            <li><strong>Planned</strong> (<code>&lt;your_planned_flows&gt;</code>) is a change inside a plan. It is not yet allowed. Leave it out of the allowed lookup until a person approves it.</li>
+            <li><strong>Actual</strong> is the live search. It is the evidence. Indicators of compromise join onto these rows only.</li>
+          </ul>
+          <p><code>OK</code> means the actual row is in the allowed lookup. <code>violation</code> means an actual row is not allowed, an allowed row is missing from the actual search, or an actual row matched an indicator. A planned row that is not yet actual stays <code>planned</code> and is not a violation. A person decides whether a violation may be added to the allowed lookup. The firewall, security group, or Kubernetes network policy is what permits or drops the traffic. This visualization does not call the Governance Policy Inquiry Service. That service allows or denies agent actions.</p>
+          <p>Put protocol and port in <code>edge_label</code> (for example <code>tcp/443</code>). Put the service name in <code>node_label</code>. The canvas reads those fields today. Always set <code>plane</code> to one of <code>Identity_Plane</code>, <code>Policy_Plane</code>, <code>Control_Plane</code>, or <code>Data_Plane</code>. Collapse repeats with <code>| stats</code> so the result stays under the 5,000-row stop. Replace every <code>&lt;your_*&gt;</code> placeholder with your index or lookup.</p>
+          <ul style="padding-left: 20px;">
+            <li><code>from</code>, <code>to</code> — required endpoints.</li>
+            <li><code>node_label</code> — service name.</li>
+            <li><code>edge_label</code> — protocol and port.</li>
+            <li><code>group</code> — VPC, subnet, network security group, or Kubernetes namespace.</li>
+            <li><code>vpcId</code> — cloud network id when you have one. Leave it empty for on-prem Kubernetes and put the namespace in <code>group</code>.</li>
+            <li><code>plane</code> — set in the search. Kubernetes control-plane components are not the diagram's NIST bands. If <code>plane</code> is empty, a label containing <code>api_server</code> is classified as <code>Data_Plane</code>.</li>
+            <li><code>status</code> — <code>OK</code>, <code>violation</code>, or <code>planned</code>, using the rule above.</li>
+          </ul>
+
+          <h3 style="color: #FF9900; margin-top: 18px;">AWS — Config security groups and VPC Flow</h3>
+          <p>Point the actual search at the flow or Config index you already collect. The allowed lookup and the planned lookup stay separate.</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[index=<your_aws_index> sourcetype=<your_vpcflow_or_config_sourcetype>
+| eval from=coalesce(src_ip, srcaddr, source)
+| eval to=coalesce(dest_ip, dstaddr, destination)
+| eval node_label=coalesce(service, from)
+| eval edge_label=coalesce(protocol, "ip")."/".coalesce(dest_port, dstport, "any")
+| eval group=coalesce(vpc_id, "unassigned")
+| eval vpcId=vpc_id
+| eval plane=case(match(node_label, "(?i)iam|identity"), "Identity_Plane", match(node_label, "(?i)firewall|waf|gateway"), "Control_Plane", true(), "Data_Plane")
+| stats count by from to node_label edge_label group vpcId plane
+| eval record="actual", ioc_hit=0
+| lookup <your_indicator_lookup> dest as to OUTPUT indicator
+| eval ioc_hit=if(isnotnull(indicator), 1, 0)
+| append [
+    | inputlookup <your_allowed_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="allowed", ioc_hit=0
+  ]
+| append [
+    | inputlookup <your_planned_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="planned", ioc_hit=0
+  ]
+| stats values(record) as record max(ioc_hit) as ioc_hit by from to node_label edge_label group vpcId plane
+| eval has_actual=mvcount(mvfilter(match(record, "^actual$")))
+| eval has_allowed=mvcount(mvfilter(match(record, "^allowed$")))
+| eval status=case(has_actual>0 AND ioc_hit>0, "violation", has_actual>0 AND has_allowed>0, "OK", has_actual>0, "violation", has_allowed>0, "violation", true(), "planned")
+| table from to node_label edge_label group vpcId plane status]]></pre>
+
+          <h3 style="color: #FF9900; margin-top: 18px;">Azure — network security groups</h3>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[index=<your_azure_index> sourcetype=<your_nsg_or_flow_sourcetype>
+| eval from=coalesce(src_ip, sourceAddress)
+| eval to=coalesce(dest_ip, destinationAddress)
+| eval node_label=coalesce(service, rule_name, from)
+| eval edge_label=coalesce(protocol, "ip")."/".coalesce(dest_port, destinationPort, "any")
+| eval group=coalesce(nsg_name, subnet, "unassigned")
+| eval vpcId=vnet
+| eval plane=case(match(node_label, "(?i)identity|entra|aad"), "Identity_Plane", match(node_label, "(?i)firewall|waf|gateway"), "Control_Plane", true(), "Data_Plane")
+| stats count by from to node_label edge_label group vpcId plane
+| eval record="actual", ioc_hit=0
+| lookup <your_indicator_lookup> dest as to OUTPUT indicator
+| eval ioc_hit=if(isnotnull(indicator), 1, 0)
+| append [
+    | inputlookup <your_allowed_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="allowed", ioc_hit=0
+  ]
+| append [
+    | inputlookup <your_planned_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="planned", ioc_hit=0
+  ]
+| stats values(record) as record max(ioc_hit) as ioc_hit by from to node_label edge_label group vpcId plane
+| eval has_actual=mvcount(mvfilter(match(record, "^actual$")))
+| eval has_allowed=mvcount(mvfilter(match(record, "^allowed$")))
+| eval status=case(has_actual>0 AND ioc_hit>0, "violation", has_actual>0 AND has_allowed>0, "OK", has_actual>0, "violation", has_allowed>0, "violation", true(), "planned")
+| table from to node_label edge_label group vpcId plane status]]></pre>
+
+          <h3 style="color: #FF9900; margin-top: 18px;">GCP — VPC firewall rules</h3>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[index=<your_gcp_index> sourcetype=<your_firewall_or_flow_sourcetype>
+| eval from=coalesce(src_ip, connection.src_ip)
+| eval to=coalesce(dest_ip, connection.dest_ip)
+| eval node_label=coalesce(service, rule_name, from)
+| eval edge_label=coalesce(protocol, "ip")."/".coalesce(dest_port, "any")
+| eval group=coalesce(vpc_name, "unassigned")
+| eval vpcId=vpc_name
+| eval plane=case(match(node_label, "(?i)iam|identity"), "Identity_Plane", match(node_label, "(?i)firewall|armor|gateway"), "Control_Plane", true(), "Data_Plane")
+| stats count by from to node_label edge_label group vpcId plane
+| eval record="actual", ioc_hit=0
+| lookup <your_indicator_lookup> dest as to OUTPUT indicator
+| eval ioc_hit=if(isnotnull(indicator), 1, 0)
+| append [
+    | inputlookup <your_allowed_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="allowed", ioc_hit=0
+  ]
+| append [
+    | inputlookup <your_planned_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="planned", ioc_hit=0
+  ]
+| stats values(record) as record max(ioc_hit) as ioc_hit by from to node_label edge_label group vpcId plane
+| eval has_actual=mvcount(mvfilter(match(record, "^actual$")))
+| eval has_allowed=mvcount(mvfilter(match(record, "^allowed$")))
+| eval status=case(has_actual>0 AND ioc_hit>0, "violation", has_actual>0 AND has_allowed>0, "OK", has_actual>0, "violation", has_allowed>0, "violation", true(), "planned")
+| table from to node_label edge_label group vpcId plane status]]></pre>
+
+          <h3 style="color: #FF9900; margin-top: 18px;">On-prem Kubernetes — manifests first, then live rows</h3>
+          <p>Manifests you are still standing up belong in <code>&lt;your_planned_flows&gt;</code> until a person approves them into <code>&lt;your_allowed_flows&gt;</code>. The namespace is the group. This app does not connect to the API server, score the nodes, or enforce Pod Security. After the cluster is online, point the actual search at the flow or audit events you already collect.</p>
+          <p>Set <code>plane</code> in the search. A common assignment puts <code>kube-apiserver</code>, <code>etcd</code>, <code>kube-scheduler</code>, and <code>kube-controller-manager</code> on <code>Control_Plane</code> and workloads on <code>Data_Plane</code>. That assignment is yours. Leaving <code>plane</code> empty lets the label <code>api_server</code> fall into <code>Data_Plane</code>.</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[index=<your_k8s_index> sourcetype=<your_flow_or_audit_sourcetype>
+| eval from=coalesce(src_service, src_ip)
+| eval to=coalesce(dest_service, dest_ip)
+| eval node_label=coalesce(k8s_component, service, from)
+| eval edge_label=coalesce(protocol, "tcp")."/".coalesce(dest_port, "any")
+| eval group=coalesce(namespace, "unassigned")
+| eval vpcId=""
+| eval plane=case(k8s_component IN ("kube-apiserver", "etcd", "kube-scheduler", "kube-controller-manager"), "Control_Plane", true(), "Data_Plane")
+| stats count by from to node_label edge_label group vpcId plane
+| eval record="actual", ioc_hit=0
+| lookup <your_indicator_lookup> dest as to OUTPUT indicator
+| eval ioc_hit=if(isnotnull(indicator), 1, 0)
+| append [
+    | inputlookup <your_allowed_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="allowed", ioc_hit=0
+  ]
+| append [
+    | inputlookup <your_planned_flows>
+    | fields from to node_label edge_label group vpcId plane
+    | eval record="planned", ioc_hit=0
+  ]
+| stats values(record) as record max(ioc_hit) as ioc_hit by from to node_label edge_label group vpcId plane
+| eval has_actual=mvcount(mvfilter(match(record, "^actual$")))
+| eval has_allowed=mvcount(mvfilter(match(record, "^allowed$")))
+| eval status=case(has_actual>0 AND ioc_hit>0, "violation", has_actual>0 AND has_allowed>0, "OK", has_actual>0, "violation", has_allowed>0, "violation", true(), "planned")
+| table from to node_label edge_label group vpcId plane status]]></pre>
         </div>
       </html>
     </panel>

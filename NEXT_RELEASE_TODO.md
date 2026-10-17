@@ -3,7 +3,25 @@
 This list is based on failure analysis against mock config and standard D3 force-graph patterns for AWS Config data. These items are prioritized for the next release to improve stability, usability, and visual accuracy.
 
 ---
+
+## Adoption boundary — in force (17 Oct 2026)
+
+No host agent, no chat agent, and no visualizer feature work until a named production install asks for a change. Compatibility, AppInspect, and CVE fixes continue.
+
+- The canvas paints an edge table. A saved search or Companion produces the rows. Recipes for that table are in the User Guide. They are documentation, not a new renderer.
+- Keep three customer lists apart in those recipes. **Allowed** is the approved flow. **Planned** is a change that is not yet allowed. **Actual** is the live evidence. `OK` only when the actual row is allowed. A planned row that is not yet actual is not a violation.
+- Do not ship a filled PPSM, security-group, or flow allow list in this app. The allow list is the customer's authorization.
+- GPIS stays the agent allow-or-deny service in the governance repository. Do not load the draft PPSM registry into GPIS from this repo, and do not turn GPIS into a flow or cluster auditor.
+- Do not audit a Kubernetes cluster from this app. No API-server calls, CIS score, or Pod Security enforcement.
+- Four gates before any new capability: a real diagram job, a named install, no new host agent, and a diagram rather than enforcement.
+
 ## 📍 Session Log
+
+### ✅ Session: October 17, 2026 — Adoption boundary, baseline recipes, GPIS left unchanged
+- [x] **Freeze held.** No visualizer code, no host collector, and no chat agent. The boundary above is the standing rule.
+- [x] **Column contract and four source recipes** added to `default/data/ui/views/user_guide.xml` (AWS, Azure, GCP, on-prem Kubernetes). Patterns only. No filled allow list. `plane` is set in the search. Kubernetes control-plane components are assigned explicitly so the `api_server` keyword does not drop them in the data band.
+- [x] **GPIS not modified.** It still allows or denies agent actions only. The draft PPSM registry stays unloaded.
+- [x] **Allowed, planned, and actual split in the User Guide.** `OK` only when the actual row is allowed. A planned row that is not yet actual is not a violation. README and this boundary match that wording. No renderer change.
 
 ### ✅ Session: September 22, 2026 — v2.8.6 Splunkbase Release Readiness, Cloud Compatibility & Hygiene
 - [x] **v2.8.6 Release Readiness & Final Certification**:
