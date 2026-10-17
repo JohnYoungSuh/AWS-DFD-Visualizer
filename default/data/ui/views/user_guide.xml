@@ -276,9 +276,16 @@
             <li><code>edge_label</code> — protocol and port.</li>
             <li><code>group</code> — VPC, subnet, network security group, or Kubernetes namespace.</li>
             <li><code>vpcId</code> — cloud network id when you have one. Leave it empty for on-prem Kubernetes and put the namespace in <code>group</code>.</li>
-            <li><code>plane</code> — set in the search. Kubernetes control-plane components are not the diagram's NIST bands. If <code>plane</code> is empty, a label containing <code>api_server</code> is classified as <code>Data_Plane</code>.</li>
-            <li><code>status</code> — <code>OK</code>, <code>violation</code>, or <code>planned</code>, using the rule above.</li>
+            <li><code>plane</code> — source or isolated-node band. Kubernetes control-plane components are not the diagram's NIST bands. If <code>plane</code> is empty, a label containing <code>api_server</code> is classified as <code>Data_Plane</code>.</li>
+            <li><code>dest_plane</code> — destination band on a hop row. Joined hops set this so the source node is not pinned to the destination plane.</li>
+            <li><code>status</code> — <code>OK</code>, <code>violation</code>, or <code>planned</code>, using the rule above. In zero-trust layout the hop paints: red, green, or amber. SSH/22 on a violated node is an extra highlight, not the only red path.</li>
           </ul>
+          <p>This canvas does not join Allowed, Planned, and Actual. Feed already-joined rows, or run a customer SPL recipe below. This app does not call the Kubernetes API or GPIS and does not hold a kubeconfig.</p>
+
+          <h3 style="color: #FF9900; margin-top: 18px;">GPIS join-state file (already joined)</h3>
+          <p>Copy <code>reconciliation-rows.csv</code> from <code>ai-agent-governance-framework</code> <code>scripts/join-state.py</code> into this app's lookups. A dogfood copy ships as <code>reconciliation-rows.csv</code>. It is a sample hop table, not an allow list.</p>
+          <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[| inputlookup reconciliation-rows.csv
+| table from to node_label edge_label group dest_plane status]]></pre>
 
           <h3 style="color: #FF9900; margin-top: 18px;">AWS — Config security groups and VPC Flow</h3>
           <p>Point the actual search at the flow or Config index you already collect. The allowed lookup and the planned lookup stay separate.</p>
@@ -370,7 +377,7 @@
 
           <h3 style="color: #FF9900; margin-top: 18px;">On-prem Kubernetes — manifests first, then live rows</h3>
           <p>Manifests you are still standing up belong in <code>&lt;your_planned_flows&gt;</code> until a person approves them into <code>&lt;your_allowed_flows&gt;</code>. The namespace is the group. This app does not connect to the API server, score the nodes, or enforce Pod Security. After the cluster is online, point the actual search at the flow or audit events you already collect.</p>
-          <p>Set <code>plane</code> in the search. A common assignment puts <code>kube-apiserver</code>, <code>etcd</code>, <code>kube-scheduler</code>, and <code>kube-controller-manager</code> on <code>Control_Plane</code> and workloads on <code>Data_Plane</code>. That assignment is yours. Leaving <code>plane</code> empty lets the label <code>api_server</code> fall into <code>Data_Plane</code>.</p>
+          <p>Set <code>plane</code> in the search for isolated nodes. For already-joined hop rows use <code>dest_plane</code> (see join-state file above). A common assignment puts <code>kube-apiserver</code>, <code>etcd</code>, <code>kube-scheduler</code>, and <code>kube-controller-manager</code> on <code>Control_Plane</code> and workloads on <code>Data_Plane</code>. That assignment is yours. Leaving <code>plane</code> empty lets the label <code>api_server</code> fall into <code>Data_Plane</code>.</p>
           <pre style="background-color: #1a222a; color: #5cb85c; padding: 12px; border-radius: 4px; border: 1px solid #333; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4;"><![CDATA[index=<your_k8s_index> sourcetype=<your_flow_or_audit_sourcetype>
 | eval from=coalesce(src_service, src_ip)
 | eval to=coalesce(dest_service, dest_ip)

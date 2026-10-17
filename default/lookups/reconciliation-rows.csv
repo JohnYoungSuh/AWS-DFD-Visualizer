@@ -1,0 +1,4 @@
+from,to,node_label,edge_label,group,dest_plane,status
+dfd-viz-ui,k8s-api-server,dfd-viz-ui,HTTPS:6443,ai-agents-dev,Control_Plane,violation
+dfd-viz-ui,reconciliation-file,dfd-viz-ui,file:reconciliation-rows.json,ai-agents-dev,Data_Plane,OK
+gpis-client,gpis-pdp,gpis-client,HTTPS:8000,ai-agents-dev,Policy_Plane,OK

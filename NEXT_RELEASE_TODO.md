@@ -17,6 +17,12 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 ## 📍 Session Log
 
+### ✅ Session: October 17, 2026 — Week 3 join-state paint findings closed
+- [x] **Hop `status` paints the edge** in zero-trust layout (`violation` red, `OK` green, `planned` amber). SSH/22 on a violated node remains an extra highlight.
+- [x] **`dest_plane`** on joined hop rows so the source is not pinned to the destination band.
+- [x] **Join-state file path** — User Guide §1.3 recipe `| inputlookup reconciliation-rows.csv`. Dogfood lookup + `join_state_dogfood` nav view. CSV Live Feed placeholder uses 1.3 columns. Canvas still does not call Kubernetes or GPIS.
+- [x] **Tests** — `JoinStateSection13.cy.jsx` (hop status, SSH/22 regression, CSV paste). No kubeconfig.
+
 ### ✅ Session: October 17, 2026 — Adoption boundary, baseline recipes, GPIS left unchanged
 - [x] **Freeze held.** No visualizer code, no host collector, and no chat agent. The boundary above is the standing rule.
 - [x] **Column contract and four source recipes** added to `default/data/ui/views/user_guide.xml` (AWS, Azure, GCP, on-prem Kubernetes). Patterns only. No filled allow list. `plane` is set in the search. Kubernetes control-plane components are assigned explicitly so the `api_server` keyword does not drop them in the data band.

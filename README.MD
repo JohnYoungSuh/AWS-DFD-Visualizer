@@ -18,7 +18,7 @@ The complete Zero-Trust cloud topology solution inside Splunk operates across tw
 
 Separating data normalization (Companion) from diagram rendering (Visualizer) keeps the visualization engine lightweight, compliant, and decoupled from underlying log ingestion schemas.
 
-The User Guide (section 1.3) is the column contract. Allowed flows and planned changes stay in separate lookups the customer owns. The live search is the actual evidence. One recipe each for AWS, Azure, GCP, and on-prem Kubernetes maps that source into `from`, `to`, `node_label`, `edge_label`, `group`, `vpcId`, `plane`, and `status`. `OK` means the actual row is allowed. The app does not ship a port allow list, does not call a Kubernetes API server, and does not allow or deny traffic. Agent allow-or-deny stays in the Governance Policy Inquiry Service, which this visualization does not modify.
+The User Guide (section 1.3) is the column contract. Allowed flows and planned changes stay in separate lookups the customer owns, or arrive already joined as `reconciliation-rows.csv` from the GPIS join-state script. The canvas paints hop `status` (`OK` green, `violation` red, `planned` amber). Joined hops put the destination band in `dest_plane` so the source node is not pinned. The app does not ship a port allow list, does not call a Kubernetes API server, and does not allow or deny traffic. Agent allow-or-deny stays in the Governance Policy Inquiry Service, which this visualization does not modify.
 
 ---
 

@@ -247,9 +247,9 @@ const buildStatusHighlight = (status, customPaletteMap = {}) => {
         return { color: '#FF0000', className: 'pulsing-red', labelPrefix: '🚨 ' };
     }
 
-    // 3. Built-in warning defaults (always preserved)
-    if (s === 'warning' || s === 'alert' || s === 'suspicious') {
-        return { color: '#FFA500', className: 'pulsing-yellow', labelPrefix: '⚠️ ' };
+    // 3. Built-in warning defaults (always preserved). Section 1.3 `planned` is amber.
+    if (s === 'warning' || s === 'alert' || s === 'suspicious' || s === 'planned') {
+        return { color: '#FFA500', className: 'pulsing-yellow', labelPrefix: s === 'planned' ? '📋 ' : '⚠️ ' };
     }
 
     return null;
@@ -355,6 +355,14 @@ const indexOfFirstField = (fields, names) => {
         if (idx > -1) return idx;
     }
     return -1;
+};
+
+const STATUS_RANK = { violation: 2, planned: 1, ok: 0 };
+
+const worseHopStatus = (a, b) => {
+    const ra = STATUS_RANK[String(a || '').toLowerCase().trim()] || 0;
+    const rb = STATUS_RANK[String(b || '').toLowerCase().trim()] || 0;
+    return ra >= rb ? (a || b || '') : (b || a || '');
 };
 
 const parseSplunkData = (data) => {
@@ -589,7 +597,7 @@ const parseSplunkData = (data) => {
 
         if (to && to !== 'null' && to.trim() !== '') {
             const safeToId = safeId(to);
-            rawLinks.push({ source: safeFromId, target: safeToId, label: edge, link_drilldown });
+            rawLinks.push({ source: safeFromId, target: safeToId, label: edge, link_drilldown, status });
             if (!nodesMap.has(safeToId)) {
                 const toLabel = to.split(/[:/]/).pop() || to;
                 const toNode = { 
@@ -660,6 +668,7 @@ const parseSplunkData = (data) => {
                 target: currentEdge.target, 
                 link_drilldown: currentEdge.link_drilldown || null,
                 protocols: new Set(currentEdge.label ? [currentEdge.label] : []),
+                status: currentEdge.status || '',
                 count: 1
             });
         } else {
@@ -670,6 +679,7 @@ const parseSplunkData = (data) => {
             if (currentEdge.link_drilldown && !existingRecord.link_drilldown) {
                 existingRecord.link_drilldown = currentEdge.link_drilldown;
             }
+            existingRecord.status = worseHopStatus(existingRecord.status, currentEdge.status);
             existingRecord.count = (existingRecord.count || 1) + 1;
         }
         return acc;
@@ -680,6 +690,7 @@ const parseSplunkData = (data) => {
         target: edge.target,
         label: Array.from(edge.protocols).filter(Boolean).sort().join(', '),
         link_drilldown: edge.link_drilldown,
+        status: edge.status || '',
         count: edge.count || 1
     }));
 
@@ -692,7 +703,9 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
     if (!source.x || !target.x) return null;
 
     let d;
-    let isViolated = false;
+    const linkStatus = String(link.status || '').toLowerCase().trim();
+    let isViolated = linkStatus === 'violation';
+    let isPlanned = !isViolated && linkStatus === 'planned';
 
     const checkNodeViolation = (node) => {
         if (!node) return false;
@@ -714,9 +727,10 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
         return false;
     };
 
-    if (isZeroTrust || (config?.layoutMode || '').toLowerCase() === 'hierarchy') {
+    if (!isViolated && (isZeroTrust || (config?.layoutMode || '').toLowerCase() === 'hierarchy')) {
         if (checkNodeViolation(targetNode) || checkNodeViolation(sourceNode)) {
             isViolated = true;
+            isPlanned = false;
         }
     }
 
@@ -915,11 +929,25 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
     }
 
     const isZeroTrustColors = isZeroTrust || isStaticBlueprint;
-    const strokeColor = isZeroTrustColors ? (isViolated ? '#FF0000' : '#00FF00') : '#879196';
-    const strokeDash = isZeroTrustColors && isViolated ? '4,4' : 'none';
-    const markerEnd = isZeroTrustColors ? (isViolated ? 'url(#arrow-red)' : 'url(#arrow-green)') : 'url(#arrow)';
+    let strokeColor = '#879196';
+    let strokeDash = 'none';
+    let markerEnd = 'url(#arrow)';
+    if (isZeroTrustColors) {
+        if (isViolated) {
+            strokeColor = '#FF0000';
+            strokeDash = '4,4';
+            markerEnd = 'url(#arrow-red)';
+        } else if (isPlanned) {
+            strokeColor = '#FFA500';
+            strokeDash = '6,4';
+            markerEnd = 'url(#arrow-amber)';
+        } else {
+            strokeColor = '#00FF00';
+            markerEnd = 'url(#arrow-green)';
+        }
+    }
 
-    return { d, midX, midY, isViolated, strokeColor, strokeDash, markerEnd };
+    return { d, midX, midY, isViolated, isPlanned, strokeColor, strokeDash, markerEnd };
 };
 
 // SECTION: LINK_COMPONENT — SVG edge renderer (curved arc or straight line)
@@ -928,16 +956,17 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
 const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode, isHovered, onMouseEnter, onMouseLeave }) => {
     const geom = getLinkGeometry(link, config, isZeroTrust, targetNode, sourceNode);
     if (!geom) return null;
-    const { d, strokeColor, strokeDash, markerEnd } = geom;
+    const { d, strokeColor, strokeDash, markerEnd, isViolated, isPlanned } = geom;
 
     // Edge weighting: log2 scale clamped to [2, 10]px. Single row → 2px; 50 rows → ~7px; 100+ → 10px.
     const edgeCount = link.count || 1;
     const edgeStrokeWidth = Math.min(10, 2 + Math.log2(edgeCount + 1));
+    const paintStatus = isViolated ? 'violation' : isPlanned ? 'planned' : 'ok';
 
     return (
-        <g className="link-group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
+        <g className="link-group" data-status={paintStatus} data-edge-label={link.label || ''} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={(e) => onLinkClick && onLinkClick(e, link)} style={{ cursor: 'pointer' }}>
             <path d={d} stroke="transparent" fill="none" strokeWidth={Math.max(25, edgeStrokeWidth + 12)} />
-            <path d={d} stroke={strokeColor} fill="none" strokeWidth={edgeStrokeWidth} strokeDasharray={strokeDash} markerEnd={markerEnd} data-edge-count={edgeCount} />
+            <path d={d} stroke={strokeColor} fill="none" strokeWidth={edgeStrokeWidth} strokeDasharray={strokeDash} markerEnd={markerEnd} data-edge-count={edgeCount} data-status={paintStatus} />
         </g>
     );
 };
@@ -946,9 +975,11 @@ const Link = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode, 
 const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceNode, isHovered, onMouseEnter, onMouseLeave }) => {
     const geom = getLinkGeometry(link, config, isZeroTrust, targetNode, sourceNode);
     if (!geom) return null;
-    const { midX, midY, isViolated } = geom;
+    const { midX, midY, isViolated, isPlanned } = geom;
     const { label } = link;
     if (!label) return null;
+    const accent = isViolated ? '#FF0000' : isPlanned ? '#FFA500' : '#D5D7D8';
+    const textFill = isViolated ? '#FF0000' : isPlanned ? '#B45309' : '#232F3E';
 
     const sizeConf = config?.linkTextSize || 'medium';
     let fontSize = 14;
@@ -958,7 +989,7 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
 
     // Dynamic width: ~0.58× char width per font-size px + 24px horizontal padding.
     // The violation prefix "⚠️ " adds ~3 effective chars worth of width.
-    const displayLabel = isViolated ? `⚠️ ${label}` : label;
+    const displayLabel = isViolated ? `⚠️ ${label}` : isPlanned ? `📋 ${label}` : label;
     const charWidth = fontSize * 0.58;
     const dynamicBgWidth = Math.max(80, Math.ceil(displayLabel.length * charWidth) + 24);
 
@@ -979,8 +1010,8 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
                 height={displayFontSize + 16} 
                 rx={15} 
                 style={{ fill: '#ffffff' }}
-                stroke={isViolated ? "#FF0000" : "#D5D7D8"} 
-                strokeWidth={isViolated ? 2 : (isHovered ? 1.5 : 1)}
+                stroke={accent} 
+                strokeWidth={isViolated || isPlanned ? 2 : (isHovered ? 1.5 : 1)}
                 x={-(displayBgWidth/2)} 
                 y={-((displayFontSize + 16)/2)} 
             />
@@ -988,8 +1019,8 @@ const LinkLabel = ({ link, config, onLinkClick, isZeroTrust, targetNode, sourceN
                 textAnchor="middle" 
                 dy={displayFontSize/3} 
                 fontSize={displayFontSize} 
-                fontWeight={isViolated || isHovered ? "bold" : "normal"}
-                fill={isViolated ? "#FF0000" : "#232F3E"}
+                fontWeight={isViolated || isPlanned || isHovered ? "bold" : "normal"}
+                fill={textFill}
                 style={{
                     textShadow: isHovered ? '0 0 4px #fff' : 'none'
                 }}
@@ -3491,13 +3522,13 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                             boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
                         }}>
                             <span style={{ fontSize: '11px', color: isDarkTheme ? '#dcdcdc' : '#232f3e', fontWeight: 'bold' }}>
-                                Paste Edge Table CSV (headers: from,to,node_label,edge_label,vpcId,subnetId,securityGroups)
+                                Paste Edge Table CSV (headers: from,to,node_label,edge_label,group,dest_plane,status)
                             </span>
                             <textarea
                                 id="csv-textarea"
                                 value={csvInput}
                                 onChange={(e) => setCsvInput(e.target.value)}
-                                placeholder={`from,to,node_label,edge_label,vpcId,subnetId,securityGroups\nbastion,web,Bastion,HTTPS/443,vpc-1,subnet-2,"[]"\nweb,db,Web Server,SSH/22,vpc-1,subnet-1,"[{\\"id\\":\\"sg-1\\",\\"is_compliant\\":false}]"\ndb,,Database Server,,vpc-1,subnet-1,"[]"`}
+                                placeholder={`from,to,node_label,edge_label,group,dest_plane,status\ndfd-viz-ui,k8s-api-server,dfd-viz-ui,HTTPS:6443,ai-agents-dev,Control_Plane,violation\ngpis-client,gpis-pdp,gpis-client,HTTPS:8000,ai-agents-dev,Policy_Plane,OK`}
                                 rows={6}
                                 style={{
                                     width: '100%',
@@ -3603,6 +3634,9 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
                     </marker>
                     <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF0000" />
+                    </marker>
+                    <marker id="arrow-amber" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#FFA500" />
                     </marker>
                 </defs>
                 <g ref={gRef}>
