@@ -4,6 +4,35 @@
 
 ---
 
+## 📌 LL-009 — Transitive Dev-Only Advisory With No Upstream Fix (`first_patched_version: null`)
+
+**Date Resolved:** October 19, 2026  
+**Context:** Dependabot Alert #27 (CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm) in transitive dev dependency `braces@3.0.3` via `webpack-dev-server` → `http-proxy-middleware` → `micromatch`.
+
+### How It Was Missed Initially
+1. **Timing**: The CVE was ingested into GitHub's advisory database on **October 4, 2026** (Alert #27 opened Oct 4, 2026). Prior releases (v2.8.6 in September) preceded this alert's creation.
+2. **CI Production-Only Scope**: CI pipelines enforce `npm audit --omit=dev --audit-level=high`. Because `braces` is strictly under `webpack-dev-server` (devDependency), production runtime scans reported 0 vulnerabilities.
+3. **No Automated PR**: Because `first_patched_version: null`, Dependabot could not open an automated fix PR (`gh pr list` was empty). The alert accumulated silently in the Security tab.
+
+### Why It Cannot Be Patched via npm
+* Latest npm version of `braces` remains `3.0.3`.
+* In upstream issue `micromatch/braces#70`, the maintainer rejected the vulnerability report as invalid ("complete nonsense"), citing existing `maxLength` guards and the computational infeasibility of bounding regex DFA states.
+* Upgrading `webpack-dev-server` to `6.1.0` still pulls `http-proxy-middleware@4.1.1` → `micromatch@4.0.8` → `braces@3.0.3`.
+
+### The Durable Triage Protocol (Standard Operating Procedure)
+When an alert cannot be resolved by `npm audit fix`:
+1. **Verify Production Bundle Isolation**: Run `npm audit --omit=dev` and inspect `visualization.js` to confirm the package is never bundled or deployed to Splunk.
+2. **Verify Workstation Attack Vector**: Confirm whether the affected component receives untrusted network input (in our case, `webpack-dev-server` only serves local Cypress test fixtures).
+3. **Check Upstream Patch Availability**: Check `gh api /repos/.../dependabot/alerts/<id>` for `first_patched_version`. If `null`, check upstream repository issues.
+4. **Formal GitHub Dismissal with Audit Trail**:
+   * Dismiss the alert via GitHub UI or `gh api` with reason `not_used` or `acceptable_risk`.
+   * Provide a full audit explanation linking to upstream issues and confirming zero production impact.
+5. **Codify in Repository Documentation**:
+   * Document the exception under *Supply Chain & Assets Integrity* in `SECURITY.md`.
+   * Log the triage in `NEXT_RELEASE_TODO.md` session log so compliance auditors have complete git-level traceability.
+
+---
+
 ## 📌 LL-008 — Architecture & Market Positioning: Agentless Microsegmentation (Illumio CloudSecure & Cisco Secure Workload Parity)
 
 **Date Documented:** September 4, 2026  

@@ -25,6 +25,7 @@ Commit message: `chore: bump version to X.Y.Z across all configs`
 ### Pre-Release Dependency & Supply Chain Checklist
 Before freezing an LTS release, tagging a version, or publishing to Splunkbase:
 1. **Dependabot Open Alerts Check**: Run `gh api /repos/JohnYoungSuh/AWS-DFD-Visualizer/dependabot/alerts --jq '.[] | select(.state == "open")'` and verify 0 open actionable alerts.
+   - If an open alert exists with `first_patched_version: null` (no upstream fix available) in a devDependency, execute the **LL-009 Triage Protocol**: verify 0 production impact (`npm audit --omit=dev`), assess workstation exposure, formally dismiss in GitHub (`reason: not_used` or `acceptable_risk`) with full technical justification, and document in `SECURITY.md` to restore open count to 0.
 2. **Dependabot PR Triage**: Review `gh pr list` for open Dependabot PRs. Merge or rebase them promptly — do not let them exceed 30 days of inactivity, which causes GitHub to disable auto-rebases and silent alerts.
 3. **Full Audit**: Run `npm audit` across both production and development dependencies. Local dev tools (`webpack-dev-server`, `launch-editor`, `fast-uri`, `shell-quote`) execute on developer machines and in CI runners and must be kept patched.
 4. **Production Runtime Audit**: Run `npm audit --omit=dev` and verify 0 vulnerabilities in runtime packages.
