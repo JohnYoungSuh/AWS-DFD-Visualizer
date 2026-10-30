@@ -5,9 +5,9 @@
 | Item | Status |
 |---|---|
 | **Version** | 2.8.7 (all 5 files in sync) |
-| **Branch** | `master` |
-| **Next priority** | 🚀 **Release v2.8.7 to Splunkbase & LTS Freeze** (see NEXT_RELEASE_TODO.md) |
-| **CI** | Green on last push |
+| **Branch** | `master` (Public MIT) |
+| **Next priority** | 🚀 **Patch Release v2.8.8 (DoD IL5 Hardening & Full DevSecOps)** (see NEXT_RELEASE_TODO.md) |
+| **CI / ASPM** | Green on master; 0 CVEs; CodeQL + AppInspect + TruffleHog + SBOM active |
 
 ## Where Things Live
 | What | Where |

@@ -4,6 +4,30 @@
 
 ---
 
+## 📌 LL-011 — Full-Spectrum DevSecOps for High-Assurance Public Repositories (Frontend CodeQL SAST, Tooling Pinning & Declarative Dependency Governance)
+
+**Date Documented:** October 29, 2026  
+**Context:** DevSecOps maturity gap analysis and hardening for public open-source repository targeting DoD IL5.
+
+### Root Cause Analysis & Gaps Identified
+1. **Frontend SAST Blind Spot in CI**:  
+   While Python test scripts were audited via Bandit, the core production codebase (`AwsDfdVisualizer.jsx` — 3,870 lines of React/D3) had zero automated Static Application Security Testing (SAST) in GitHub Actions. Relying solely on AppInspect and manual review left potential AST data-flow flaws (CWE-79, CWE-22, injection) unmonitored in automated PR checks.
+2. **Unpinned Runner Tooling Vulnerabilities**:  
+   CI workflows executed unpinned installations (`pip install bandit`). If an upstream package is hijacked or introduces breaking syntax changes, pipeline execution fails or the runner is exposed to supply chain attacks.
+3. **Passive vs. Declarative Dependency Maintenance**:  
+   Relying on ambient GitHub security advisories meant dependency PRs were reactive. Without `.github/dependabot.yml`, GitHub Actions workflow runners and non-critical npm packages were never scheduled for proactive version updates.
+4. **Unprotected Branch Risk (NIST CM-3)**:  
+   Public repositories without branch protection rules on `master` permit accidental direct pushes, unreviewed code promotion, and force pushes (`git push --force`) that bypass CI testing gates.
+
+### Durable Engineering Standard (Standard Operating Procedure)
+* **Dual-Language SAST in CI**: Every repository containing React/D3 frontend logic must maintain a dedicated CodeQL workflow (`.github/workflows/codeql.yml`) targeting `javascript-typescript` with the `+security-and-quality` query suite, executing on pushes, PRs, and weekly cron schedules.
+* **100% Tooling Version Pinning**: All runner utilities installed via package managers in CI must specify exact pinned versions (`pip install bandit==1.8.0`).
+* **Declarative Multi-Ecosystem Dependabot**: Maintain `.github/dependabot.yml` with weekly schedules covering both `npm` and `github-actions`.
+* **Repository Access Governance**: Enforce `.github/CODEOWNERS` restricting approvals on workflows, manifests, and security policies.
+* **Enforced Branch Protection**: Protect `master` by requiring status checks (`Splunk App CI/CD`, `CodeQL Analysis`) to pass, requiring PR approvals, and banning force pushes.
+
+---
+
 ## 📌 LL-010 — DoD IL5 / DISA CC SRG ATO Hardening: Strict TLS, ICAM mTLS, and Immutable Action Pinning
 
 **Date Documented:** October 29, 2026  

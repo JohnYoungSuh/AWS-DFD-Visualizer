@@ -40,15 +40,19 @@
 
 ---
 
-## Config & Manifest Files
+## Config, Manifest & CI/CD Files
 
 | File | Purpose | Tokens |
 |---|---|---|
 | `package.json` | Dependencies, scripts, Node >=22 requirement | ~228 |
-| `Makefile` | build / inspect / deploy / clean targets | ~787 |
+| `Makefile` | build / inspect / deploy / clean / checksum targets | ~800 |
 | `default/app.conf` | Splunk app metadata, version (sync on every release) | ~78 |
 | `splunk-app-manifest.json` | Splunk Cloud manifest, version (sync on every release) | ~570 |
 | `default/visualizations.conf` | Viz registration with Splunk | ~94 |
+| `.github/workflows/splunk-ci.yml` | Primary 3-stage CI/CD pipeline (TruffleHog, Bandit, AppInspect, Cypress, SBOM) | ~900 |
+| `.github/workflows/codeql.yml` | CodeQL SAST analysis workflow (JS/TS + Python) | ~400 |
+| `.github/dependabot.yml` | Weekly automated dependency maintenance (npm + github-actions) | ~150 |
+| `.github/CODEOWNERS` | Mandatory review gates for security workflows and manifests | ~100 |
 
 ---
 
@@ -56,7 +60,7 @@
 
 | File | Purpose |
 |---|---|
-| `src/components/AwsDfdVisualizer/AwsDfdVisualizer.cy.jsx` | Main Cypress component spec |
+| `src/components/AwsDfdVisualizer/AwsDfdVisualizer.cy.jsx` | Main Cypress component spec (66+ specs) |
 | `src/visualization_source.cy.js` | Entry point smoke test |
 | `src/__mocks__/SplunkVisualizationBase.js` | Splunk AMD runtime stub |
 | `cypress/support/component.js` | Cypress setup |
@@ -77,10 +81,12 @@
 
 ---
 
-## Current Bug Priority (from NEXT_RELEASE_TODO.md)
+## Historical Core Fixes & Architectural Milestones
 
-| Priority | Bug | Status |
+| Issue | Description | Status |
 |---|---|---|
-| 🔴 Critical | **Bug #1 — ARN-safe node ID normalization** | ⏳ PENDING — next to fix |
-| 🔴 Critical | Bug #2 — Bidirectional edge dedup | ✅ Fixed May 21 |
-| 🔴 Critical | Bug #3 — Null/undefined label guard | ✅ Fixed May 21 |
+| Bug #1 | ARN-safe node ID normalization (slashes/colons in D3 joins) | ✅ Fixed May 22 |
+| Bug #2 | Bidirectional edge deduplication (`edgeSet` canonical key) | ✅ Fixed May 21 |
+| Bug #3 | Null/undefined label guard (`parseSplunkData` + `NodeCard`) | ✅ Fixed May 21 |
+| STIG Hardening | SPL injection denylist, backtick block, decode-first path traversal | ✅ Fixed Sept 18 |
+| DevSecOps / ASPM | CodeQL SAST, Dependabot config, fail-closed TLS, SHA pinning (LL-010, LL-011) | ✅ Fixed Oct 29 |
