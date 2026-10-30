@@ -11,12 +11,15 @@ trigger: always_on
 - **NEVER hardcode secrets, credentials, tokens, or environment-specific URLs** in any source file
 - **NEVER commit `node_modules/`, `*.webp`, `tasks*`, `media_*`, or `click_feedback*` files**
 - **NEVER delete `package-lock.json`** unless it is provably corrupt
+- **NEVER commit internal customer data, private hostnames, or proprietary subnets** — this is a public open-source repository
+- **NEVER introduce unsolicited visualizer feature churn or host collectors** — respect the October 17, 2026 Adoption Boundary
 
 ## Build & Release
 - **NEVER push a version bump without synchronizing all 5 version files simultaneously** (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`)
 - **NEVER commit without running `npm run build`** and confirming `webpack compiled successfully`
 - **NEVER release without `make inspect` showing 0 errors, 0 failures, 0 warnings**
 - **NEVER break the `Makefile` pipeline** — CI depends on it for SBOM generation
+- **NEVER leave unaddressed or un-triaged open Dependabot alerts or runtime vulnerabilities** before a release
 
 ## Environment
 - **NEVER use PowerShell or Windows CMD** — all commands run in WSL2/bash with UNIX paths
