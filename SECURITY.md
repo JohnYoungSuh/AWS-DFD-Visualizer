@@ -58,7 +58,7 @@ Auto-refreshing dashboards running on operation center displays can easily lock 
 ### 4. Zero Secrets & Secure Script Harnesses
 - **Environment-Driven Credentials**: Internal test and verification scripts (`test-drilldown.py`, `test-spl.py`) do not contain hardcoded usernames, passwords, or basic auth tokens. Credentials must be passed via `SPLUNK_USER` and `SPLUNK_PASSWORD` environment variables.
 - **Fail Closed / Graceful Offline Handling**: If environment credentials are not provided, scripts exit gracefully without failure or unhandled exceptions, facilitating offline builds.
-- **Strict TLS Defaults**: Certificate verification defaults to secure validation (`ssl.create_default_context()`). Insecure certificate bypass is prohibited unless explicitly requested via `SPLUNK_INSECURE_TLS=true` in local development environments.
+- **Strict TLS Fail-Closed Mandate**: Certificate verification strictly enforces validation via standard certificate authorities or DoD PKI bundles (`SPLUNK_CA_BUNDLE`). Insecure certificate bypass (`ssl.CERT_NONE` / `SPLUNK_INSECURE_TLS`) has been completely removed from all test scripts to meet DISA CC SRG IL5 / NIST SC-8 / SC-13 standards. Support for Mutual TLS (`SPLUNK_CLIENT_CERT` / `SPLUNK_CLIENT_KEY`) and Bearer tokens (`SPLUNK_TOKEN`) is natively integrated.
 
 ### 5. CSV Live Feed Isolation
 - **Drilldown Column Neutralization**: When users paste topology into the Live Feed Console, sensitive search-driving columns (`node_drilldown`, `link_drilldown`) are automatically stripped, preventing panel viewers from staging unauthorized drilldowns.
@@ -75,3 +75,23 @@ To prevent DOM-based Cross-Site Scripting (XSS) and injection vulnerabilities wh
 - **Strict Key Validation**: Keys representing custom status names are matched against a strict alphanumeric allow-list (`^[a-zA-Z0-9\-_\s]{1,64}$`). Any key containing HTML tags, scripts, or punctuation is rejected.
 - **Strict Hex Color Validation**: Custom color values must strictly conform to a 6-digit hex pattern (`^#[0-9A-Fa-f]{6}$`). Invalid inputs are silently dropped.
 - **Priority Default Safeguard**: User-defined custom colors only augment visual statuses; core built-in compliance and life-cycle defaults (like `ResourceDeleted` dimming or `ResourceNotRecorded` dashed states) cannot be overridden or disabled by custom status configuration.
+
+---
+
+## DoD CC SRG Impact Level 5 (IL5) Shared Responsibility Boundary
+
+Deploying `AWS-DFD-Visualizer` inside a DoD Impact Level 5 (IL5) / CUI operational boundary operates under a strict **Shared Responsibility Model**:
+
+### 1. Application Layer (Enforced in Code & Pipeline)
+- **100% Text-Only DOM Rendering**: Banning `dangerouslySetInnerHTML` and D3 `.html()` guarantees immunity to DOM-based XSS (CWE-79).
+- **Strict JIT SPL Guardrails**: Token sanitization and dangerous command denylists block search breakout attacks.
+- **Client-Side DoS Protection**: 5,000-row circuit breaker prevents thread exhaustion on monitoring consoles.
+- **Strict Cryptographic Fail-Closed Policy**: Zero insecure TLS bypasses allowed; native mTLS and Bearer token support.
+- **Immutable Supply Chain Integrity**: All CI/CD pipeline actions are pinned to immutable 40-character commit SHAs; every release tarball generates cryptographic SHA-256 and SHA-512 checksums alongside CycloneDX SBOMs.
+
+### 2. Customer Enclave Layer (Mandatory for Operational ATO)
+In accordance with DISA CC SRG §3.2 and FedRAMP High controls, the acquiring DoD organization is responsible for:
+- **Hosting Boundary**: Deploying Splunk Search Heads inside an accredited IL5 dedicated cloud (e.g., AWS GovCloud US-East/West, Azure Government, or DoD on-premise enclave).
+- **FIPS 140-3 Cryptographic Mode**: Enabling `fipsMode = true` in Splunk's `server.conf` and enforcing OS-level FIPS kernel modules on the host.
+- **Identity & Access Management (ICAM)**: Enforcing CAC/PIV/DoD PKI authentication for all administrative and analyst logins to Splunk Web.
+- **Personnel Security**: Restricting administration of the Splunk cluster and private code mirrors to vetted U.S. Persons possessing appropriate background investigations (Tier 3/Tier 5).

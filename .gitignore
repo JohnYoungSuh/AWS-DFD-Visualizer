@@ -3,6 +3,8 @@
 
 # Splunk Specific
 *.spl
+*.sha256
+*.sha512
 *.tar.gz
 .venv/
 __pycache__/

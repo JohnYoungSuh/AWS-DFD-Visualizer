@@ -39,7 +39,10 @@ build:
 	chmod -R 755 dist/$(APP_NAME)/bin 2>/dev/null || true
 	# Package the staging directory into the .spl file
 	tar -czf $(SPL_FILE) -C dist $(APP_NAME)
-	@echo "Done: $(SPL_FILE)"
+	# Cryptographic artifact checksums for IL5 supply chain verification (NIST SI-7)
+	sha256sum $(SPL_FILE) > $(SPL_FILE).sha256
+	sha512sum $(SPL_FILE) > $(SPL_FILE).sha512
+	@echo "Done: $(SPL_FILE) (SHA-256 and SHA-512 generated)"
 
 list: build
 	@echo "Listing contents of $(SPL_FILE)..."

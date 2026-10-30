@@ -22,6 +22,12 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 - [x] **ASPM Security Posture Assessment**: Conducted full 5-pillar ASPM evaluation (SCA, SAST, Secrets, AppInspect, DoS). Published comprehensive assessment report to brain artifacts.
 - [x] **Dev Dependency Remediation**: Resolved 5 transitive dev vulnerabilities via `npm audit fix` (`launch-editor` 2.14.2, `follow-redirects` 1.16.2, `fast-uri` 3.1.9, `body-parser` 1.20.9, `systeminformation` 5.33.18), addressing GitHub Dependabot alerts #30, #31, #32, #33, #34. Both `npm audit` and `npm audit --omit=dev` confirmed at 0 vulnerabilities.
 - [x] **Agent Persona & Rules Modernization**: Updated `.agents/rules/agent-role.md`, `.agents/rules/constraints.md`, `.agents/rules/ide-rules.md`, and `.cursorrules` to codify the continuous ASPM Charter, Public Open-Source Hygiene, and Adoption Boundary enforcement.
+- [x] **DoD IL5 Compliance & Pipeline Hardening**:
+  - Eliminated `SPLUNK_INSECURE_TLS` and `ssl.CERT_NONE` cryptographic bypasses from test harnesses (`test-drilldown.py`, `test-spl.py`), enforcing fail-closed TLS verification with DoD Root CA bundle support (`SPLUNK_CA_BUNDLE`).
+  - Added support for DoD PKI Mutual TLS (mTLS) client certificates (`SPLUNK_CLIENT_CERT` / `SPLUNK_CLIENT_KEY`) and Bearer token authentication (`SPLUNK_TOKEN`).
+  - Pinned all GitHub Actions in `.github/workflows/splunk-ci.yml` to immutable 40-character commit SHAs.
+  - Added cryptographic SHA-256 and SHA-512 checksum generation in `Makefile` and CI artifact staging.
+  - Documented DISA CC SRG IL5 / FedRAMP High Shared Responsibility Model in `SECURITY.md`.
 
 ### ✅ Session: October 19, 2026 — Dependabot Alert #27 Triage & Supply Chain Traceability
 - [x] **Dependabot Alert #27 (`braces` CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm)**:

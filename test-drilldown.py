@@ -5,22 +5,33 @@ import base64
 import urllib.request
 import urllib.parse
 
+splunk_token = os.getenv("SPLUNK_TOKEN")
 splunk_user = os.getenv("SPLUNK_USER")
 splunk_pass = os.getenv("SPLUNK_PASSWORD")
 splunk_host = os.getenv("SPLUNK_HOST", "localhost")
 splunk_port = os.getenv("SPLUNK_PORT", "8089")
 
-if not splunk_user or not splunk_pass:
-    print("Notice: SPLUNK_USER and/or SPLUNK_PASSWORD environment variables are not set.")
+client_cert = os.getenv("SPLUNK_CLIENT_CERT")
+client_key = os.getenv("SPLUNK_CLIENT_KEY")
+ca_bundle = os.getenv("SPLUNK_CA_BUNDLE") or os.getenv("REQUESTS_CA_BUNDLE")
+
+# Require valid authentication: Token, Mutual TLS Client Cert, or User/Pass credentials
+has_auth = bool(splunk_token or (client_cert and os.path.isfile(client_cert)) or (splunk_user and splunk_pass))
+if not has_auth:
+    print("Notice: No authentication credentials provided (SPLUNK_TOKEN, SPLUNK_CLIENT_CERT, or SPLUNK_USER/SPLUNK_PASSWORD).")
     print("Skipping live Splunk dashboard deployment test. (Expected in CI/offline environments)")
     sys.exit(0)
 
-# Configure TLS: secure by default, explicit opt-in required for local lab certificates
+# Configure TLS: strict verification mandated by DISA CC SRG IL5 / NIST SC-8 / SC-13
+# Insecure certificate bypass (ssl.CERT_NONE) is strictly prohibited.
 ctx = ssl.create_default_context()
-if os.getenv("SPLUNK_INSECURE_TLS", "").lower() in ("true", "1", "yes"):
-    print("Warning: Disabling TLS verification due to SPLUNK_INSECURE_TLS override.")
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE  # nosec B501
+if ca_bundle and os.path.isfile(ca_bundle):
+    print(f"Loading custom DoD/Enterprise CA bundle from: {ca_bundle}")
+    ctx.load_verify_locations(cafile=ca_bundle)
+
+if client_cert and os.path.isfile(client_cert):
+    print(f"Configuring Mutual TLS (mTLS) with DoD PKI client certificate: {client_cert}")
+    ctx.load_cert_chain(certfile=client_cert, keyfile=client_key if client_key and os.path.isfile(client_key) else None)
 
 url = f"https://{splunk_host}:{splunk_port}/servicesNS/admin/search/data/ui/views/test"
 data = urllib.parse.urlencode({"eai:data": """<dashboard version="1.1" theme="dark">
@@ -51,11 +62,15 @@ data = urllib.parse.urlencode({"eai:data": """<dashboard version="1.1" theme="da
   </row>
 </dashboard>"""}).encode('utf-8')
 
-auth_pair = f"{splunk_user}:{splunk_pass}".encode("utf-8")
-basic_auth = base64.b64encode(auth_pair).decode("ascii")
-
 req = urllib.request.Request(url, data=data, method="POST")
-req.add_header("Authorization", f"Basic {basic_auth}")
+
+if splunk_token:
+    req.add_header("Authorization", f"Bearer {splunk_token}")
+elif splunk_user and splunk_pass:
+    auth_pair = f"{splunk_user}:{splunk_pass}".encode("utf-8")
+    basic_auth = base64.b64encode(auth_pair).decode("ascii")
+    req.add_header("Authorization", f"Basic {basic_auth}")
+# Note: If mutual TLS (mTLS) is used with client_cert, Authorization header is optional depending on Splunk server config.
 
 try:
     print(f"Uploading Multi-CSP Test Dashboard to Splunk at {splunk_host}:{splunk_port}...")

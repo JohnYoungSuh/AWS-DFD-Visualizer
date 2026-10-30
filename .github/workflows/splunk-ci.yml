@@ -22,25 +22,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
         with:
           fetch-depth: 0
 
       - name: Setup Node.js 22 LTS
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: 'npm'
 
       - name: Secret Scanning (TruffleHog)
-        uses: trufflesecurity/trufflehog@v3.95.5
+        uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51 # v3.95.5
         with:
           path: ./
           extra_args: --only-verified
         continue-on-error: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.0.0
         with:
           python-version: '3.9'
 
@@ -64,7 +64,7 @@ jobs:
       - name: Run Cypress Component Tests (drilldowns, exports, stencils)
         run: npm run test:cy
 
-      - name: Package Splunk App (.spl)
+      - name: Package Splunk App (.spl) & Cryptographic Checksums
         run: |
           SPL_FILE="${APP_NAME}-${VERSION}.spl"
           mkdir -p dist/${APP_NAME}
@@ -77,31 +77,36 @@ jobs:
           find dist/${APP_NAME} -type d -exec chmod 755 {} +
           find dist/${APP_NAME} -type f -exec chmod 644 {} +
           chmod -R 755 dist/${APP_NAME}/bin 2>/dev/null || true
-          # Create the tarball
+          # Create the tarball and generate cryptographic SHA-256 / SHA-512 hashes
           tar -czf ${SPL_FILE} -C dist ${APP_NAME}
+          sha256sum ${SPL_FILE} > ${SPL_FILE}.sha256
+          sha512sum ${SPL_FILE} > ${SPL_FILE}.sha512
           echo "SPL_FILE=${SPL_FILE}" >> $GITHUB_ENV
-          echo "Packaged: ${SPL_FILE}"
+          echo "Packaged: ${SPL_FILE} (SHA-256: $(cat ${SPL_FILE}.sha256))"
 
       - name: Splunk AppInspect (Local CLI)
-        uses: splunk/appinspect-cli-action@v2
+        uses: splunk/appinspect-cli-action@515d3746940c6c48c70f5e716ba22d1bd118506c # v2.18.0
         with:
           app_path: ${{ env.SPL_FILE }}
           result_file: appinspect-report.html
 
       - name: Upload Security Reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: security-reports
           path: |
             appinspect-report.html
 
-      # Upload the validated .spl for Stage 2 to reuse (avoids double-build)
-      - name: Upload Validated .spl
-        uses: actions/upload-artifact@v5
+      # Upload the validated .spl and checksums for Stage 2 to reuse (avoids double-build)
+      - name: Upload Validated .spl and Checksums
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: validated-spl
-          path: ${{ env.SPL_FILE }}
+          path: |
+            ${{ env.SPL_FILE }}
+            ${{ env.SPL_FILE }}.sha256
+            ${{ env.SPL_FILE }}.sha512
 
   # STAGE 2: SBOM Generation (reuses the .spl validated in Stage 1)
   build_and_package:
@@ -110,23 +115,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
 
       - name: Download Validated .spl
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: validated-spl
           path: dist/
 
       - name: Generate SBOM (CycloneDX)
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.17.9
         with:
           path: dist/
           format: cyclonedx-json
           output-file: dist/bom.json
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: aws-dfd-visualizer-il5-package
           path: dist/
@@ -140,15 +145,15 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
 
       - name: Setup Node.js 22 LTS
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
 
       - name: Download Package
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: aws-dfd-visualizer-il5-package
           path: dist/
