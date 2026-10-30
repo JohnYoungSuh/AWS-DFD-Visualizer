@@ -24,6 +24,7 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
   - **Unused Local Variables (`js/unused-local-variable`)**: Cleaned up unread variables in `visualization_source.js` (`themeFamily`), `AwsDfdVisualizer.jsx` (`dr`, `nodeWidth`, `nodeHeight`, `gapY`, `R`, `tickUpdate`, `vpcs`, `subnets`, `computes`, `isLicenseExceeded`), and `scripts/generate-stencil-catalog.js` (`filename`).
   - **Python Unused Global (`py/unused-global-variable`)**: Removed unused `res` variable assignment in `test-spl.py`.
 - [x] **Rebuilt & Validated**: Rebuilt bundle with `npm run build` and `make build`, verifying clean AppInspect run (0 errors, 0 failures).
+- [x] **Release v2.8.8 Tagged & Published**: Created Git tag `v2.8.8`, published formal GitHub Release `v2.8.8` attaching `AWS-DFD-Visualizer-2.8.8.spl` and cryptographic checksums (`.sha256`, `.sha512`). Documented LL-012 in `LESSONS_LEARNED.md`. Confirmed 100% green CI/CD pipelines on `master` with 0 open CodeQL and 0 open Dependabot alerts.
 
 ### ✅ Session: October 29, 2026 — ASPM Security Assessment, Dev Tooling Remediation & Agent Persona Modernization
 - [x] **v2.8.8 Release Synchronization**:

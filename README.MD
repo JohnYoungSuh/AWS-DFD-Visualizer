@@ -34,7 +34,7 @@ This repository is hardened for **DoD Impact Level 5 (IL5)**, **FedRAMP High**, 
 - **Cryptographic Release Checksums**: Every build automatically generates SHA-256 (`.spl.sha256`) and SHA-512 (`.spl.sha512`) hashes alongside the `.spl` archive (NIST SI-7).
 - **Software Bill of Materials (SBOM)**: Every build generates a CycloneDX SBOM (`bom.json`) via Syft (NIST 800-53 SA-4 / CISA minimum elements).
 - **Secret Scanning**: TruffleHog actively validates and blocks commits containing sensitive credentials (SC-28).
-- **SAST & Flaw Prevention**: Python scripts pass Bandit SAST with non-zero exit gates (SI-2); React Virtual DOM enforces a 100% "Text-Only" rendering policy banning `dangerouslySetInnerHTML` and D3 `.html()` (CWE-79).
+- **SAST & Flaw Prevention**: Automated dual-language SAST in CI via GitHub CodeQL (JavaScript/TypeScript + Python with `security-and-quality` suites) with 0 open findings; Python scripts pass Bandit SAST with non-zero exit gates (SI-2); React Virtual DOM enforces a 100% "Text-Only" rendering policy banning `dangerouslySetInnerHTML` and D3 `.html()` (CWE-79).
 - **AppInspect Zero-Defect Gate**: Automated precertification against Splunk Cloud and Enterprise standards ensures 0 errors, 0 failures, 0 warnings.
 
 ### 🤝 DoD IL5 Shared Responsibility Model
@@ -58,7 +58,10 @@ Please include a detailed description of the vulnerability, affected components,
 
 ## Key Features (v2.8.8)
 
-### 🔒 Security Hardening & Vulnerability Remediation (v2.8.6)
+### 🔒 Security Hardening, Cryptography & CodeQL SAST Remediation (v2.8.8)
+- **CodeQL SAST & Code Scanning Remediation (LL-012)**: 100% remediation of all 18 open CodeQL static analysis findings across JavaScript/TypeScript and Python, achieving 0 open alerts in GitHub Code Scanning. Fixed regex character class duplication on composite emoji variation selectors (`\uFE0F`), removed useless local variable assignments, and purged unused variables and legacy flags while preserving React/D3 state integrity.
+- **DoD IL5 Cryptographic Hardening (LL-010)**: Strict fail-closed TLS verification across all test harnesses and automation scripts (`test-drilldown.py`, `test-spl.py`), removing insecure bypass flags (`SPLUNK_INSECURE_TLS`, `ssl.CERT_NONE`). Full native support for DoD PKI Root CA bundles (`SPLUNK_CA_BUNDLE`), Mutual TLS client certificates (`SPLUNK_CLIENT_CERT`, `SPLUNK_CLIENT_KEY`), and Bearer token authentication (`SPLUNK_TOKEN`).
+- **Immutable Supply Chain Pinning (LL-010)**: All GitHub Actions pinned to immutable 40-character commit SHAs in CI workflows. Automated release archives generate SHA-256 (`.spl.sha256`) and SHA-512 (`.spl.sha512`) cryptographic checksum sidecars for NIST SI-7 supply chain verification.
 - **SPL Injection Denylist & Macro Guarding**: Implemented an explicit high-risk command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro blocking on column-driven `node_drilldown`/`link_drilldown` fields. Added `allowColumnDrilldown` visualizer option.
 - **Zero Secrets Enforcement**: Removed hardcoded credentials across test harnesses (`test-drilldown.py`, `test-spl.py`), migrating to environment variables (`SPLUNK_USER`, `SPLUNK_PASSWORD`) with graceful offline exits and strict TLS defaults.
 - **URI Traversal Defense (CWE-22)**: Decodes URI components prior to validation in `sanitizeFallbackUrl`, rejecting directory traversal sequences (`..`), backslashes (`\`), and lingering `%` encodings.

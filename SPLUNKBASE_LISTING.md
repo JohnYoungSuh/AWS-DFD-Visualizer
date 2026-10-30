@@ -54,7 +54,7 @@ The AWS Zero-Trust topology solution consists of two complementary apps designed
 | Splunk Version | Enterprise or Cloud 9.x (recommended) |
 | Framework | Dashboard Studio (Unified Dashboard Framework) **and** Classic SimpleXML |
 | Node.js (build only) | ≥ 22 LTS (only needed if building from source) |
-| License | Apache License 2.0 |
+| License | MIT License |
 
 ### Supported Stencil Keys by Cloud Provider
 
