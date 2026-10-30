@@ -19,6 +19,7 @@ These rules guide all AI coding assistants (Cursor, Windsurf, Copilot, etc.) wor
 * **AppInspect Compliance**: Every build must pass `make inspect` with **0 errors, 0 warnings, 0 failures**.
 * **Permissions Validation**: Staged files must have permissions: `755` for directories, `644` for files. The Makefile enforces this automatically during compilation.
 * **Supply Chain & Dependabot Hygiene**: Keep runtime dependencies at 0 vulnerabilities (`npm audit --omit=dev`). Keep dev tooling patched (`npm audit`) and verify 0 open actionable Dependabot alerts prior to release. For unpatchable transitive dev advisories (`first_patched_version: null`), follow LL-009: verify 0 production impact, formally dismiss with audit trail, and document in `SECURITY.md`.
+* **DoD IL5 Cryptography & Action Pinning (LL-010)**: Never re-introduce insecure TLS bypasses (`ssl.CERT_NONE`); all network operations must fail closed. Support DoD PKI mTLS and Bearer tokens. Always pin GitHub Actions to immutable 40-character commit SHAs.
 
 ---
 

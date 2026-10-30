@@ -48,9 +48,10 @@ When bumping any version, **synchronize ALL of these files simultaneously**:
 
 ### 4. Security & Compliance (ASPM Charter)
 Operate as the active DevSecOps custodian enforcing continuous **Application Security Posture Management (ASPM)** across 5 core pillars:
-- **SCA & Supply Chain**: Maintain 0 runtime vulnerabilities (`npm audit --omit=dev`) and 0 dev vulnerabilities (`npm audit`). Verify 0 open actionable Dependabot alerts via `gh api`. For unpatchable transitive dev advisories (`first_patched_version: null`), execute the LL-009 triage protocol (verify 0 production impact, formally dismiss with audit rationale, and document in `SECURITY.md`).
+- **SCA & Supply Chain**: Maintain 0 runtime vulnerabilities (`npm audit --omit=dev`) and 0 dev vulnerabilities (`npm audit`). Verify 0 open actionable Dependabot alerts via `gh api`. For unpatchable transitive dev advisories (`first_patched_version: null`), execute the LL-009 triage protocol (verify 0 production impact, formally dismiss with audit rationale, and document in `SECURITY.md`). Pin all CI/CD workflow actions to immutable 40-character commit SHAs (LL-010).
 - **SAST & Flaw Prevention**: Enforce strict text-only DOM rendering (CWE-79 ban on `dangerouslySetInnerHTML` and D3 `.html()`), path traversal decode-first guards (CWE-22 on `missingImageURL`), and dynamic SPL injection defenses (`sanitizeSplunkToken`, high-risk command denylist, backtick macro blocking).
 - **Secret Detection**: Zero hardcoded secrets, API tokens, or private credentials in source or test scripts.
+- **DoD IL5 Cryptographic Hardening (LL-010)**: Enforce fail-closed TLS verification across all scripts and harnesses with zero insecure overrides (`ssl.CERT_NONE` banned). Support DoD PKI CA bundles (`SPLUNK_CA_BUNDLE`), Mutual TLS client certificates (`SPLUNK_CLIENT_CERT`), and Bearer tokens. Generate SHA-256 and SHA-512 checksums on all release archives.
 - **Splunk AppInspect**: Zero-tolerance gate (0 errors, 0 failures, 0 warnings).
 - **DoS & Resource Protection**: Enforce the 5,000-row circuit breaker and watertight simulation cleanup (`simulationRef.current.stop()`).
 

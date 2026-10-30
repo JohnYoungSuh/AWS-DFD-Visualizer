@@ -9,6 +9,8 @@ trigger: always_on
 - **NEVER let D3 directly mutate React-managed DOM** — use D3 for math/physics only, React for rendering
 - **NEVER use positional column indexing** (`data.rows[3]`) for SPL parsing — always use named column access
 - **NEVER hardcode secrets, credentials, tokens, or environment-specific URLs** in any source file
+- **NEVER re-introduce `ssl.CERT_NONE`, insecure TLS bypass flags (`SPLUNK_INSECURE_TLS`), or unvalidated cert overrides** in scripts or harnesses — all TLS communication must fail closed with explicit CA validation (LL-010)
+- **NEVER reference mutable semantic tags (`@v...`) in `.github/workflows/`** — all GitHub Actions must be pinned to immutable 40-character commit SHAs (LL-010)
 - **NEVER commit `node_modules/`, `*.webp`, `tasks*`, `media_*`, or `click_feedback*` files**
 - **NEVER delete `package-lock.json`** unless it is provably corrupt
 - **NEVER commit internal customer data, private hostnames, or proprietary subnets** — this is a public open-source repository

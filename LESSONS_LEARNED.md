@@ -4,6 +4,30 @@
 
 ---
 
+## 📌 LL-010 — DoD IL5 / DISA CC SRG ATO Hardening: Strict TLS, ICAM mTLS, and Immutable Action Pinning
+
+**Date Documented:** October 29, 2026  
+**Context:** Formal DISA CC SRG Impact Level 5 (IL5) / FedRAMP High Authority to Operate (ATO) compliance evaluation.
+
+### Root Cause Analysis & ATO Blockers Identified
+1. **Cryptographic Insecure Bypass (Cat I Finding - NIST SC-8 / SC-13)**:  
+   Test scripts historically contained a developer convenience flag (`SPLUNK_INSECURE_TLS=true`) that configured `ctx.verify_mode = ssl.CERT_NONE` (`# nosec B501`). In a DoD IL5 assessment, *any* code or test harness capable of disabling certificate verification is an automatic Category I ATO blocker requiring remediation.
+2. **ICAM Basic Authentication (Cat I Finding - NIST IA-2, AC-2)**:  
+   Automation harnesses relied exclusively on static username/password Basic Auth (`Authorization: Basic ...`), violating DoD ICAM mandates requiring DoD PKI (CAC/ECA) or OAuth/OIDC tokens.
+3. **Supply Chain Mutable Action Tags (Cat II Finding - NIST SA-4, NIST SP 800-161)**:  
+   GitHub Actions referenced mutable semantic version tags (`actions/checkout@v5`, `anchore/sbom-action@v0`). If an upstream maintainer account or branch tag is hijacked, malicious code could execute in the build runner.
+4. **Supply Chain Cryptographic Checksums (Cat II Finding - NIST SI-7)**:  
+   The pipeline generated `.spl` archives and SBOMs, but lacked cryptographic hash manifests (SHA-256 / SHA-512) for automated downstream integrity verification.
+
+### Durable Engineering Standard (Standard Operating Procedure)
+* **Zero TLS Bypass Backdoors**: Never introduce `ssl.CERT_NONE`, `rejectUnauthorized: false`, or `SPLUNK_INSECURE_TLS` flags into any script, tool, or harness. Always fail closed. If private lab certificates are used, load the specific trusted CA bundle explicitly via `SPLUNK_CA_BUNDLE` or `REQUESTS_CA_BUNDLE` (`ctx.load_verify_locations()`).
+* **ICAM Multi-Protocol Support**: All test and operational integration scripts must support Mutual TLS (`SPLUNK_CLIENT_CERT`, `SPLUNK_CLIENT_KEY`) and Bearer tokens (`SPLUNK_TOKEN`), relegating basic auth strictly to fallback.
+* **Immutable Commit SHA Action Pinning**: Every single action in `.github/workflows/` must be pinned to an immutable 40-character commit SHA with an inline version comment (`uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0`).
+* **Cryptographic Checksum Packaging**: `Makefile` and CI packaging jobs must automatically emit SHA-256 (`.spl.sha256`) and SHA-512 (`.spl.sha512`) alongside the release tarball.
+* **Shared Responsibility Boundary**: Maintain clear separation in `SECURITY.md` between software canvas responsibilities (SAST, SCA, Text-Only DOM, DoS caps) and customer hosting responsibilities (AWS GovCloud / Azure Gov, Splunk `fipsMode = true`, CAC/PKI SAML SSO, U.S. Persons).
+
+---
+
 ## 📌 LL-009 — Transitive Dev-Only Advisory With No Upstream Fix (`first_patched_version: null`)
 
 **Date Resolved:** October 19, 2026  
