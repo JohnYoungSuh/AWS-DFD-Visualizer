@@ -15,6 +15,22 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 - Do not audit a Kubernetes cluster from this app. No API-server calls, CIS score, or Pod Security enforcement.
 - Four gates before any new capability: a real diagram job, a named install, no new host agent, and a diagram rather than enforcement.
 
+---
+
+## 🎯 Next Session Priority: CodeQL Code Quality Sweep (Alerts #5–#22)
+- [ ] **Fix Regex Duplicate Characters in Character Class (`js/regex/duplicate-in-character-class`)**:
+  - `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`: line 1459, line 2754
+- [ ] **Remove Useless Local Variable Assignments (`js/useless-assignment-to-local`)**:
+  - `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`: lines 1175, 2468, 2469
+- [ ] **Clean Up Unused Local Variables (`js/unused-local-variable`)**:
+  - `src/visualization_source.js`: line 45
+  - `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`: lines 893, 1673, 1720, 1954, 2599, 2727
+  - `scripts/generate-stencil-catalog.js`: line 324
+- [ ] **Clean Up Python Unused Global Variable (`py/unused-global-variable`)**:
+  - `test-spl.py`: line 24
+
+---
+
 ## 📍 Session Log
 
 ### ✅ Session: October 29, 2026 — ASPM Security Assessment, Dev Tooling Remediation & Agent Persona Modernization

@@ -6,8 +6,9 @@
 |---|---|
 | **Version** | 2.8.8 (all 5 files in sync) |
 | **Branch** | `master` (Public MIT) |
-| **Status** | 🚀 **Release Ready v2.8.8 (DoD IL5 Hardening & Full DevSecOps)** |
+| **Status** | 🚀 **Release v2.8.8 Shipped / Validated** |
 | **CI / ASPM** | Green on master; 0 CVEs; CodeQL + AppInspect + TruffleHog + SBOM active |
+| **Next Priority** | 🧹 **CodeQL Code Scanning Sweep** (18 code quality/cleanliness alerts cataloged) |
 
 ## Where Things Live
 | What | Where |
