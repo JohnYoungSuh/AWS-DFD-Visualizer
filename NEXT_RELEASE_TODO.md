@@ -18,6 +18,12 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 ## 📍 Session Log
 
 ### ✅ Session: October 29, 2026 — ASPM Security Assessment, Dev Tooling Remediation & Agent Persona Modernization
+- [x] **CodeQL SAST & GitHub Actions Pipeline Resolution**:
+  - Diagnosed CodeQL workflow failures (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled`).
+  - Switched repository-level CodeQL configuration via GitHub REST API from default-setup to advanced configuration (`state: not-configured`), enabling custom CodeQL analysis workflow (`.github/workflows/codeql.yml`) to upload SARIF reports for JavaScript/TypeScript and Python.
+  - Re-ran workflow `40999803152` and confirmed 100% green passing status.
+  - Upgraded all GitHub Actions (`actions/checkout`, `actions/setup-node`, `trufflesecurity/trufflehog`, `actions/download-artifact`, `github/codeql-action`) across `.github/workflows/splunk-ci.yml` and `codeql.yml` to latest versions while strictly maintaining immutable 40-character commit SHA pinning (LL-010).
+  - Triaged Dependabot pull requests: configured repository `ci` label; ignored incompatible `@babel/preset-env` v8 major bump to preserve toolchain stability on Babel 7; automatically resolved Dependabot action PRs (#16-#21).
 - [x] **Repository Visibility Confirmed Public**: Transitioned GitHub repository to Public (`visibility: PUBLIC`), aligned with open-source MIT licensing and zero-secret policy.
 - [x] **ASPM Security Posture Assessment**: Conducted full 5-pillar ASPM evaluation (SCA, SAST, Secrets, AppInspect, DoS). Published comprehensive assessment report to brain artifacts.
 - [x] **Dev Dependency Remediation**: Resolved 5 transitive dev vulnerabilities via `npm audit fix` (`launch-editor` 2.14.2, `follow-redirects` 1.16.2, `fast-uri` 3.1.9, `body-parser` 1.20.9, `systeminformation` 5.33.18), addressing GitHub Dependabot alerts #30, #31, #32, #33, #34. Both `npm audit` and `npm audit --omit=dev` confirmed at 0 vulnerabilities.
