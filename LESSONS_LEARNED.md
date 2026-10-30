@@ -4,6 +4,30 @@
 
 ---
 
+## 📌 LL-012 — CodeQL SAST Remediation: Composite Emoji Variation Selectors in Regex Character Classes & React Lifecycle Hygiene
+
+**Date Documented:** October 30, 2026  
+**Context:** GitHub Advanced Security / CodeQL SAST `security-and-quality` analysis on React + D3 codebase (Alerts #5–#22).
+
+### Root Cause Analysis & CodeQL AST Patterns
+1. **Composite Emoji in Regex Character Classes (`js/regex/duplicate-in-character-class`)**:
+   - Modern Unicode emoji frequently consist of multiple codepoints: a base symbol combined with a Variation Selector-16 (`\uFE0F` / VS16) to force graphic rendering (e.g., `🛡️` = `U+1F6E1` + `\uFE0F`, `⚙️` = `U+2699` + `\uFE0F`, `⚠️` = `U+26A0` + `\uFE0F`).
+   - When multiple such emoji are placed inside a character set `[...]` (e.g., `/[🛡️🔑⚙️💾⚠️🚨]/`), the character class treats each codepoint individually. Consequently, `\uFE0F` is included repeatedly within the set, triggering CodeQL rule `js/regex/duplicate-in-character-class`.
+   - **Remediation Pattern**:
+     - For matching full glyph sequences: Use non-capturing alternation groups with the unicode flag: `/(?:🛡️|🔑|⚙️|💾|⚠️|🚨)/u`.
+     - For negated character classes: Deduplicate base symbols and include the variation selector `\uFE0F` exactly once: `/[^a-zA-Z0-9\s\-_:/.⚙⚠🚨\uFE0F]/gu`.
+
+2. **React Force-Render State Variables (`js/unused-local-variable`)**:
+   - In Splunk Custom Visualizations wrapped in React, asynchronous D3 physics updates require triggering React re-renders via state updates (`setTickUpdate(Date.now())`).
+   - Declaring `const [tickUpdate, setTickUpdate] = useState(0)` where `tickUpdate` is never read in JSX causes static analysis tools (CodeQL) to flag `tickUpdate` as an unused local variable.
+   - **Remediation Pattern**: Use array destructuring with an omitted first element: `const [, setTickUpdate] = useState(0);`.
+
+3. **Useless Local Variable Assignments (`js/useless-assignment-to-local`)**:
+   - Initializing variables with default values (e.g., `let decoded = trimmed;` or `let dynamicW = W;`) immediately prior to a `try/catch` or conditional branch where the variable is unconditionally overwritten triggers `js/useless-assignment-to-local`.
+   - **Remediation Pattern**: Declare variables uninitialized (`let decoded;`, `let dynamicW;`) when unconditional assignment immediately follows.
+
+---
+
 ## 📌 LL-011 — Full-Spectrum DevSecOps for High-Assurance Public Repositories (Frontend CodeQL SAST, Tooling Pinning & Declarative Dependency Governance)
 
 **Date Documented:** October 29, 2026  
