@@ -42,7 +42,6 @@ export default SplunkVisualizationBase.extend({
         const isDark = document.body && (document.body.classList.contains('themed-dark') || document.body.classList.contains('theme-dark'));
         const bgColor = cleanConfig['backgroundColor'] || '';
         const isDarkBg = bgColor === '#000000' || bgColor === '#141414' || (bgColor.match(/^#(0[0-9a-f]|1[0-9a-f])/i));
-        const themeFamily   = cleanConfig['themeFamily'] || 'enterprise';
         const colorScheme   = cleanConfig['colorScheme'] || cleanConfig['theme'] || (isDark || isDarkBg ? 'dark' : 'light');
         const handleDrilldown = (actionProps, e) => {
             const { action, ...dataPayload } = actionProps;

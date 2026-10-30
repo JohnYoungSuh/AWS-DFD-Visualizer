@@ -890,7 +890,6 @@ const getLinkGeometry = (link, config, isZeroTrust, targetNode, sourceNode) => {
     } else {
         const dx = target.x - source.x;
         const dy = target.y - source.y;
-        const dr = Math.sqrt(dx * dx + dy * dy) || 1;
 
         const padding = 12;
 
@@ -1172,7 +1171,7 @@ const NodeCard = ({ node, isDarkTheme, onNodeClick, onNodeDoubleClick, config, i
             return getAppStaticUrl('icons/generic.svg');
         }
         // STIG / CWE-22 Hardening: Decode URL encoding first, then reject traversal, backslashes, or lingering percent signs
-        let decoded = trimmed;
+        let decoded;
         try {
             decoded = decodeURIComponent(trimmed);
         } catch (e) {
@@ -1456,7 +1455,7 @@ const Zone = ({ groupName, nodes, isDarkTheme, controlPlaneTitle }) => {
     }
 
     let displayTitle = groupName.toUpperCase();
-    if (defaultBadge && !/[🛡️🔑⚙️💾⚠️🚨]/.test(groupName)) {
+    if (defaultBadge && !/(?:🛡️|🔑|⚙️|💾|⚠️|🚨)/u.test(groupName)) {
         displayTitle = `${defaultBadge} ${displayTitle}`;
     }
 
@@ -1670,7 +1669,7 @@ const computeDimensions = (node, adapter, layoutParams = { nodeWidth: 280, nodeH
 };
 
 const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, layoutParams = { nodeWidth: 280, nodeHeight: 100, padding: 40, gapX: 120, gapY: 100 }, centerX = 600, centerY = 900, config = {}) => {
-    const { nodeWidth, nodeHeight, padding, gapX, gapY } = layoutParams;
+    const { padding, gapX } = layoutParams;
     unassociatedNodes.forEach((node, idx) => {
         const dims = getNodeCardDimensions(node, config);
         node.width = dims.w;
@@ -1717,7 +1716,7 @@ const assignCoordinates = (root, unassociatedNodes, globalEdgeAssets, adapter, l
                 currentX += child.width + dx;
             });
         } else {
-            const { K, R, colWidths, rowHeights, P, dx, dy } = p.grid;
+            const { K, colWidths, rowHeights, P, dx, dy } = p.grid;
             
             p.children.forEach((child, idx) => {
                 const col = idx % K;
@@ -1951,7 +1950,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
     const svgRef = useRef(null);
     const gRef = useRef(null);
     
-    const [tickUpdate, setTickUpdate] = useState(0);
+    const [, setTickUpdate] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [isCalculating, setIsCalculating] = useState(false);
     const [hoveredLinkIdx, setHoveredLinkIdx] = useState(null);
@@ -2465,8 +2464,8 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
             const padX = 180;
             const padY = 90;
 
-            let dynamicW = W;
-            let dynamicH = H;
+            let dynamicW;
+            let dynamicH;
 
             if (hierarchyDir === 'Left to Right') {
                 const treeHeight = (maxX - minX) + 2 * padY;
@@ -2596,7 +2595,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         }
 
         if (isZeroTrustLayout && parsed.nodes.length > 0) {
-            const { stratifiedNodes, unassociatedNodes, globalEdgeAssets, vpcs, subnets, computes } = resolveHierarchy(parsed.nodes, globalAdapter);
+            const { stratifiedNodes, unassociatedNodes, globalEdgeAssets } = resolveHierarchy(parsed.nodes, globalAdapter);
             
             const stratify = d3.stratify()
                 .id(d => d.id)
@@ -2724,8 +2723,6 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         };
     }, [data, localData, isZeroTrustLayout, isStaticBlueprint, layoutParams, config]);
 
-    const isLicenseExceeded = false;
-
     debugLog("AWS-DFD-Visualizer: layout determination result:", {
         isZeroTrustLayout,
         isZeroTrust,
@@ -2751,7 +2748,7 @@ const AwsDfdVisualizer = ({ data, config, width, height, isDarkTheme, onDrilldow
         } while (sanitized !== prev);
 
         // 3. Strict allowlist (excluding parentheses, brackets, and quotes to prevent injection)
-        return sanitized.replace(/[^a-zA-Z0-9\s\-_:/.⚙️⚠️🚨]/gu, '').trim();
+        return sanitized.replace(/[^a-zA-Z0-9\s\-_:/.⚙⚠🚨\uFE0F]/gu, '').trim();
     };
 
     const preset = config?.governancePreset || 'standard';

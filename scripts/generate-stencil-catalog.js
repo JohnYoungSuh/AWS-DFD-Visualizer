@@ -321,7 +321,6 @@ function generateProviderCatalog(provider, exportPrefix) {
 
     svgs.forEach(svgPath => {
         const relPath = path.relative(ICON_DIR, svgPath).replace(/\\/g, '/');
-        const filename = path.basename(svgPath);
         const rawBase = path.basename(svgPath, '.svg');
         const baseName = rawBase;
         const parentDir = path.basename(path.dirname(svgPath));
