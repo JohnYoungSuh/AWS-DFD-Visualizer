@@ -28,6 +28,11 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
   - Pinned all GitHub Actions in `.github/workflows/splunk-ci.yml` to immutable 40-character commit SHAs.
   - Added cryptographic SHA-256 and SHA-512 checksum generation in `Makefile` and CI artifact staging.
   - Documented DISA CC SRG IL5 / FedRAMP High Shared Responsibility Model in `SECURITY.md`.
+- [x] **DevSecOps Pipeline & Repository Governance**:
+  - Implemented GitHub CodeQL SAST workflow (`.github/workflows/codeql.yml`) targeting JavaScript/TypeScript (React/D3) and Python with immutable commit SHA action pinning and `security-and-quality` queries.
+  - Added declarative `.github/dependabot.yml` automating weekly updates for `npm` and `github-actions`.
+  - Pinned CI SAST tooling (`bandit==1.8.0`) in `.github/workflows/splunk-ci.yml`.
+  - Ingested `.github/CODEOWNERS` defining mandatory maintainer review on security workflows and Splunk app manifests.
 
 ### ✅ Session: October 19, 2026 — Dependabot Alert #27 Triage & Supply Chain Traceability
 - [x] **Dependabot Alert #27 (`braces` CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm)**:

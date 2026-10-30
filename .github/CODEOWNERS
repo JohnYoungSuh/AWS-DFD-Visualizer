@@ -1,0 +1,14 @@
+# Global default owners for all repository assets
+* @JohnYoungSuh
+
+# CI/CD Workflows & Pipeline Security
+/.github/ @JohnYoungSuh
+
+# Splunk App Manifests, Permissions & Defaults
+/default/ @JohnYoungSuh
+/metadata/ @JohnYoungSuh
+/splunk-app-manifest.json @JohnYoungSuh
+
+# Security Policy & Governance
+/SECURITY.md @JohnYoungSuh
+/.agents/ @JohnYoungSuh

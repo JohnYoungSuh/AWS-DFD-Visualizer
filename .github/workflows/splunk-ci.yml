@@ -46,7 +46,7 @@ jobs:
 
       - name: Python Security Scan (Bandit)
         run: |
-          pip install bandit
+          pip install bandit==1.8.0
           bandit -r . -x ./.venv,./node_modules,./dist -ll
 
       # Build the webpack bundle and package the .spl BEFORE AppInspect.
