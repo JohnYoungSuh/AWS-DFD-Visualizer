@@ -24,18 +24,39 @@ The User Guide (section 1.3) is the column contract. Allowed flows and planned c
 
 ## Security & Compliance (NIST 800-53 / IL5 / Zero Trust)
 
-This repository is hardened for **DoD Impact Level 5 (IL5)** and **Zero Trust Architecture (ZTA)** environments.
+This repository is hardened for **DoD Impact Level 5 (IL5)**, **FedRAMP High**, and **Zero Trust Architecture (ZTA)** environments under a formal Shared Responsibility Model.
 
-### 🛡️ Defensive Controls
+### 🛡️ Defensive Controls & Application Security Posture (ASPM)
 
-- **SBOM (CycloneDX)**: Every build generates a CycloneDX software bill of materials (`bom.json`) via Syft for supply chain integrity (NIST 800-53 SA-4).
+- **Continuous ASPM Enforcement**: 0 production vulnerabilities (`npm audit --omit=dev`), 0 dev tooling vulnerabilities (`npm audit`), and 0 open Dependabot alerts.
+- **Fail-Closed Cryptography & DoD PKI (LL-010)**: All test and deployment harnesses enforce strict TLS certificate validation with zero insecure bypasses (`ssl.CERT_NONE` prohibited). Supports DoD PKI CA bundles (`SPLUNK_CA_BUNDLE`), Mutual TLS client certificates (`SPLUNK_CLIENT_CERT`), and Bearer tokens (`SPLUNK_TOKEN`).
+- **Immutable Supply Chain Pinning (LL-010)**: All CI/CD workflow actions are pinned to immutable 40-character commit SHAs, preventing upstream tag hijacking (NIST SP 800-161).
+- **Cryptographic Release Checksums**: Every build automatically generates SHA-256 (`.spl.sha256`) and SHA-512 (`.spl.sha512`) hashes alongside the `.spl` archive (NIST SI-7).
+- **Software Bill of Materials (SBOM)**: Every build generates a CycloneDX SBOM (`bom.json`) via Syft (NIST 800-53 SA-4 / CISA minimum elements).
 - **Secret Scanning**: TruffleHog actively validates and blocks commits containing sensitive credentials (SC-28).
-- **SAST**: Python packaging scripts are validated via Bandit (SI-2).
-- **AppInspect**: Automated validation against Splunk Cloud and Enterprise AppInspect guidelines ensures 0 errors, 0 warnings, 0 failures.
+- **SAST & Flaw Prevention**: Python scripts pass Bandit SAST with non-zero exit gates (SI-2); React Virtual DOM enforces a 100% "Text-Only" rendering policy banning `dangerouslySetInnerHTML` and D3 `.html()` (CWE-79).
+- **AppInspect Zero-Defect Gate**: Automated precertification against Splunk Cloud and Enterprise standards ensures 0 errors, 0 failures, 0 warnings.
+
+### 🤝 DoD IL5 Shared Responsibility Model
+
+- **Application Layer (What this software guarantees):** 100% client-side rendering, zero outbound telemetry, dynamic SPL injection protection (`sanitizeSplunkToken`), DoS circuit breaker (5,000-row cap), fail-closed TLS, and verified SBOM/checksum supply chain provenance.
+- **Customer Enclave Layer (Mandatory for Operational ATO):** Deploying Splunk Search Heads inside an accredited IL5 dedicated cloud (e.g. AWS GovCloud US-East/West, Azure Government, or DoD on-premise enclave), enabling `fipsMode = true` in Splunk's `server.conf`, integrating CAC/PKI SAML MFA, and restricting logical access to vetted U.S. Persons (Tier 3/Tier 5).
 
 ---
 
-## Key Features (v2.8.6)
+## 🔒 Vulnerability Reporting & Responsible Disclosure
+
+This project is hardened for high-security environments (**DoD Impact Level 5 / NIST 800-53**).  
+**DO NOT open a public GitHub issue for security vulnerabilities.**
+
+To report a vulnerability privately, please email the security team at:  
+📧 **`security.report@suhlabs.com`**
+
+Please include a detailed description of the vulnerability, affected components, and step-by-step reproduction steps or Proof of Concept (PoC). We will acknowledge receipt within 48 hours. See [SECURITY.md](SECURITY.md) for full policy details.
+
+---
+
+## Key Features (v2.8.7)
 
 ### 🔒 Security Hardening & Vulnerability Remediation (v2.8.6)
 - **SPL Injection Denylist & Macro Guarding**: Implemented an explicit high-risk command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro blocking on column-driven `node_drilldown`/`link_drilldown` fields. Added `allowColumnDrilldown` visualizer option.
