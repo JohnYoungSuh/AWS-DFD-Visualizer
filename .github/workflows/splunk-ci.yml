@@ -12,8 +12,8 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   APP_NAME: AWS-DFD-Visualizer
-  VERSION: "2.8.7"
-  SPL_FILE: "AWS-DFD-Visualizer-2.8.7.spl"
+  VERSION: "2.8.8"
+  SPL_FILE: "AWS-DFD-Visualizer-2.8.8.spl"
 
 jobs:
   # STAGE 1: Build, Security Scanning & AppInspect Validation

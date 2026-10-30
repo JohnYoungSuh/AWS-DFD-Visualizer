@@ -1,4 +1,4 @@
-# AWS DFD Visualizer — v2.8.7
+# AWS DFD Visualizer — v2.8.8
 
 > [!IMPORTANT]
 > **Multi-Cloud Interactive Security Data Flow Diagram (DFD) for Splunk** — A high-performance, D3.js + React powered visualization engine. Renders complex cloud architecture data (AWS Config, Azure Resource Manager, GCP Asset Inventory) into interactive, audit-ready Zero-Trust topology blueprints. Designed for **DoD Impact Level 5 (IL5)** and **NIST 800-53 / NIST 800-207** environments.
@@ -14,7 +14,7 @@ The complete Zero-Trust cloud topology solution inside Splunk operates across tw
 | Component | Repository / Splunkbase App | Primary Responsibility |
 |---|---|---|
 | **Data Engine (ETL)** | **AWS-DFD-Companion** (v1.1.6) | Ingests raw AWS Config, CloudWatch VPC Flow Logs, and multi-cloud asset inventory. Normalizes telemetry via pre-packaged CIM/TA-AWS macros into standard DFD table rows (`from`, `to`, `edge_label`, `status`). |
-| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.8.7) | Ingests normalized DFD table rows and renders interactive, audit-ready Zero-Trust blueprints with DoD IL5 compliance boundaries, nested VPC/Subnet containers, and drilldown capabilities. |
+| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.8.8) | Ingests normalized DFD table rows and renders interactive, audit-ready Zero-Trust blueprints with DoD IL5 compliance boundaries, nested VPC/Subnet containers, and drilldown capabilities. |
 
 Separating data normalization (Companion) from diagram rendering (Visualizer) keeps the visualization engine lightweight, compliant, and decoupled from underlying log ingestion schemas.
 
@@ -56,7 +56,7 @@ Please include a detailed description of the vulnerability, affected components,
 
 ---
 
-## Key Features (v2.8.7)
+## Key Features (v2.8.8)
 
 ### 🔒 Security Hardening & Vulnerability Remediation (v2.8.6)
 - **SPL Injection Denylist & Macro Guarding**: Implemented an explicit high-risk command denylist (`delete`, `sendemail`, `outputcsv`, `outputlookup`, `collect`, `mcollect`, `meventcollect`, `tscollect`, `outputtext`, `rest`, `runshellscript`, `script`, `dump`, `sendalert`, `map`, `run`, `crawl`, `dbxoutput`) and backtick macro blocking on column-driven `node_drilldown`/`link_drilldown` fields. Added `allowColumnDrilldown` visualizer option.

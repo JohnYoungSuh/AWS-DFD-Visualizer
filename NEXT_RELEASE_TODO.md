@@ -18,6 +18,9 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 ## 📍 Session Log
 
 ### ✅ Session: October 29, 2026 — ASPM Security Assessment, Dev Tooling Remediation & Agent Persona Modernization
+- [x] **v2.8.8 Release Synchronization**:
+  - Atomically bumped version to `2.8.8` simultaneously across all 5 core configuration files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, and `src/components/AwsDfdVisualizer/AwsDfdVisualizer.jsx`), plus `package-lock.json`, `.github/workflows/splunk-ci.yml`, and documentation (`RELEASE_NOTES.md`, `README.MD`, `SECURITY.md`, `SESSION_START.md`, `CODEMAP.md`, `SPLUNKBASE_LISTING.md`).
+  - Compiled and packaged hardened `AWS-DFD-Visualizer-2.8.8.spl` package with companion cryptographic SHA-256 and SHA-512 checksum sidecars.
 - [x] **CodeQL SAST & GitHub Actions Pipeline Resolution**:
   - Diagnosed CodeQL workflow failures (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled`).
   - Switched repository-level CodeQL configuration via GitHub REST API from default-setup to advanced configuration (`state: not-configured`), enabling custom CodeQL analysis workflow (`.github/workflows/codeql.yml`) to upload SARIF reports for JavaScript/TypeScript and Python.

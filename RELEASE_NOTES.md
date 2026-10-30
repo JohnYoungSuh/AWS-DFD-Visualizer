@@ -1,3 +1,22 @@
+# Release Notes: AWS-DFD-Visualizer v2.8.8
+
+**Release Date:** October 29, 2026  
+**Framework:** Splunk Unified Dashboard Framework (Dashboard Studio) & Classic SimpleXML  
+**Target Environment:** DoD Impact Level 5 (IL5) / NIST 800-53 / Zero-Trust Architecture  
+**License:** MIT (Copyright (c) 2026 suhlabs)
+
+---
+
+## Overview
+
+Version 2.8.8 delivers critical DoD Impact Level 5 (IL5) cryptographic hardening, full CI/CD pipeline supply chain enforcement, and proactive Application Security Posture Management (ASPM):
+- **DoD IL5 Cryptographic Hardening (LL-010)**: Eliminated insecure TLS flags (`SPLUNK_INSECURE_TLS`) and unvalidated certificate overrides (`ssl.CERT_NONE`) from all test harnesses and automation scripts (`test-drilldown.py`, `test-spl.py`), enforcing fail-closed TLS verification. Added native support for DoD PKI Root CA bundles (`SPLUNK_CA_BUNDLE`), Mutual TLS (mTLS) client certificates (`SPLUNK_CLIENT_CERT`, `SPLUNK_CLIENT_KEY`), and Bearer token authentication (`SPLUNK_TOKEN`). Release packages now generate companion SHA-256 and SHA-512 cryptographic checksum sidecars for NIST SI-7 supply chain verification.
+- **CI/CD Supply Chain Hardening & Action Pinning (LL-010)**: Pinned all GitHub Actions across `splunk-ci.yml` and `codeql.yml` to immutable 40-character commit SHAs. Upgraded to GitHub CodeQL Action v4 for automated SAST scanning across JavaScript/TypeScript and Python with `security-and-quality` suites.
+- **Dev Tooling & Supply Chain Remediation (ASPM)**: Remediated all transitive devDependencies via `npm audit fix`, resolving 5 GitHub Dependabot security advisories (`launch-editor`, `follow-redirects`, `fast-uri`, `body-parser`, `systeminformation`). Maintained 0 production runtime vulnerabilities (`npm audit --omit=dev`) and 0 dev vulnerabilities.
+- **Repository Governance & Compliance Documentation**: Added automated weekly dependency scanning via `.github/dependabot.yml`, mandatory maintainer review gates via `.github/CODEOWNERS`, updated vulnerability disclosure contact to `security.report@suhlabs.com`, and formalized the DISA CC SRG IL5 / FedRAMP High Shared Responsibility Model in `SECURITY.md`.
+
+---
+
 # Release Notes: AWS-DFD-Visualizer v2.8.7
 
 **Release Date:** October 13, 2026  
