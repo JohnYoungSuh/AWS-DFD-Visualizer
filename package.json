@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "@babel/preset-env": "^7.20.0",
+    "@babel/preset-env": "^8.0.7",
     "@babel/preset-react": "^7.18.6",
     "@cypress/react18": "^2.0.1",
     "@splunk/webpack-configs": "^7.0.3",
