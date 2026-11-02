@@ -91,7 +91,7 @@ jobs:
           result_file: appinspect-report.html
 
       - name: Upload Security Reports
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: security-reports
@@ -100,7 +100,7 @@ jobs:
 
       # Upload the validated .spl and checksums for Stage 2 to reuse (avoids double-build)
       - name: Upload Validated .spl and Checksums
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validated-spl
           path: |
@@ -131,7 +131,7 @@ jobs:
           output-file: dist/bom.json
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: aws-dfd-visualizer-il5-package
           path: dist/
