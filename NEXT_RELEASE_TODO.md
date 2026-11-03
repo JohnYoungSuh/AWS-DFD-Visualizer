@@ -17,7 +17,71 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 ---
 
-### ✅ Session: October 30, 2026 — CodeQL SAST & Code Scanning Remediation (Alerts #5–#22)
+## 🏛️ Release v2.9.0 (Architecture Quality Hardening & A+ Certification)
+
+> **Objective:** Attain reference-grade A+ (99/100) architectural standard through zero-feature modular refactoring, sub-second test ergonomics, fault-tolerant blast radius containment, and formal typing contracts.  
+> **Adoption Boundary Compliance:** 100% compliant with the October 17, 2026 Adoption Boundary. Zero new host collectors, zero chat widgets, and zero unsolicited visualizer feature churn. Pure internal code quality, maintainability, and testing ergonomics.
+
+### Step 1 · Component Decomposition (`AwsDfdVisualizer.jsx`) *(Priority: 🔴 Critical Architectural Refactor)*
+- [ ] **Deconstruct `AwsDfdVisualizer.jsx` into Domain Modules**
+  - *Context*: Single file contains ~3,800 lines of mixed concerns (parsers, simulation loops, layout math, Draw.io exporter, HUD, and SVG renderers).
+  - *Target Architecture*:
+    - `hooks/useD3Simulation.js` — D3 force simulation lifecycle, tick clamping, synchronous 300-tick bypass, and unmount cleanup (`simulationRef.current.stop()`).
+    - `hooks/useSplunkDataParser.js` — Row/object normalization, field aliases (`from`/`to`, `src`/`dest`), ARN sanitization, and hierarchy resolution.
+    - `hooks/useZtaLayout.js` — 3-plane deterministic coordinate math and container boundary padding.
+    - `parsers/hierarchyParser.js` — Single-pass $O(N)$ parent-child tree extraction (`resolveHierarchy`).
+    - `parsers/edgeBundler.js` — Canonical edge deduplication (`[from, to].sort().join('|')`) and logarithmic stroke width calculation.
+    - `parsers/drawioExporter.js` — Uncompressed mxGraphModel XML generation and XSS `<script>` filtering.
+    - `subcomponents/` — Isolated UI components: `<CanvasSvg />`, `<NodeCard />`, `<LinkGroup />`, `<ZoneContainer />`, `<HudOverlay />`, `<LicenseGateModal />`.
+  - *Acceptance*: Root `AwsDfdVisualizer.jsx` orchestrates state in $\le 250$ lines; Webpack production bundle compiles with 0 errors and zero changes to external RequireJS export contracts.
+
+### Step 2 · Sub-Second Offline Unit Testing (Math & Parsers) *(Priority: 🟡 High)*
+- [ ] **Headless Unit Test Suite for Algorithmic Engines**
+  - *Context*: Running Cypress locally in headless WSL terminal without an active X-server/Xvfb hits exit code 132.
+  - *Action*:
+    - Add lightweight unit test harness (Vitest or Jest with `jsdom`) for pure mathematical and parsing algorithms.
+    - Test `rectCollide`: Verify axis-aligned bounding box (AABB) collision resolution, non-zero separation vectors, and zero `NaN` coordinates under arbitrary initial positions.
+    - Test `hierarchyParser`: Verify single-pass tree generation, orphaned node fallbacks, and boundary hull coordinates.
+    - Test `edgeBundler`: Verify canonical sorted key deduplication and logarithmic stroke width clamps: $\text{clamp}(2 + \log_2(\text{volume}), 2, 10)$.
+    - Test `sanitizeSplunkToken`: Verify high-risk command denylist, backtick macro blocking, and quote escaping.
+  - *Acceptance*: Running `npm test` executes the complete algorithmic test suite headlessly in $<500$ms in any WSL or CI environment without requiring a browser or display server.
+
+### Step 3 · Defensive React Error Boundary *(Priority: 🟡 High)*
+- [ ] **Implement `<VisualizerErrorBoundary>` Component**
+  - *Context*: Malformed SPL row data or unexpected object shapes can trigger unhandled React render crashes ("white screen of death") across dashboard panels.
+  - *Action*:
+    - Implement React Error Boundary wrapping `<CanvasSvg />`.
+    - Render an in-canvas diagnostic HUD on caught errors displaying the error description, offending data row index, and suggested SPL query remedy.
+    - Provide "Retry Render" and "Copy Diagnostic JSON" actions without crashing the outer Splunk dashboard container.
+  - *Acceptance*: Deliberately malformed SPL rows trigger the diagnostic fallback banner; outer dashboard panels and navigation remain fully functional.
+
+### Step 4 · Formal Schema Typing Contracts *(Priority: 🟢 Medium)*
+- [ ] **JSDoc / TypeScript Schema Declarations**
+  - *Context*: Data flows through untyped duck-typing dictionaries, increasing cognitive load for contributors and auditors.
+  - *Action*:
+    - Add comprehensive JSDoc `@typedef` schemas (or `src/types/visualizer.d.ts`):
+      - `SplunkDataRow`: Raw incoming SimpleXML and Dashboard Studio row/object schemas.
+      - `NormalizedNode`: Validated node contract (`id`, `arn`, `label`, `category`, `plane`, `status`, `x`, `y`).
+      - `NormalizedLink`: Validated edge contract (`source`, `target`, `label`, `volume`, `strokeWidth`, `status`).
+      - `ZoneHierarchy`: Nested enclosure definitions for VPC, Subnet, and Security Group hulls.
+  - *Acceptance*: Zero editor/lint type warnings across all parser and layout hooks.
+
+---
+
+## 📍 Session Log
+
+### ✅ Session: November 3, 2026 — Dependabot PR Resolution, CI Python 3.11 Migration & GitHub Wiki Deployment
+- [x] **Dependabot Pull Requests Fully Resolved (0 Open PRs)**:
+  - Diagnosed CI runner failure on Ubuntu 26.04 dropping Python 3.9; migrated `.github/workflows/splunk-ci.yml` to Python 3.11.
+  - Pinned updated immutable 40-character commit SHAs for `actions/setup-python`, `anchore/sbom-action`, and `actions/upload-artifact`.
+  - Configured `.github/dependabot.yml` ignore rules for breaking major upgrades (`react 19`, `@babel/* 8`, `cypress 16`) and unused phantom dependencies.
+  - Batch-updated safe minor/patch devDependencies (`webpack` 5.112.2, `webpack-dev-server` 5.2.7, `cypress` 15.21.1) with 0 vulnerabilities (`npm audit`).
+  - Closed obsolete/redundant PRs (#22–#38), confirming 0 open PRs, 0 open Dependabot alerts, and 0 code scanning alerts.
+- [x] **DART Framework & Deterministic Architecture Wiki Published**:
+  - Authored comprehensive documentation for the **DART** framework (**D**eclare, **A**uthorize, **R**eview, **T**rack), establishing clear DoD PPSM (DoDI 8551.01) lifecycle mapping and deprecating DAAD.
+  - Authored deterministic grouping specification contrasting $O(N)$ parent-child hierarchy, 3-plane ZTA swimlanes, and AABB physics against non-deterministic ML clustering.
+  - Cloned and initialized live GitHub Wiki repository (`https://github.com/JohnYoungSuh/AWS-DFD-Visualizer.wiki.git`) with persistent `_Sidebar.md` navigation and synchronized in-repo mirror (`docs/wiki/`).
+  - Reviewed and de-slopped all wiki pages, stripping "Executive Summary" headings, promotional rhetoric, and fluff in favor of crisp engineering specifications.
 - [x] **Remediated all 18 open CodeQL Code Scanning alerts**:
   - **Regex Character Class Duplication (`js/regex/duplicate-in-character-class`)**: Refactored emoji matching in `AwsDfdVisualizer.jsx` (lines 1459, 2754) to eliminate duplicate variation selector `\uFE0F` across composite emoji sequences.
   - **Useless Local Variable Assignments (`js/useless-assignment-to-local`)**: Removed redundant initial assignments for `decoded` (line 1175), `dynamicW`, and `dynamicH` (lines 2468, 2469) in `AwsDfdVisualizer.jsx`.
