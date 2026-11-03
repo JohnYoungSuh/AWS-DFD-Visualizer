@@ -32,6 +32,14 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 
 ### 2.2. Architecture Epics
 
+#### 🏛️ Release v2.9.0: Architecture Quality Hardening & A+ Certification
+* **Goal**: Attain reference-grade A+ (99/100) architectural standard without introducing feature churn or violating the Adoption Boundary.
+* **Deliverables**:
+  - **Component Decomposition**: Deconstruct `AwsDfdVisualizer.jsx` (~3,800 lines) into domain hooks (`useD3Simulation`, `useSplunkDataParser`, `useZtaLayout`), pure parsers (`hierarchyParser`, `edgeBundler`, `drawioExporter`), and modular subcomponents (`CanvasSvg`, `NodeCard`, `LinkGroup`, `ZoneContainer`, `HudOverlay`, `LicenseGateModal`).
+  - **Sub-Second Unit Testing**: Implement headless test suite (Vitest/Jest with jsdom) executing pure math tests (`rectCollide`, AABB physics, logarithmic edge bundler, token sanitizer) in $<500$ms in any WSL or CI environment without X11/Xvfb.
+  - **Defensive Error Boundary**: Wrap canvas in `<VisualizerErrorBoundary>` to intercept malformed SPL rows with an in-canvas diagnostic HUD instead of blank dashboard crashes.
+  - **Formal Schema Contracts**: Define JSDoc `@typedef` and declaration types for `SplunkDataRow`, `NormalizedNode`, `NormalizedLink`, and `ZoneHierarchy`.
+
 #### 🏛️ Epic 1: Topology Knowledge Unit (TKU) & Vendor Expansion (v3.5.x)
 * **Goal**: Support hybrid third-party appliances (Oracle, Cisco, F5, Palo Alto, HashiCorp Vault) alongside core cloud providers.
 * **Deliverables**:

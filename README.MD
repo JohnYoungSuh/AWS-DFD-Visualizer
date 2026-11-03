@@ -100,10 +100,10 @@ Please include a detailed description of the vulnerability, affected components,
 
 ## 📚 Technical Architecture & Governance Wiki
 
-For deep-dive architectural references, governance frameworks, and technical whitepapers, see the [Engineering Wiki](docs/wiki/Home.md):
-- **[The DART Governance Framework](docs/wiki/DART-Governance-Framework.md)**: Defining the **D**eclare, **A**uthorize, **R**eview, **T**rack methodology for continuous Zero-Trust compliance and PPSM.
+For deep-dive architectural references, governance frameworks, and technical whitepapers, visit the [Live GitHub Wiki](https://github.com/JohnYoungSuh/AWS-DFD-Visualizer/wiki) or the in-repo mirror ([docs/wiki/](docs/wiki/Home.md)):
+- **[The DART Governance Framework](docs/wiki/DART-Governance-Framework.md)**: Defining the **D**eclare, **A**uthorize, **R**eview, **T**rack methodology for continuous Zero-Trust compliance and PPSM (DoDI 8551.01).
 - **[Solving the Group Problem Deterministically](docs/wiki/Deterministic-Grouping-vs-Machine-Learning.md)**: Why we reject probabilistic Machine Learning clustering in favor of authoritative hierarchy extraction, NIST 800-207 swimlanes, and bounded geometric physics.
-- **[Lessons Learned & Engineering Roadmap](docs/wiki/Lessons-Learned-and-Roadmap.md)**: Institutional memory (LL-001 through LL-012) and forward-looking architecture epics.
+- **[Lessons Learned & Engineering Roadmap](docs/wiki/Lessons-Learned-and-Roadmap.md)**: Institutional memory (LL-001 through LL-012), v2.9.0 quality hardening (A+ certification), and future architectural epics.
 
 ---
 

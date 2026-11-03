@@ -18,7 +18,7 @@ Technical reference and design documentation for the `AWS-DFD-Visualizer` Splunk
 
 ### 3. [Lessons Learned & Architecture Roadmap](Lessons-Learned-and-Roadmap)
 * **Institutional memory (LL-001 – LL-012)**: React/D3 boundaries, ARN escaping, CodeQL emoji regex fixes, and fail-closed DoD IL5 cryptography.
-* **Standing Adoption Boundary**: Maintenance priorities, zero unsolicited agent churn, and future roadmap epics (Metanodes, TKU vendor expansion, Terraform HCL export).
+* **Standing Adoption Boundary & Roadmap**: v2.9.0 Architecture Quality Hardening (A+ Certification), followed by gated epics (TKU vendor expansion, Metanodes, Terraform HCL export).
 
 ---
 
