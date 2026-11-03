@@ -1,31 +1,23 @@
-# Solving the Group Problem: Deterministic Architecture vs. Machine Learning
+# Deterministic Grouping vs. Machine Learning
 
-## Executive Summary
+In regulated environments (**DoD IL5**, **DISA CC SRG**, **NIST 800-53 Rev. 5**, **NIST 800-207 Zero Trust**), network topology grouping must be deterministic, explainable, and reproducible. 
 
-When visualizing complex enterprise cloud environments containing thousands of assets across **AWS**, **Microsoft Azure**, and **Google Cloud Platform (GCP)**, diagrams naturally degrade into unreadable "hairballs"—tangled webs of crossing edges and overlapping nodes.
-
-Many contemporary tools attempt to solve this "group problem" using **Machine Learning (ML)** and probabilistic graph clustering algorithms (e.g., Louvain community detection, k-means spatial clustering, Markov clustering, or Graph Neural Networks).
-
-In **DoD Impact Level 5 (IL5)**, **NIST 800-53**, and **Zero-Trust Architecture (ZTA)** environments, **machine learning is the wrong tool for topology grouping**. 
-
-`AWS-DFD-Visualizer` solves the group problem **deterministically through ground-truth hierarchy extraction, NIST 800-207 Zero-Trust swimlanes, and bounded geometric physics**.
+Machine learning clustering (e.g., Louvain community detection, k-means, Markov clustering, Graph Neural Networks) introduces non-deterministic node placement, black-box group assignments, and browser main-thread computational overhead. `AWS-DFD-Visualizer` solves node grouping using ground-truth cloud telemetry, NIST 800-207 functional planes, and axis-aligned bounding box (AABB) physics.
 
 ---
 
-## 1. Why Machine Learning Fails for Regulated Cloud Topologies
+## 1. Technical Comparison
 
-| Failure Mode | Machine Learning / Probabilistic Clustering | Deterministic DFD Visualizer Approach | Compliance Consequence |
+| Dimension | Machine Learning / Graph Clustering | Deterministic DFD Visualizer Engine | Compliance Impact |
 |---|---|---|---|
-| **Reproducibility** | **Non-deterministic**: Minor telemetry fluctuations or random seeds yield different node clusters on every dashboard refresh. | **100% Deterministic**: Identical search results produce pixel-identical diagram layouts every time. | **NIST AU-12 / CM-3**: RMF auditors require consistent, reproducible evidence during compliance briefings. |
-| **Explainability** | **Black Box**: Nodes are grouped based on statistical mathematical distance rather than real cloud isolation boundaries. | **Ground-Truth Semantics**: Grouping reflects authoritative AWS Config / ARM telemetry (`vpc_id`, `subnet_id`, `zone`). | **Zero Trust Tenet 1**: All resource relationships must be explicitly verifiable, not inferred. |
-| **Performance & DoS** | **Thread-Locking Overhead**: Running $O(V^2)$ or $O(E \log V)$ clustering algorithms on 5,000+ nodes crashes browser UI threads. | **Linear Ingestion**: Hierarchy parsing runs in $O(N)$ single-pass time; physics settles in $\le 300$ synchronous ticks. | **NIST SC-5**: Client-side DoS circuit breaker halts processing at 5,000 rows without browser lockups. |
-| **Security Accuracy** | **Anomaly Obfuscation**: Probabilistic clustering often absorbs rogue or unauthorized flows into the nearest large cluster. | **Unforgiving Violation Isolation**: Unauthorized flows (e.g., SSH/22) are explicitly isolated and highlighted in pulsing red. | **NIST AC-4**: Security boundary violations must never be visually camouflaged by clustering heuristics. |
+| **Reproducibility** | **Non-deterministic**: Telemetry jitter or random initialization seeds yield different node groupings on each render. | **Deterministic**: Identical SPL search rows produce identical coordinate layouts on every run. | **NIST AU-12 / CM-3**: RMF assessment requires reproducible evidence across audit intervals. |
+| **Explainability** | **Inferred**: Groups are derived from statistical edge density rather than actual infrastructure boundaries. | **Ground-Truth**: Enclosures reflect explicit cloud hierarchy attributes (`vpc_id`, `subnet_id`, `resource_group`). | **Zero Trust Tenet 1**: All resource associations must be verified from authoritative configuration, never inferred. |
+| **Complexity & DoS** | **$O(V^2)$ to $O(E \log V)$**: Browser thread locks when clustering graphs with thousands of nodes. | **$O(N)$ Parsing**: Hierarchy extraction runs in a single pass; D3 layout settles within $\le 300$ synchronous ticks. | **NIST SC-5**: Client-side circuit breaker enforces a hard stop at 5,000 rows to prevent browser crashes. |
+| **Violation Visibility** | **Masked**: Anomalous or unauthorized edges can be visually absorbed into adjacent dense clusters. | **Isolated**: Unauthorized flows (`status="violation"`) are isolated and highlighted with pulsing red strokes. | **NIST AC-4**: Security boundary violations must remain unmasked and visually prominent. |
 
 ---
 
-## 2. The Four Deterministic Pillars of the Group Solution
-
-Rather than asking an artificial intelligence model to "guess" where nodes belong, `AWS-DFD-Visualizer` leverages the factual structure already defined by the cloud provider and the NIST Zero-Trust framework:
+## 2. Deterministic Layout Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -48,43 +40,31 @@ Rather than asking an artificial intelligence model to "guess" where nodes belon
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Pillar 1: Authoritative Hierarchy Extraction (Parent-Child Containment)
-Cloud platforms are not flat networks; they are structured containment hierarchies. Telemetry from AWS Config, Azure Resource Graph, and GCP Cloud Asset Inventory already contains unambiguous parent-child links:
-* `AWS::EC2::VPC` $\rightarrow$ contains `AWS::EC2::Subnet` $\rightarrow$ contains `AWS::EC2::Instance` / `AWS::RDS::DBInstance`.
-* `Microsoft.Network/virtualNetworks` $\rightarrow$ contains `subnets` $\rightarrow$ contains `virtualMachines`.
+### Pillar 1: Authoritative Hierarchy Extraction
+Cloud configuration services (AWS Config, Azure Resource Graph, GCP Cloud Asset Inventory) provide explicit containment relationships:
+* AWS: `AWS::EC2::VPC` $\rightarrow$ `AWS::EC2::Subnet` $\rightarrow$ `AWS::EC2::Instance` / `AWS::RDS::DBInstance`
+* Azure: `Microsoft.Network/virtualNetworks` $\rightarrow$ `subnets` $\rightarrow$ `virtualMachines`
 
-The visualizer's ingestion engine (`resolveHierarchy`) parses named fields (`vpc_id`, `subnet_id`, `group`, `zone`) in a single linear pass ($O(N)$), deterministically generating nested containment enclosures (`<Zone />`) with padded boundary hulls.
+The visualizer's ingestion parser (`resolveHierarchy`) inspects explicit boundary fields (`vpc_id`, `subnet_id`, `group`, `zone`) in a single $O(N)$ pass, generating nested `<Zone />` SVG containers with calculated boundary padding.
 
 ### Pillar 2: NIST 800-207 Zero-Trust Swimlanes
-In **Blueprint Mode** (`layoutMode="zero-trust"`), unconstrained physics is completely deactivated. Resources are classified and constrained into three horizontal functional planes:
-1. **Identity Plane (Top)**: Authentication authorities, IAM roles, policies, directory services.
-2. **Control & Policy Plane (Middle)**: Policy Enforcement Points (PEPs), WAFs, API Gateways, CDN edge endpoints.
-3. **Infrastructure & Data Plane (Bottom)**: Virtual private clouds, compute workloads, database storage, message brokers.
+In **Blueprint Mode** (`layoutMode="zero-trust"`), dynamic physics is disabled. Nodes are assigned to three horizontal functional planes based on their resource type:
+1. **Identity Plane (Top)**: IAM roles, users, directory services, and identity providers.
+2. **Control & Policy Plane (Middle)**: Policy Enforcement Points (PEPs), WAFs, API Gateways, and load balancers.
+3. **Infrastructure & Data Plane (Bottom)**: Virtual private networks, compute instances, database storage, and message queues.
 
-By anchoring nodes to functional security planes, visual density is eliminated without mathematical clustering approximations.
+Aligning nodes to functional security planes eliminates layout ambiguity without heuristic clustering.
 
-### Pillar 3: Bounded Geometric Physics (`rectCollide`)
-When dynamic exploration is desired (`layoutMode="force"`), standard D3 spherical physics fails because rectangular text cards (`280×100`px) collide unevenly, creating overlapping text.
+### Pillar 3: Bounded Rectangular Collision (`rectCollide`)
+Standard D3 force-directed layouts use radial collision detection, which assumes circular nodes. Rectangular node cards ($280 \times 100\,\text{px}$) collide unevenly under radial physics, causing text overlaps.
 
-`AWS-DFD-Visualizer` solves this with a custom **Rectangular Collision Force**:
-* Computes exact axis-aligned bounding box (AABB) overlap vectors ($dx, dy$) between card corners.
-* Applies random spatial jitter (`Math.random() * 50 - 25`) on node initialization to prevent division-by-zero (`NaN`) coordinate collapses.
-* Executes 300 synchronous layout pre-ticks for datasets under 100 nodes, delivering a fully settled, perfectly spaced layout instantly upon render.
+The visualizer implements custom Axis-Aligned Bounding Box (AABB) collision:
+* Evaluates horizontal and vertical overlap vectors ($dx, dy$) against card dimensions.
+* Applies bounded spatial jitter (`Math.random() * 50 - 25`) during node initialization to prevent division-by-zero (`0/0 = NaN`) coordinate lockups in `d3.forceCollide`.
+* Executes 300 synchronous layout pre-ticks for datasets under 100 nodes, rendering a fully settled layout without visual jitter.
 
-### Pillar 4: Semantic Metanode Aggregation & Logarithmic Edge Bundling
-In enterprise topologies with 1,000+ microservice instances, rendering every individual compute node creates visual chaos.
-
-The visualizer resolves this deterministically:
-1. **Semantic Metanodes**: Clusters sharing identical `product_name` or `service_type` within a subnet collapse into a single aggregated Metanode card (e.g., `Order-Processor-Fn [×128]`), complete with expandable drilldown toggles.
-2. **Logarithmic Edge Bundling**: Parallel connection paths between identical endpoints are deduplicated via canonical sorted keys (`[from, to].sort().join('|')`). Edge thickness scales logarithmically between `2`px and `10`px:
+### Pillar 4: Metanode Aggregation and Logarithmic Edge Bundling
+High-density deployments (e.g., hundreds of container tasks or serverless functions) are handled through two deterministic aggregation rules:
+1. **Semantic Metanodes**: Nodes within the same subnet sharing identical `product_name` or `service_type` collapse into an aggregated card (e.g., `Order-Processor-Fn [×128]`) with drilldown inspection.
+2. **Canonical Edge Deduplication & Logarithmic Scaling**: Parallel connections between identical endpoints are deduplicated on ingest using canonical sorted keys (`[from, to].sort().join('|')`). Stroke width scales logarithmically with traffic volume:
    $$\text{strokeWidth} = \text{clamp}\left(2 + \log_2(\text{trafficVolume}), 2, 10\right)$$
-   This provides instant visual weight for high-volume trunk routes while preventing visual line stacking.
-
----
-
-## 3. Summary: Why Determinism Wins for DevSecOps
-
-By discarding non-deterministic Machine Learning clustering in favor of **authoritative hierarchy parsing, NIST 800-207 swimlanes, and bounded geometric math**, `AWS-DFD-Visualizer` provides:
-1. **Auditable Integrity**: An architecture diagram that never shifts unpredictably between audit cycles.
-2. **Zero-Latency Performance**: Client-side rendering that operates cleanly within Splunk Search Head memory boundaries.
-3. **Uncompromising Security Visibility**: Direct visual mapping of compliance violations and architectural drift that cannot be masked by probabilistic clustering.
