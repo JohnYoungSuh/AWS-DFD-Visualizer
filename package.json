@@ -33,7 +33,7 @@
     "@splunk/webpack-configs": "^7.0.3",
     "babel-loader": "^8.4.1",
     "cypress": "^15.14.2",
-    "webpack": "^5.93.0",
+    "webpack": "^5.112.2",
     "webpack-cli": "^5.0.0",
     "webpack-dev-server": "^5.2.6"
   }
