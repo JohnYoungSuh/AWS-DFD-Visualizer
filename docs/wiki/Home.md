@@ -6,14 +6,14 @@ Welcome to the **AWS-DFD-Visualizer** documentation and technical knowledge base
 
 ## 📖 Wiki Knowledge Base Navigation
 
-### 1. [The DAAD Governance Framework](DAAD-Governance-Framework.md)
-* **What is DAAD?** The **D**eclare, **A**pprove, **A**uthorize, **D**rift promotion lifecycle.
+### 1. [The DART Governance Framework](DART-Governance-Framework.md)
+* **What is DART?** The **D**eclare, **A**uthorize, **R**eview, **T**rack continuous compliance methodology.
 * **The Four Pillars**:
-  * **Declare**: Specifying intended architecture in IaC/GitOps (`planned`).
-  * **Approve**: Technical review and automated AST/SAST validation (`reviewed`).
-  * **Authorize**: Accreditation into the active security baseline by Authorizing Officials / GPIS (`OK` / `allowed`).
-  * **Drift**: Continuous reconciliation against live telemetry to spot unauthorized flows and configuration discrepancies (`violation`).
-* **Compliance Mapping**: Formal alignment with NIST 800-53 (AC-4, CM-2, CM-3, CA-7) and NIST 800-207 Zero-Trust tenets.
+  * **D — Declare**: Identify, map, and document your ports, protocols, and services (PPSM) in IaC (`planned`).
+  * **A — Authorize**: Gain formal sign-off and approval for required traffic profiles from Authorizing Officials / GPIS (`OK` / `allowed`).
+  * **R — Review**: Periodically inspect and evaluate the active network footprint via Zero-Trust Blueprint swimlanes (`zero-trust`).
+  * **T — Track**: Continuously monitor, log, and maintain accountability for any changes and operational drift (`violation`).
+* **Compliance Mapping**: Formal alignment with DoDI 8551.01 (PPSM), NIST 800-53 (AC-4, CM-2, CM-3, CA-2, CA-7, AU-12), and NIST 800-207 Zero-Trust tenets.
 
 ---
 

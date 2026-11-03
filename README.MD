@@ -101,7 +101,7 @@ Please include a detailed description of the vulnerability, affected components,
 ## 📚 Technical Architecture & Governance Wiki
 
 For deep-dive architectural references, governance frameworks, and technical whitepapers, see the [Engineering Wiki](docs/wiki/Home.md):
-- **[The DAAD Governance Framework](docs/wiki/DAAD-Governance-Framework.md)**: Defining the **D**eclare, **A**pprove, **A**uthorize, **D**rift lifecycle for continuous Zero-Trust compliance.
+- **[The DART Governance Framework](docs/wiki/DART-Governance-Framework.md)**: Defining the **D**eclare, **A**uthorize, **R**eview, **T**rack methodology for continuous Zero-Trust compliance and PPSM.
 - **[Solving the Group Problem Deterministically](docs/wiki/Deterministic-Grouping-vs-Machine-Learning.md)**: Why we reject probabilistic Machine Learning clustering in favor of authoritative hierarchy extraction, NIST 800-207 swimlanes, and bounded geometric physics.
 - **[Lessons Learned & Engineering Roadmap](docs/wiki/Lessons-Learned-and-Roadmap.md)**: Institutional memory (LL-001 through LL-012) and forward-looking architecture epics.
 
