@@ -1,6 +1,6 @@
 # Lessons Learned & Technical Roadmap
 
-Engineering reference documenting resolved architectural constraints (**LL-001 through LL-012**) and the forward roadmap governed by the **October 17, 2026 Standing Adoption Boundary**.
+Engineering reference documenting resolved architectural constraints (**LL-001 through LL-013**) and the forward roadmap governed by the **October 17, 2026 Standing Adoption Boundary**.
 
 ---
 
@@ -8,6 +8,7 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 
 | Ref ID | Focus Area | Root Cause | Engineering Solution |
 |---|---|---|---|
+| **LL-013** | **Zero-Linger Pre-Release Dependency Drainage** | Tagging releases while Dependabot PRs linger leaves manifests out of sync, triggers Dependabot 30-day auto-rebase abandonment, and masks CI runner deprecations (e.g. Ubuntu 26.04 dropping Python 3.9). | Hard release gate: release version bumps, git tags, and `.spl` packaging are strictly blocked until `gh pr list` reports 0 open PRs, Dependabot alerts report 0 open items, and `npm audit` reports 0 vulnerabilities. |
 | **LL-012** | **CodeQL Emoji Character Classes & React Lifecycle** | Multi-codepoint emoji (`🛡️`, `⚙️`, `⚠️`) contain Variation Selector-16 (`\uFE0F`). Grouping multiple emoji inside character classes `[...]` duplicated `\uFE0F`, triggering CodeQL regex alerts. Declaring unread state variables in force-render hooks triggered unused variable alerts. | Use non-capturing alternation `/(?:🛡️|⚙️|⚠️)/u` for glyph matching, deduplicate base glyphs in negation classes, and use omitted destructuring `const [, setTickUpdate] = useState(0)`. |
 | **LL-011** | **Dual-Language AST SAST in CI** | Python test scripts were scanned with Bandit, but the primary 3,800-line React/D3 codebase had no automated static application security testing in CI runners. | Implemented dual-language GitHub CodeQL SAST workflow (`.github/workflows/codeql.yml`) targeting JavaScript/TypeScript and Python with `security-and-quality` suites; pinned CI tooling to immutable SHAs. |
 | **LL-010** | **DoD IL5 Cryptography & Action Pinning** | Test scripts contained flags (`SPLUNK_INSECURE_TLS=true`) setting `ssl.CERT_NONE`, which blocks ATO accreditation. Workflow actions referenced mutable tags (`@v5`). | Removed insecure TLS bypass flags; enforced fail-closed TLS verification with DoD Root CA bundle (`SPLUNK_CA_BUNDLE`), mTLS (`SPLUNK_CLIENT_CERT`), and Bearer token (`SPLUNK_TOKEN`) support; pinned all workflow actions to 40-character commit SHAs; emit SHA-256/512 checksums. |

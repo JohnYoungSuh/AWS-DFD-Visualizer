@@ -21,6 +21,7 @@ trigger: always_on
 - **NEVER commit without running `npm run build`** and confirming `webpack compiled successfully`
 - **NEVER release without `make inspect` showing 0 errors, 0 failures, 0 warnings**
 - **NEVER break the `Makefile` pipeline** — CI depends on it for SBOM generation
+- **NEVER tag, bump, or post a release while open dependency pull requests (`gh pr list`) or un-triaged Dependabot alerts remain** — enforce the zero-linger dependency drainage gate (LL-013)
 - **NEVER leave unaddressed or un-triaged open Dependabot alerts or runtime vulnerabilities** before a release
 
 ## Environment

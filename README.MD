@@ -99,7 +99,7 @@ Include a description of the issue, affected components, and step-by-step reprod
 For technical references, governance lifecycles, and architecture documentation, see the [Live GitHub Wiki](https://github.com/JohnYoungSuh/AWS-DFD-Visualizer/wiki) or the in-repo mirror ([docs/wiki/](docs/wiki/Home.md)):
 - **[The DART Governance Framework](docs/wiki/DART-Governance-Framework.md)**: Ports, Protocols, and Services Management (DoDI 8551.01) lifecycle: **D**eclare, **A**uthorize, **R**eview, **T**rack.
 - **[Deterministic Grouping vs. Machine Learning](docs/wiki/Deterministic-Grouping-vs-Machine-Learning.md)**: Why deterministic hierarchy extraction, NIST 800-207 swimlanes, and AABB physics replace probabilistic ML clustering in regulated environments.
-- **[Lessons Learned & Technical Roadmap](docs/wiki/Lessons-Learned-and-Roadmap.md)**: Institutional engineering memory (LL-001 through LL-012) and forward roadmap (v2.9.0 quality hardening).
+- **[Lessons Learned & Technical Roadmap](docs/wiki/Lessons-Learned-and-Roadmap.md)**: Institutional engineering memory (LL-001 through LL-013) and forward roadmap (v2.9.0 quality hardening).
 
 ---
 

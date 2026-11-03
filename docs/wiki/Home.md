@@ -17,7 +17,7 @@ Technical reference and design documentation for the `AWS-DFD-Visualizer` Splunk
 * **The deterministic alternative**: $O(N)$ parent-child hierarchy extraction, 3-plane ZTA constraints, AABB rectangular collision math (`rectCollide`), and logarithmic edge bundling.
 
 ### 3. [Lessons Learned & Architecture Roadmap](Lessons-Learned-and-Roadmap)
-* **Institutional memory (LL-001 – LL-012)**: React/D3 boundaries, ARN escaping, CodeQL emoji regex fixes, and fail-closed DoD IL5 cryptography.
+* **Institutional memory (LL-001 – LL-013)**: React/D3 boundaries, ARN escaping, CodeQL emoji regex fixes, fail-closed DoD IL5 cryptography, and zero-linger pre-release dependency gates.
 * **Standing Adoption Boundary & Roadmap**: v2.9.0 Architecture Quality Hardening (A+ Certification), followed by gated epics (TKU vendor expansion, Metanodes, Terraform HCL export).
 
 ---

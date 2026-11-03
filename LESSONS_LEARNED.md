@@ -4,6 +4,32 @@
 
 ---
 
+## 📌 LL-013 — Zero-Linger Dependency Gate: Pre-Release PR & Dependabot Drainage Mandate
+
+**Date Documented:** November 3, 2026  
+**Context:** Triage and batch remediation of lingering Dependabot pull requests (#22–#38) following GitHub Actions Ubuntu 26.04 runner migration.
+
+### Problem & Root Cause Analysis
+1. **Supply Chain Debt Accumulation**:
+   - Tagging or publishing releases while automated dependency PRs remain open leaves production manifests and developer lockfiles out of sync with security patches and toolchain fixes.
+2. **Dependabot Rebase Abandonment**:
+   - GitHub Dependabot stops automatically rebasing or resolving conflicts on pull requests that remain open without maintainer activity for more than 30 days. This creates silent PR abandonment where alerts continue accumulating in the Security tab without active CI feedback.
+3. **Runner & Toolchain Decay**:
+   - Lingering PRs mask underlying runner deprecations. In our case, GitHub migrated `ubuntu-latest` to Ubuntu 26.04, which dropped Python 3.9 support. Because dependency PRs were left open across several weeks, every single pending Dependabot PR failed in CI with `The version '3.9' with architecture 'x64' was not found for Ubuntu 26.04`.
+4. **Post-Release Scramble**:
+   - Tagging a release before draining dependencies forces developers to perform emergency dependency triage immediately after publishing, diluting release focus and risking post-release regressions.
+
+### Durable Engineering Standard (The Zero-Linger Rule)
+* **Hard Release Gate**: A release version bump, git tag (`vX.Y.Z`), or `.spl` distribution package must **NEVER** be posted until all open dependency PRs and actionable Dependabot alerts are 100% resolved.
+* **Pre-Release Drainage Sequence**:
+  1. **PR Drainage**: Run `gh pr list --label dependencies`. Every open PR must be either merged (if compatible), batch-updated, or closed with explicit ignore rules configured in `.github/dependabot.yml`.
+  2. **Alert Drainage**: Run `gh api /repos/:owner/:repo/dependabot/alerts --jq '.[] | select(.state == "open")'`. Confirm 0 open actionable alerts. If unpatchable transitive dev advisories exist (`first_patched_version: null`), execute the LL-009 triage protocol.
+  3. **Local Audit**: Confirm `npm audit --omit=dev` reports 0 vulnerabilities and `npm audit` reports 0 vulnerabilities.
+  4. **Full Verification**: Run `npm run build` and `make inspect` (0 errors, 0 failures, 0 warnings).
+  5. **Release Promotion**: Only after steps 1–4 report zero pending items may the 5 version files be bumped and the release tagged.
+
+---
+
 ## 📌 LL-012 — CodeQL SAST Remediation: Composite Emoji Variation Selectors in Regex Character Classes & React Lifecycle Hygiene
 
 **Date Documented:** October 30, 2026  
