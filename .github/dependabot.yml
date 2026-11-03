@@ -24,6 +24,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "webpack-dev-server"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "cypress"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "webpack-cli"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "@splunk/react-ui"
       - dependency-name: "@splunk/themes"
 
