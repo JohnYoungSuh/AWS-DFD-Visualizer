@@ -67,12 +67,12 @@ Include a description of the issue, affected components, and step-by-step reprod
 - **DoS Circuit Breaker**: Halts graph processing and displays a warning banner if incoming search results exceed 5,000 rows.
 
 ### Layout Physics & Performance
-- **Rectangular Collision Force (`rectCollide`)**: Custom Axis-Aligned Bounding Box (AABB) force matches node card dimensions ($280 \times 100$px) to eliminate label overlaps.
+- **Rectangular Collision Force (`rectCollide`)**: Custom Axis-Aligned Bounding Box (AABB) force matches node card dimensions (280 x 100 px) to eliminate label overlaps.
 - **Synchronous Pre-Ticks**: Runs 300 simulation ticks synchronously for graphs under 100 nodes, rendering a fully settled layout on initial mount.
-- **Batched Simulation**: Graphs with $\ge 150$ nodes chunk physics ticks into 30-frame batches via `requestAnimationFrame` to prevent UI thread lockups.
-- **Logarithmic Edge Bundling**: Aggregates parallel flows between identical endpoints into a single weighted edge scaling between $2$px and $10$px:
-  $$\text{strokeWidth} = \text{clamp}\left(2 + \log_2(\text{trafficVolume}), 2, 10\right)$$
-- **Level of Detail (LOD)**: Hides card labels and SVG drop-shadows when zoomed out ($k < 0.45$) to minimize browser compositor overhead.
+- **Batched Simulation**: Graphs with 150 nodes chunk physics ticks into 30-frame batches via `requestAnimationFrame` to prevent UI thread lockups.
+- **Logarithmic Edge Bundling**: Aggregates parallel flows between identical endpoints into a single weighted edge scaling between 2 px and 10 px:
+  $$\text{strokeWidth} = \text{clamp}\left(2 + \log_2(\text{trafficVolume}), 2, 10\right)
+- **Level of Detail (LOD)**: Hides card labels and SVG drop-shadows when zoomed out (k < 0.45) to minimize browser compositor overhead.
 
 ### Diagram Controls & Formatting
 - **Dynamic Label Width**: Capsule boundaries scale to exact text length to prevent protocol label truncation.
