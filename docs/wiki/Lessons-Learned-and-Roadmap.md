@@ -38,7 +38,8 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 * **Deliverables**:
   - **Component Decomposition**: Deconstruct `AwsDfdVisualizer.jsx` (~3,800 lines) into domain hooks (`useD3Simulation`, `useSplunkDataParser`, `useZtaLayout`), pure parsers (`hierarchyParser`, `edgeBundler`, `drawioExporter`), and modular subcomponents (`CanvasSvg`, `NodeCard`, `LinkGroup`, `ZoneContainer`, `HudOverlay`, `LicenseGateModal`).
   - **Sub-Second Unit Testing**: Implement headless test suite (Vitest/Jest with jsdom) executing pure math tests (`rectCollide`, AABB physics, logarithmic edge bundler, token sanitizer) in $<500$ms in any WSL or CI environment without X11/Xvfb.
-  - **Defensive Error Boundary**: Wrap canvas in `<VisualizerErrorBoundary>` to intercept malformed SPL rows with an in-canvas diagnostic HUD instead of blank dashboard crashes.
+  - **Defensive Error Boundary & Validation**: Wrap canvas in `<VisualizerErrorBoundary>` to intercept malformed SPL rows (hard-failing missing required columns) with an in-canvas diagnostic HUD instead of blank dashboard crashes.
+  - **Boundary Flag Isolation**: Isolate PPSM BOUNDARY1–16 flags strictly to edge badges/metadata, preventing boundary tokens from corrupting ZTA 3-plane node placement.
   - **Formal Schema Contracts**: Define JSDoc `@typedef` and declaration types for `SplunkDataRow`, `NormalizedNode`, `NormalizedLink`, and `ZoneHierarchy`.
 
 #### 🏛️ Epic 1: Topology Knowledge Unit (TKU) & Vendor Expansion (v3.5.x)
