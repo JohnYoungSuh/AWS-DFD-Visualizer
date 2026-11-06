@@ -103,12 +103,12 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
   - Formally triaged all flagged items as technical **false positives** with zero production security impact:
     1. `45.33.32.1`: Mock test fixture string in `SplunkbaseScreenshots.cy.jsx` for marketing screenshot generation (never dialed or bound to any socket).
     2. `CONTAINER = splunk-emass`: Local developer workstation Docker container label in convenience scripts (`Makefile`, `bin/repair_viz.sh`, `bin/sync_to_docker.sh`) for local asset sync (`docker cp`).
-    3. `Navy Identity Server` / `mktl_governance.xml`: Illustrative backlog examples in feature design discussions.
+    3. `Navy Identity Server` / `MKTL` typo: Illustrative backlog notes; `MKTL` was an accidental transposition typo for Splunk's official **Machine Learning Toolkit (MLTK)** (`mltk_governance.xml`).
     4. `16 boundaries` / `BOUNDARY1-16`: Conceptual network segmentation flags.
   - Remediated all items for defense-in-depth:
     - Replaced mock public IP with RFC 5737 TEST-NET-2 documentation IP `198.51.100.25`.
     - Renamed local Docker container to generic `splunk-dev`.
-    - Sanitized backlog/wiki examples to `Enterprise Identity Provider` and `zta_governance.xml`.
+    - Sanitized backlog/wiki examples to `Enterprise Identity Provider` and corrected `MKTL` to Splunk's official **Machine Learning Toolkit (MLTK)** (`mltk_governance.xml`).
     - Scrubbed numbered boundary schemes to generic *"network boundary attributes"* and locked architectural mapping rule (3 planes = node layout only; boundaries = edge attributes only).
   - Documented audit triage in `SECURITY.md`, captured engineering standard **LL-014** in `LESSONS_LEARNED.md`, and synchronized GitHub Wiki (`AWS-DFD-Visualizer.wiki.git` commit `d13cf6a`).
   - Confirmed 0 errors on `npm run build`, pushed commit `e00f02a6` to `origin/master`, and verified 100% green CI/CD pipeline runs (`Splunk App CI/CD #42161169398`, `CodeQL #42161169237`).
@@ -699,7 +699,7 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
         6. Update the D3 rectangular collision (`rectCollide`) force to use the calculated node-specific rect `{ w, h }` plus configurable padding parameters (`paddingX`/`paddingY`).
         7. Verify that the "Zero-Latency" 300-tick bypass runs with these new dynamic dimensions, testing performance to ensure small/medium graphs settle instantly without UI thread freezing up to 150 nodes.
 - [x] **Decoupled Plane Renaming & Terminology Customization**
-    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g., Enterprise Identity Provider, Governance policy presets).
+    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g., Enterprise Identity Provider, Splunk MLTK Governance presets).
     - *Action*:
         1. Add the "Governance Terminology" section to `formatter.html` with text inputs, and register defaults in `visualizations.conf` for `labelIdentityPlane` (default: "Identity/Management Plane"), `labelControlPlane` (default: "⚙️ Control Plane"), and `labelDataPlane` (default: "Data Plane"). Putting the emoji in the defaults allows users to change/delete prefixes from the Splunk UI without modifying the source code.
         2. Update the Splunk data parser so that if an SPL eval field returns a custom `zone_name` (or `zone`), the visualizer prioritizes the SPL value over the UI preset options. This enables Sec-Agents to dynamically rename planes (e.g. `zone_name="⚠️ CONTAINMENT ZONE"`).
@@ -1026,8 +1026,8 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 - [ ] **Generative Terraform HCL Compiler (`HclCompiler.js`)**
     - *Action*: Serialize canvas topology, node target metadata, and security group connections into clean, downloadable `main.tf` Terraform plans.
-- [ ] **Zero-Trust Executive Governance Table (`zta_governance.xml`)**
-    - *Action*: Build live SPL dashboard joining TKU identification with `dfd_governance_rules.csv` to generate migration action tables (`Service | Decision | Risk | Action | Wave`).
+- [ ] **Splunk MLTK Executive Governance Table (`mltk_governance.xml`)**
+    - *Action*: Build live SPL dashboard joining TKU identification with `dfd_governance_rules.csv` and Splunk Machine Learning Toolkit (MLTK) to generate migration action tables (`Service | Decision | Risk | Action | Wave`).
 - [ ] **Comprehensive STIG AU-12 Audit Logging**
     - *Action*: Track all diagram, XML, and Terraform exports via `Splunk.util.trackEvent()` with IL5 compliance payloads.
 

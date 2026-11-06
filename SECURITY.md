@@ -84,9 +84,9 @@ A rigorous Operational Security (OPSEC) and Controlled Unclassified Information 
 - **Local Developer Docker Container Acronym (`CONTAINER = splunk-emass`)**:
   - *Triage / False Positive Rationale*: Used solely in local developer workstation convenience scripts (`Makefile`, `bin/repair_viz.sh`, `bin/sync_to_docker.sh`) to target a local Docker container for file synchronization (`docker cp`). No live connection to the DoD Enterprise Mission Assurance Support Service (eMASS) or military network endpoints existed.
   - *Disposition*: Sanitized to generic `splunk-dev` across all developer tooling to maintain clean open-source neutral naming conventions.
-- **Hypothetical Identity & Governance Table Names (`Navy Identity Server`, `mktl_governance.xml`)**:
-  - *Triage / False Positive Rationale*: Hypothetical descriptive names in backlog feature proposals (`NEXT_RELEASE_TODO.md` and roadmap artifacts) illustrating the requirement for custom plane naming and compliance presets; never corresponded to live production enclaves.
-  - *Disposition*: Sanitized to vendor-neutral terms (`Enterprise Identity Provider`, `zta_governance.xml`, `Zero-Trust Governance`).
+- **Splunk MLTK Typo Correction & Neutral Identity Names (`Navy Identity Server`, `mktl_governance.xml`)**:
+  - *Triage / False Positive Rationale*: `MKTL` was a transposition typographical error for Splunk's official public **Machine Learning Toolkit (MLTK)** (`mltk_governance.xml`), rather than a proprietary acronym. `Navy Identity Server` was an illustrative customer example in backlog feature notes for custom plane naming.
+  - *Disposition*: Corrected typo to official public product name **Splunk Machine Learning Toolkit (MLTK)** (`mltk_governance.xml`) and sanitized identity mockup to generic `Enterprise Identity Provider`.
 - **Boundary Numbering Scheme (`16 boundaries`, `BOUNDARY1–16`)**:
   - *Triage / False Positive Rationale*: Generic network segmentation discussion decoupled from real-world classification schemes.
   - *Disposition*: Replaced with generic *"network boundary attributes"* and enforced architectural rule that boundaries are edge-level metadata only, never driving plane assignment.

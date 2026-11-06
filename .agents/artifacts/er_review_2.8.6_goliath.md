@@ -121,7 +121,7 @@ Scope risk: **High**. Not a 2.8.6 patch.
 There is no AI consensus engine in AWS-DFD-Visualizer. The related `suhlabs-infr-ai-poc` / `ai-agent-governance-framework` review (19 Sep 2026) found **mocks and stubs**, not a policy engine. Wiring a Splunk custom visualization to “self-healing agents” is a different product and would destroy the air-gapped IL5 story if it implied outbound model calls.
 
 #### Roadmap Alignment
-No viz epic implements this. v4.0 Zero-Trust governance table is SPL+CSV, not multi-agent.
+No viz epic implements this. v4.0 Splunk MLTK (Machine Learning Toolkit) governance table is SPL+CSV, not multi-agent.
 
 #### Acceptance Criteria
 N/A — do not put this on the 2.8.6 scoreboard.

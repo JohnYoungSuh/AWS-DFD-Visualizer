@@ -14,8 +14,8 @@
    - In UI and screenshot test specs (`SplunkbaseScreenshots.cy.jsx`), developers often create mock node rows with realistic-looking metadata (e.g. labeling an attacker node `"Malicious C2 Server (45.33.32.1)"`). While technically benign and purely local in-memory test data (never sending or receiving network packets), `45.33.32.1` is a routable public IPv4 address. Automated or manual OPSEC review correctly flags this as potential live intelligence or unauthorized target exposure.
 2. **Local Workstation Developer Artifacts in Scripts**:
    - Developer tooling and sync scripts often use shorthand container names (`CONTAINER = splunk-emass`). While purely a local Docker container tag on developer workstations with no network connection to the real DoD Enterprise Mission Assurance Support Service (eMASS), the acronym creates false-positive alarms in military security audits.
-3. **Hypothetical Backlog Architecture Examples**:
-   - Backlog notes discussing feature requirements often borrow familiar domain acronyms or customer contexts (e.g. `Navy Identity Server`, `mktl_governance.xml`). In public open-source repositories, these illustrative labels can be misinterpreted as proprietary system architectures.
+3. **Hypothetical Backlog Architecture Examples & Typographical Acronyms**:
+   - Backlog notes discussing feature requirements often borrow familiar customer contexts (e.g. `Navy Identity Server`) or contain typographical errors (e.g. `MKTL` / `mktl_governance.xml`, which was an accidental transposition typo for Splunk's official **Machine Learning Toolkit (MLTK)**). In public open-source repositories, these illustrative labels or typos can be misconstrued during audits as proprietary or classified acronyms.
 4. **Boundary Scheme Conflation**:
    - Conflating boundary classification flags with core Zero Trust Architecture layout planes distorted graph layouts and raised questions regarding network boundary specifications.
 
@@ -24,6 +24,7 @@
   - `192.0.2.0/24` (TEST-NET-1)
   - `198.51.100.0/24` (TEST-NET-2)
   - `203.0.113.0/24` (TEST-NET-3)
+* **Public Ecosystem Acronym Precision**: When referencing public vendor tooling (such as Splunk apps and toolkits), strictly use official acronyms (e.g. **Splunk MLTK** for Machine Learning Toolkit) to prevent accidental confusion with sensitive organizational abbreviations.
 * **Generic Developer Tooling Naming**: Makefile and local bash scripts must use neutral, generic container and target names (e.g. `splunk-dev`), never mission-system acronyms.
 * **Strict Decoupling of Planes and Boundaries**: Network boundaries are edge-level metadata and badges only; they must never drive node `group` or vertical plane placement.
 * **Formal False-Positive Audit Logging**: When non-production findings are identified during OPSEC audits, document both the technical false-positive rationale and the proactive remediation in `SECURITY.md` and `LESSONS_LEARNED.md`.
