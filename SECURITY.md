@@ -76,6 +76,21 @@ To prevent DOM-based Cross-Site Scripting (XSS) and injection vulnerabilities wh
 - **Strict Hex Color Validation**: Custom color values must strictly conform to a 6-digit hex pattern (`^#[0-9A-Fa-f]{6}$`). Invalid inputs are silently dropped.
 - **Priority Default Safeguard**: User-defined custom colors only augment visual statuses; core built-in compliance and life-cycle defaults (like `ResourceDeleted` dimming or `ResourceNotRecorded` dashed states) cannot be overridden or disabled by custom status configuration.
 
+### 8. DoD OPSEC & Controlled Unclassified Information (CUI) Audit & False Positive Triage (November 5, 2026)
+A rigorous Operational Security (OPSEC) and Controlled Unclassified Information (CUI) review was performed across the codebase, documentation, backlog notes, and test fixtures. While all identified items were determined upon technical evaluation to be **false positives** (originating in local developer test harnesses, mock screenshot specs, or hypothetical architectural notes with zero operational impact), proactive remediation was applied to ensure defense-in-depth compliance:
+- **Mock Adversary Public IPv4 in Cypress Spec (`45.33.32.1`)**:
+  - *Triage / False Positive Rationale*: Located in `SplunkbaseScreenshots.cy.jsx` within an in-memory row array used purely for generating visual marketing screenshots of an adversary node (`"Malicious C2 Server (45.33.32.1)"`). No outbound packets were ever generated, and no real-world endpoint was targeted.
+  - *Disposition*: Remediated for defense-in-depth to RFC 5737 TEST-NET-2 documentation IP `198.51.100.25`, eliminating potential scanning or accidental attribution to external public hosts.
+- **Local Developer Docker Container Acronym (`CONTAINER = splunk-emass`)**:
+  - *Triage / False Positive Rationale*: Used solely in local developer workstation convenience scripts (`Makefile`, `bin/repair_viz.sh`, `bin/sync_to_docker.sh`) to target a local Docker container for file synchronization (`docker cp`). No live connection to the DoD Enterprise Mission Assurance Support Service (eMASS) or military network endpoints existed.
+  - *Disposition*: Sanitized to generic `splunk-dev` across all developer tooling to maintain clean open-source neutral naming conventions.
+- **Hypothetical Identity & Governance Table Names (`Navy Identity Server`, `mktl_governance.xml`)**:
+  - *Triage / False Positive Rationale*: Hypothetical descriptive names in backlog feature proposals (`NEXT_RELEASE_TODO.md` and roadmap artifacts) illustrating the requirement for custom plane naming and compliance presets; never corresponded to live production enclaves.
+  - *Disposition*: Sanitized to vendor-neutral terms (`Enterprise Identity Provider`, `zta_governance.xml`, `Zero-Trust Governance`).
+- **Boundary Numbering Scheme (`16 boundaries`, `BOUNDARY1–16`)**:
+  - *Triage / False Positive Rationale*: Generic network segmentation discussion decoupled from real-world classification schemes.
+  - *Disposition*: Replaced with generic *"network boundary attributes"* and enforced architectural rule that boundaries are edge-level metadata only, never driving plane assignment.
+
 ---
 
 ## DoD CC SRG Impact Level 5 (IL5) Shared Responsibility Boundary

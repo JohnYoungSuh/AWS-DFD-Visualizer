@@ -1,6 +1,6 @@
 # Lessons Learned & Technical Roadmap
 
-Engineering reference documenting resolved architectural constraints (**LL-001 through LL-013**) and the forward roadmap governed by the **October 17, 2026 Standing Adoption Boundary**.
+Engineering reference documenting resolved architectural constraints (**LL-001 through LL-014**) and the forward roadmap governed by the **October 17, 2026 Standing Adoption Boundary**.
 
 ---
 
@@ -8,6 +8,7 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 
 | Ref ID | Focus Area | Root Cause | Engineering Solution |
 |---|---|---|---|
+| **LL-014** | **DoD OPSEC & CUI Hygiene: Defense-in-Depth Sanitization** | Non-production mock IPs (`45.33.32.1`), local developer container names (`splunk-emass`), and hypothetical architecture examples trigger false-positive OPSEC/CUI findings. | Enforce RFC 5737 documentation subnets (`198.51.100.0/24`) for test fixtures; use neutral developer tooling targets (`splunk-dev`); decouple boundaries from layout planes; document false-positive audit triage formally in `SECURITY.md`. |
 | **LL-013** | **Zero-Linger Pre-Release Dependency Drainage** | Tagging releases while Dependabot PRs linger leaves manifests out of sync, triggers Dependabot 30-day auto-rebase abandonment, and masks CI runner deprecations (e.g. Ubuntu 26.04 dropping Python 3.9). | Hard release gate: release version bumps, git tags, and `.spl` packaging are strictly blocked until `gh pr list` reports 0 open PRs, Dependabot alerts report 0 open items, and `npm audit` reports 0 vulnerabilities. |
 | **LL-012** | **CodeQL Emoji Character Classes & React Lifecycle** | Multi-codepoint emoji (`🛡️`, `⚙️`, `⚠️`) contain Variation Selector-16 (`\uFE0F`). Grouping multiple emoji inside character classes `[...]` duplicated `\uFE0F`, triggering CodeQL regex alerts. Declaring unread state variables in force-render hooks triggered unused variable alerts. | Use non-capturing alternation `/(?:🛡️|⚙️|⚠️)/u` for glyph matching, deduplicate base glyphs in negation classes, and use omitted destructuring `const [, setTickUpdate] = useState(0)`. |
 | **LL-011** | **Dual-Language AST SAST in CI** | Python test scripts were scanned with Bandit, but the primary 3,800-line React/D3 codebase had no automated static application security testing in CI runners. | Implemented dual-language GitHub CodeQL SAST workflow (`.github/workflows/codeql.yml`) targeting JavaScript/TypeScript and Python with `security-and-quality` suites; pinned CI tooling to immutable SHAs. |

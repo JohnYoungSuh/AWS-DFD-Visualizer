@@ -4,6 +4,32 @@
 
 ---
 
+## 📌 LL-014 — DoD Operational Security (OPSEC) & CUI Hygiene: Defense-in-Depth Sanitization of Test Mocks, Local Harnesses, and Boundary Labels
+
+**Date Documented:** November 5, 2026  
+**Context:** Comprehensive DoD OPSEC and Controlled Unclassified Information (CUI) audit covering codebase, documentation, backlog notes, and test suites.
+
+### Problem & False-Positive Root Cause Analysis
+1. **Convenience Fixtures in Test Mocks**:
+   - In UI and screenshot test specs (`SplunkbaseScreenshots.cy.jsx`), developers often create mock node rows with realistic-looking metadata (e.g. labeling an attacker node `"Malicious C2 Server (45.33.32.1)"`). While technically benign and purely local in-memory test data (never sending or receiving network packets), `45.33.32.1` is a routable public IPv4 address. Automated or manual OPSEC review correctly flags this as potential live intelligence or unauthorized target exposure.
+2. **Local Workstation Developer Artifacts in Scripts**:
+   - Developer tooling and sync scripts often use shorthand container names (`CONTAINER = splunk-emass`). While purely a local Docker container tag on developer workstations with no network connection to the real DoD Enterprise Mission Assurance Support Service (eMASS), the acronym creates false-positive alarms in military security audits.
+3. **Hypothetical Backlog Architecture Examples**:
+   - Backlog notes discussing feature requirements often borrow familiar domain acronyms or customer contexts (e.g. `Navy Identity Server`, `mktl_governance.xml`). In public open-source repositories, these illustrative labels can be misinterpreted as proprietary system architectures.
+4. **Boundary Scheme Conflation**:
+   - Conflating boundary classification flags with core Zero Trust Architecture layout planes distorted graph layouts and raised questions regarding network boundary specifications.
+
+### Durable Engineering Standard (Standard Operating Procedure)
+* **RFC 5737 Mandatory for All Mock IPs**: Never use arbitrary public IPv4 addresses in test mocks, screenshot generators, or documentation. Always use designated documentation subnets:
+  - `192.0.2.0/24` (TEST-NET-1)
+  - `198.51.100.0/24` (TEST-NET-2)
+  - `203.0.113.0/24` (TEST-NET-3)
+* **Generic Developer Tooling Naming**: Makefile and local bash scripts must use neutral, generic container and target names (e.g. `splunk-dev`), never mission-system acronyms.
+* **Strict Decoupling of Planes and Boundaries**: Network boundaries are edge-level metadata and badges only; they must never drive node `group` or vertical plane placement.
+* **Formal False-Positive Audit Logging**: When non-production findings are identified during OPSEC audits, document both the technical false-positive rationale and the proactive remediation in `SECURITY.md` and `LESSONS_LEARNED.md`.
+
+---
+
 ## 📌 LL-013 — Zero-Linger Dependency Gate: Pre-Release PR & Dependabot Drainage Mandate
 
 **Date Documented:** November 3, 2026  

@@ -97,6 +97,22 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 ## 📍 Session Log
 
+### ✅ Session: November 5, 2026 — DoD OPSEC & CUI Defense-in-Depth Sanitization · Audit Triage & Documentation
+- [x] **DoD Operational Security (OPSEC) & CUI Audit**:
+  - Conducted full audit of codebase, test fixtures, documentation, and backlog notes against DISA/DoD OPSEC, DoDI 8551.01 (PPSM), and CUI guidelines.
+  - Formally triaged all flagged items as technical **false positives** with zero production security impact:
+    1. `45.33.32.1`: Mock test fixture string in `SplunkbaseScreenshots.cy.jsx` for marketing screenshot generation (never dialed or bound to any socket).
+    2. `CONTAINER = splunk-emass`: Local developer workstation Docker container label in convenience scripts (`Makefile`, `bin/repair_viz.sh`, `bin/sync_to_docker.sh`) for local asset sync (`docker cp`).
+    3. `Navy Identity Server` / `mktl_governance.xml`: Illustrative backlog examples in feature design discussions.
+    4. `16 boundaries` / `BOUNDARY1-16`: Conceptual network segmentation flags.
+  - Remediated all items for defense-in-depth:
+    - Replaced mock public IP with RFC 5737 TEST-NET-2 documentation IP `198.51.100.25`.
+    - Renamed local Docker container to generic `splunk-dev`.
+    - Sanitized backlog/wiki examples to `Enterprise Identity Provider` and `zta_governance.xml`.
+    - Scrubbed numbered boundary schemes to generic *"network boundary attributes"* and locked architectural mapping rule (3 planes = node layout only; boundaries = edge attributes only).
+  - Documented audit triage in `SECURITY.md`, captured engineering standard **LL-014** in `LESSONS_LEARNED.md`, and synchronized GitHub Wiki (`AWS-DFD-Visualizer.wiki.git` commit `d13cf6a`).
+  - Confirmed 0 errors on `npm run build`, pushed commit `e00f02a6` to `origin/master`, and verified 100% green CI/CD pipeline runs (`Splunk App CI/CD #42161169398`, `CodeQL #42161169237`).
+
 ### ✅ Session: November 3, 2026 — Dependabot PR Resolution, CI Python 3.11 Migration & GitHub Wiki Deployment
 - [x] **Dependabot Pull Requests Fully Resolved (0 Open PRs)**:
   - Diagnosed CI runner failure on Ubuntu 26.04 dropping Python 3.9; migrated `.github/workflows/splunk-ci.yml` to Python 3.11.
