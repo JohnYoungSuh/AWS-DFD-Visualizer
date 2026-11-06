@@ -34,14 +34,14 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
     - `parsers/drawioExporter.js` — Uncompressed mxGraphModel XML generation and XSS `<script>` filtering.
     - `subcomponents/` — Isolated UI components: `<CanvasSvg />`, `<NodeCard />`, `<LinkGroup />`, `<ZoneContainer />`, `<HudOverlay />`, `<LicenseGateModal />`.
   - *Acceptance*: Root `AwsDfdVisualizer.jsx` orchestrates state in $\le 250$ lines; Webpack production bundle compiles with 0 errors and zero changes to external RequireJS export contracts.
-- [ ] **Isolate PPSM Boundary Flags from Plane & Group Logic (Hypothesis 3 / To-Do 4)**
-  - *Context*: In `AwsDfdVisualizer.jsx:299`, the fallback regex tests `/(...|boundary|...)/i`, which trips on `BOUNDARY1–16` flags in `group` or `zone_name` fields and falsely forces nodes into the Control Plane, corrupting the 3-plane layout.
+- [ ] **Isolate Network Boundary Attributes from Plane & Group Logic**
+  - *Context*: In `AwsDfdVisualizer.jsx:299`, the fallback regex tests `/(...|boundary|...)/i`, which trips on boundary tags in `group` or `zone_name` fields and falsely forces nodes into the Control Plane, corrupting the 3-plane layout.
   - *Action*:
     - In `resolveZeroTrustTier` / `useSplunkDataParser.js`: Strip the generic `boundary` token from the tier-detection regex.
-    - Locked mapping rule: 3 planes = node coordinate layout only (`Identity`, `Control`, `Data`); 16 boundaries = edge attributes only.
-    - Parse multi-value `boundaries` or `BOUNDARY1–16` columns as edge metadata (`link.boundaries`) and render as badges on `LinkLabel` capsules or HUD inspector attributes.
+    - Mapping rule: 3 planes = node coordinate layout only (`Identity`, `Control`, `Data`); boundary classifications = edge attributes only.
+    - Parse multi-value `boundaries` or boundary tag columns as edge metadata (`link.boundaries`) and render as badges on `LinkLabel` capsules or HUD inspector attributes.
     - Strictly guard `node.group`, `vpcId`, and plane assignment logic so boundary tokens never alter node placement.
-  - *Acceptance*: Row sets containing `BOUNDARY1–16` retain strict 3-plane placement; boundary badges appear cleanly on edges.
+  - *Acceptance*: Row sets containing boundary tags retain strict 3-plane placement; boundary badges appear cleanly on edges.
 
 ### Step 2 · Sub-Second Offline Unit Testing (Math & Parsers) *(Priority: 🟡 High)*
 - [ ] **Headless Unit Test Suite for Algorithmic Engines**
@@ -53,10 +53,10 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
     - Test `edgeBundler`: Verify canonical sorted key deduplication and logarithmic stroke width clamps: $\text{clamp}(2 + \log_2(\text{volume}), 2, 10)$.
     - Test `sanitizeSplunkToken`: Verify high-risk command denylist, backtick macro blocking, and quote escaping.
   - *Acceptance*: Running `npm test` executes the complete algorithmic test suite headlessly in $<500$ms in any WSL or CI environment without requiring a browser or display server.
-- [ ] **Schema Contract & Boundary Isolation Test Suite (To-Do 5)**
+- [ ] **Schema Contract & Boundary Isolation Test Suite**
   - *Action*:
-    - Add test cases feeding known-good and known-bad row sets with 0, 1, and multiple `BOUNDARY1–16` flags.
-    - Assert that node coordinates strictly match their assigned ZTA planes and boundary flags appear exclusively on edge structures.
+    - Add test cases feeding known-good and known-bad row sets with 0, 1, and multiple boundary attributes.
+    - Assert that node coordinates strictly match their assigned ZTA planes and boundary attributes appear exclusively on edge structures.
   - *Acceptance*: Headless test suite validates boundary isolation and row validation in $<500$ms.
 
 ### Step 3 · Defensive React Error Boundary *(Priority: 🟡 High)*
@@ -67,13 +67,13 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
     - Render an in-canvas diagnostic HUD on caught errors displaying the error description, offending data row index, and suggested SPL query remedy.
     - Provide "Retry Render" and "Copy Diagnostic JSON" actions without crashing the outer Splunk dashboard container.
   - *Acceptance*: Deliberately malformed SPL rows trigger the diagnostic fallback banner; outer dashboard panels and navigation remain fully functional.
-- [ ] **Hard-Fail Missing Required Columns & Schema Validation (To-Do 2)**
+- [ ] **Hard-Fail Missing Required Columns & Schema Validation**
   - *Context*: Visualizer currently attempts to parse incomplete datasets, resulting in `undefined` labels, ghost nodes, or silent rendering collapses.
   - *Action*:
     - Pre-validate incoming rows in `useSplunkDataParser.js`: require `from`, `to`, `edge_label`, and `group`.
     - If required fields are missing or empty, trigger `<VisualizerErrorBoundary>` to render an in-canvas diagnostic banner ("Schema Contract Error: Missing required columns: [from, to]") instead of mounting a broken SVG.
-- [ ] **Support `status="NonCompliant"` in `buildStatusHighlight` (Hypothesis 2)**
-  - *Action*: Ensure `status="NonCompliant"` (emitted when PPSM/CAL joins fail) maps cleanly to an amber warning pill, dashed edge stroke, and non-compliant HUD badge without breaking D3 physics.
+- [ ] **Support `status="NonCompliant"` in `buildStatusHighlight`**
+  - *Action*: Ensure `status="NonCompliant"` (emitted when policy reconciliation joins fail) maps cleanly to an amber warning pill, dashed edge stroke, and non-compliant HUD badge without breaking D3 physics.
 
 ### Step 4 · Formal Schema Typing Contracts *(Priority: 🟢 Medium)*
 - [ ] **JSDoc / TypeScript Schema Declarations**
@@ -89,9 +89,9 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 > [!NOTE]
 > **Two-App Boundary Partitioning (AWS-DFD-Companion v1.2.0 Scope)**:
 > In accordance with the October 17, 2026 Standing Adoption Boundary ("Companion produces the table; Visualizer draws the diagram"), the following data engineering tasks belong exclusively to Companion and customer search configurations:
-> - **Two-Lookup Contract (To-Do 1)**: Visualizer documents the schema contract in User Guide §1.3; Companion ships the scheduled saved search producing `zt_dfd_visualization.csv`.
-> - **PPSM/CAL Reconciliation (To-Do 3)**: Companion performs the search-time join against `nsips_ppsm_baseline` on `port + protocol + direction`, outputting `status="NonCompliant"` for unmatched flows.
-> - **Dashboard Gate (To-Do 6)**: Companion caps executive summary lookups to 50 rows in SPL (`| head 50`); Visualizer maintains its general-purpose 5,000-row DoS circuit breaker.
+> - **Two-Lookup Contract**: Visualizer documents the schema contract in User Guide §1.3; Companion ships the scheduled saved search producing the clean DFD visualization lookup (`reconciliation-rows.csv` or `dfd_visualization.csv`).
+> - **Policy & PPSM Reconciliation**: Companion performs search-time joins against customer-owned authorization registries (`ppsm_registry.csv`), outputting `status="NonCompliant"` for unmatched flows.
+> - **Dashboard Gate**: Companion caps executive summary lookups to 50 rows in SPL (`| head 50`); Visualizer maintains its general-purpose 5,000-row DoS circuit breaker.
 
 ---
 
