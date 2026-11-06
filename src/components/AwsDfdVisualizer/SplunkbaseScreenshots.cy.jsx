@@ -139,7 +139,7 @@ describe('Splunkbase Official 1280x800 Screenshot Suite', () => {
                 { name: "edge_label" }, { name: "group" }, { name: "status" }
             ],
             rows: [
-                ["attacker-c2", null, "DEVICE", "Malicious C2 Server (45.33.32.1)", null, "External Perimeter", "violation"],
+                ["attacker-c2", null, "DEVICE", "Malicious C2 Server (198.51.100.25)", null, "External Perimeter", "violation"],
                 ["compromised-bastion", null, "AWS::EC2::Instance", "Bastion Proxy [Compromised]", null, "DMZ Ingress", "violation"],
                 ["internal-api-gw", null, "AWS::ElasticLoadBalancingV2::LoadBalancer", "Internal Core API Router", null, "DMZ Ingress", "compliant"],
                 ["auth-service", null, "AWS::Lambda::Function", "JWT Key Manager", null, "Identity Core", "compliant"],

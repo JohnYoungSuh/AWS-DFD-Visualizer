@@ -61,5 +61,5 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 * **Goal**: Enable direct export of canvas topologies to Infrastructure-as-Code.
 * **Deliverables**:
   - Terraform HCL Serializer (`HclCompiler.js`): Serialize canvas topology, node target metadata, and security groups into downloadable `main.tf` files.
-  - Migration & Governance Dashboard (`mktl_governance.xml`): Real-time SPL dashboard joining identification telemetry with governance rules (`Service | Decision | Risk | Action | Wave`).
+  - Migration & Governance Dashboard (`zta_governance.xml`): Real-time SPL dashboard joining identification telemetry with governance rules (`Service | Decision | Risk | Action | Wave`).
   - STIG AU-12 Audit Logging: Record all diagram and IaC export events via `Splunk.util.trackEvent()` with compliance payloads.

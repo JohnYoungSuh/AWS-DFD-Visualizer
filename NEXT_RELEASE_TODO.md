@@ -194,7 +194,7 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
   3. Restored the interactive Hierarchy layout demonstration featuring `Developer User` (`AWS::IAM::User`) in the Identity Plane in `default/data/ui/views/user_guide.xml` along with its matching live inspector panel.
   4. Ingested official MIT `LICENSE` file for `suhlabs` and synchronized licensing across `package.json`, `splunk-app-manifest.json`, and `README.MD`.
   5. Cleaned root `static/` directory to meet Splunk Cloud Operations AppInspect standards (no nested subdirectories under `static/`), confirming 0 errors and 0 failures in `make inspect`.
-  6. Synchronized version `2.8.7` simultaneously across all 5 core configuration files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`), plus `package-lock.json` and Draw.io export XML header. Validated with 66/66 passing Cypress tests and deployed to `splunk-emass`.
+  6. Synchronized version `2.8.7` simultaneously across all 5 core configuration files (`package.json`, `splunk-app-manifest.json`, `Makefile`, `default/app.conf`, `AwsDfdVisualizer.jsx`), plus `package-lock.json` and Draw.io export XML header. Validated with 66/66 passing Cypress tests and deployed to test container.
 
 ### ✅ Session: September 21, 2026 (v2.8.6 Competitive Fitness & Hardening Review · PM + SA)
 - [x] **Review only — no application code changes.** Dual-persona review of whether v2.8.6 is hardened and has the planned features to compete with VPC / network-diagram software the PM listed.
@@ -683,7 +683,7 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
         6. Update the D3 rectangular collision (`rectCollide`) force to use the calculated node-specific rect `{ w, h }` plus configurable padding parameters (`paddingX`/`paddingY`).
         7. Verify that the "Zero-Latency" 300-tick bypass runs with these new dynamic dimensions, testing performance to ensure small/medium graphs settle instantly without UI thread freezing up to 150 nodes.
 - [x] **Decoupled Plane Renaming & Terminology Customization**
-    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g., Navy Identity Server, MKTL Governance presets).
+    - *Context*: ZTA plane titles are currently hardcoded, preventing alignment with custom compliance or governance vocabularies (e.g., Enterprise Identity Provider, Governance policy presets).
     - *Action*:
         1. Add the "Governance Terminology" section to `formatter.html` with text inputs, and register defaults in `visualizations.conf` for `labelIdentityPlane` (default: "Identity/Management Plane"), `labelControlPlane` (default: "⚙️ Control Plane"), and `labelDataPlane` (default: "Data Plane"). Putting the emoji in the defaults allows users to change/delete prefixes from the Splunk UI without modifying the source code.
         2. Update the Splunk data parser so that if an SPL eval field returns a custom `zone_name` (or `zone`), the visualizer prioritizes the SPL value over the UI preset options. This enables Sec-Agents to dynamically rename planes (e.g. `zone_name="⚠️ CONTAINMENT ZONE"`).
@@ -1010,7 +1010,7 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 - [ ] **Generative Terraform HCL Compiler (`HclCompiler.js`)**
     - *Action*: Serialize canvas topology, node target metadata, and security group connections into clean, downloadable `main.tf` Terraform plans.
-- [ ] **MKTL Executive Governance Table (`mktl_governance.xml`)**
+- [ ] **Zero-Trust Executive Governance Table (`zta_governance.xml`)**
     - *Action*: Build live SPL dashboard joining TKU identification with `dfd_governance_rules.csv` to generate migration action tables (`Service | Decision | Risk | Action | Wave`).
 - [ ] **Comprehensive STIG AU-12 Audit Logging**
     - *Action*: Track all diagram, XML, and Terraform exports via `Splunk.util.trackEvent()` with IL5 compliance payloads.

@@ -8,7 +8,7 @@ PROJECT_ROOT="$( dirname "$SCRIPT_DIR" )"
 cd "$PROJECT_ROOT" || exit 1
 
 APP_NAME="AWS-DFD-Visualizer"
-CONTAINER="splunk-emass"
+CONTAINER="splunk-dev"
 VIZ_ID="AWS-DFD-Visualizer"
 
 echo "=== 1. Syncing Assets (Version 1.4.0) ==="

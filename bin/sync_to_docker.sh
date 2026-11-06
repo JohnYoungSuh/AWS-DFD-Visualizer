@@ -1,9 +1,9 @@
 #!/bin/bash
 # AWS-DFD-Visualizer Docker Sync Script
 # Run from: ~/projects/suhlabs/AWS-DFD-Visualizer
-# Container: splunk-emass
+# Container: splunk-dev
 
-CONTAINER="splunk-emass"
+CONTAINER="splunk-dev"
 APP_SRC="."
 APP_DEST="/opt/splunk/etc/apps/AWS-DFD-Visualizer"
 
