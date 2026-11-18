@@ -85,7 +85,7 @@ jobs:
           echo "Packaged: ${SPL_FILE} (SHA-256: $(cat ${SPL_FILE}.sha256))"
 
       - name: Splunk AppInspect (Local CLI)
-        uses: splunk/appinspect-cli-action@515d3746940c6c48c70f5e716ba22d1bd118506c # v2.18.0
+        uses: splunk/appinspect-cli-action@f747438f22d73e65abc4793864d9527803d0f30e # v2.18.1
         with:
           app_path: ${{ env.SPL_FILE }}
           result_file: appinspect-report.html
