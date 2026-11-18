@@ -97,6 +97,22 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 ## 📍 Session Log
 
+### ✅ Session: November 17, 2026 — Dependabot PR Drainage, Phantom Dependency Elimination & OWASP Gap Analysis
+- [x] **Dependabot Pull Requests Fully Resolved (0 Open PRs)**:
+  - Merged all 8 open Dependabot PRs (#39–#47):
+    - `d3` bumped from 7.9.0 to 7.9.2 (production library).
+    - `@babel/core` bumped to 7.29.13 and `@babel/preset-env` to 7.29.14.
+    - `cypress` bumped to 15.21.2.
+    - GitHub Actions pinned to updated immutable 40-character commit SHAs: `splunk/appinspect-cli-action@f747438f22d73e65abc4793864d9527803d0f30e` (v2.18.1), `trufflesecurity/trufflehog@3bd2b5887eb0efb8fa18bfd1d296032924e4ffdc` (v3.99.9), `github/codeql-action` init/analyze to `33d7b85da1a04171e211befe2c739303b9a4c066` (v4.39.3).
+- [x] **Phantom Dependency Elimination**:
+  - Identified and removed unused `@splunk/react-ui` and `@splunk/themes` from `package.json`, purging 138 transitive packages from `node_modules` (including legacy `moment` and `styled-components`).
+  - Confirmed `npm audit --omit=dev` reports **0 vulnerabilities**.
+  - Triaged unpatchable transitive dev advisory `GHSA-fc5q-39xc-vjpf` (`picomatch <= 4.0.7`) per LL-009 with zero production exposure.
+- [x] **OWASP Top 10 & ASVS Ruleset Gap Analysis**:
+  - Audited full codebase against OWASP Top 10 (2021/2025) and ASVS Level 2 requirements for Splunk custom visualizations.
+  - Re-verified 0 DOM XSS sinks (no `dangerouslySetInnerHTML`, no `.html()`), fail-closed TLS (no `ssl.CERT_NONE`), strict SPL token/command denylists, 5,000-row DoS circuit breaker, and zero hardcoded credentials.
+  - Rebuilt production bundle (`visualization.js` 497 KiB across 35 clean modules) and validated clean AppInspect execution (0 errors, 0 failures).
+
 ### ✅ Session: November 5, 2026 — DoD OPSEC & CUI Defense-in-Depth Sanitization · Audit Triage & Documentation
 - [x] **DoD Operational Security (OPSEC) & CUI Audit**:
   - Conducted full audit of codebase, test fixtures, documentation, and backlog notes against DISA/DoD OPSEC, DoDI 8551.01 (PPSM), and CUI guidelines.
