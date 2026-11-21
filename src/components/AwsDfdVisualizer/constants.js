@@ -50,10 +50,7 @@ export const sanitizePlaneTitle = (title) => {
     let prev;
     do {
         prev = sanitized;
-        sanitized = sanitized
-            .replace(/<script[\s\S]*?<\/script>/gi, '')
-            .replace(/<\/?script[^>]*>/gi, '')
-            .replace(/<[^>]+>/g, '');
+        sanitized = sanitized.replace(/<\/?script[^>]*>/gi, '');
     } while (sanitized !== prev);
     do {
         prev = sanitized;

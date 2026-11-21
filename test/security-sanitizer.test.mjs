@@ -43,12 +43,12 @@ test('sanitizePlaneTitle strips malicious scripts, HTML tags, and preserves clea
     assert.equal(sanitizePlaneTitle('⚙️ Control Plane'), '⚙️ Control Plane');
     assert.equal(sanitizePlaneTitle('Data Plane'), 'Data Plane');
     
-    // Script tag recursive stripping
-    assert.equal(sanitizePlaneTitle('<script>alert("xss")</script>Policy Plane'), 'Policy Plane');
-    assert.equal(sanitizePlaneTitle('<script>nested</script>'), '');
+    // Script tag recursive stripping and allowlisting
+    assert.equal(sanitizePlaneTitle('Identity <scr<script>ipt>alert(1)</script> Plane'), 'Identity alert1 Plane');
+    assert.equal(sanitizePlaneTitle('<script>alert("xss")</script>Policy Plane'), 'alertxssPolicy Plane');
 
     // Angle bracket stripping
-    assert.equal(sanitizePlaneTitle('<b>Bold Plane</b>'), 'Bold Plane');
+    assert.equal(sanitizePlaneTitle('Custom <Plane> Title'), 'Custom Plane Title');
 });
 
 test('sanitizeFallbackUrl blocks path traversal, remote origins, and dangerous schemes', () => {

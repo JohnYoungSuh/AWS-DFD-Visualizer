@@ -226,10 +226,34 @@ export const AwsDfdVisualizer = ({ data, config = {}, width, height, isDarkTheme
         handleLinkClick
     });
 
-    const preset = config.governancePreset || 'standard';
-    let identityPlaneTitle = sanitizePlaneTitle(config.labelIdentityPlane) || (preset === 'business' ? "Customer / Client Layer" : "Identity/Management Plane");
-    let controlPlaneTitle = sanitizePlaneTitle(config.labelControlPlane) || (preset === 'business' ? "Transaction / Processing" : "⚙️ Control Plane");
-    let dataPlaneTitle = sanitizePlaneTitle(config.labelDataPlane) || (preset === 'business' ? "Database / Storage Layer" : "Data Plane");
+    const preset = config?.governancePreset || 'standard';
+    let defaultIdentity = "Identity/Management Plane";
+    let defaultControl = "⚙️ Control Plane";
+    let defaultData = "Data Plane";
+
+    if (preset === 'zta') {
+        defaultIdentity = "PAP / Policy Administration";
+        defaultControl = "PDP / Policy Decision";
+        defaultData = "PEP / PIP Data Plane";
+    } else if (preset === 'business') {
+        defaultIdentity = "Customer / Client Layer";
+        defaultControl = "Transaction / Processing";
+        defaultData = "Database / Storage Layer";
+    }
+
+    let identityPlaneTitle = sanitizePlaneTitle(config?.labelIdentityPlane);
+    let controlPlaneTitle = sanitizePlaneTitle(config?.labelControlPlane);
+    let dataPlaneTitle = sanitizePlaneTitle(config?.labelDataPlane);
+
+    if (preset === 'zta' || preset === 'business') {
+        identityPlaneTitle = defaultIdentity;
+        controlPlaneTitle = defaultControl;
+        dataPlaneTitle = defaultData;
+    } else {
+        if (!identityPlaneTitle) identityPlaneTitle = defaultIdentity;
+        if (!controlPlaneTitle) controlPlaneTitle = defaultControl;
+        if (!dataPlaneTitle) dataPlaneTitle = defaultData;
+    }
 
     if (nodes && nodes.length > 0) {
         nodes.forEach(node => {
@@ -254,9 +278,9 @@ export const AwsDfdVisualizer = ({ data, config = {}, width, height, isDarkTheme
             }}>
                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>⚠️</div>
                 <h2 style={{ fontSize: '28px', color: '#EF4444', margin: '0 0 10px 0' }}>Dataset Too Large</h2>
-                <p style={{ fontSize: '15px', maxWidth: '600px', lineHeight: '1.6', color: isDarkTheme ? '#cbd5e1' : '#475569' }}>
-                    The current search returned <strong>{rawRowCount} records</strong>, exceeding the 5000 safety threshold.
-                    Please filter by VPCs, regions, or subnets to prevent browser instability.
+                <p style={{ fontSize: '15px', maxWidth: '600px', lineHeight: '1.6', margin: '0 0 20px 0', color: isDarkTheme ? '#cbd5e1' : '#475569' }}>
+                    The current search returned <strong>{rawRowCount} records</strong>, which exceeds the safety limit of 5000. 
+                    Please adjust your Splunk search query to restrict the data volume (e.g. filter by specific VPCs, regions, or subnets) to prevent browser instability.
                 </p>
             </div>
         );
