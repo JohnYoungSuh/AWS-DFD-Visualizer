@@ -4,8 +4,17 @@
   "description": "Interactive AWS Data Flow Diagrams (DFD) for Splunk. Visualizes AWS Config topologies, nested VPCs/Subnets, and Zero-Trust compliance highlights.",
   "license": "MIT",
   "main": "src/visualization_source.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JohnYoungSuh/AWS-DFD-Visualizer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JohnYoungSuh/AWS-DFD-Visualizer/issues"
+  },
+  "homepage": "https://github.com/JohnYoungSuh/AWS-DFD-Visualizer#readme",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   },
   "scripts": {
     "generate:stencils": "node scripts/generate-stencil-catalog.js",
@@ -14,27 +23,30 @@
     "start": "npm run generate:stencils && npm run validate:stencils && webpack --mode development --watch",
     "test": "node --test test/**/*.test.mjs",
     "test:unit": "node --test test/**/*.test.mjs",
-    "test:cy": "cypress run --component"
+    "test:cy": "cypress run --component",
+    "audit": "npm audit --omit=dev",
+    "audit:full": "npm audit",
+    "security:scan": "npm run audit && npm test && npm run validate:stencils"
   },
   "dependencies": {
-    "d3": "^7.9.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "d3": "7.9.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "overrides": {
-    "uuid": "^11.1.1",
-    "browserslist": "^4.28.7"
+    "uuid": "11.1.1",
+    "browserslist": "4.28.7"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.13",
-    "@babel/preset-env": "^7.29.14",
-    "@babel/preset-react": "^7.29.7",
-    "@cypress/react18": "^2.0.1",
-    "@splunk/webpack-configs": "^7.0.3",
-    "babel-loader": "^8.4.1",
-    "cypress": "^15.21.2",
-    "webpack": "^5.112.2",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.2.7"
+    "@babel/core": "7.29.13",
+    "@babel/preset-env": "7.29.14",
+    "@babel/preset-react": "7.29.7",
+    "@cypress/react18": "2.0.1",
+    "@splunk/webpack-configs": "7.0.3",
+    "babel-loader": "8.4.1",
+    "cypress": "15.21.2",
+    "webpack": "5.112.2",
+    "webpack-cli": "5.1.4",
+    "webpack-dev-server": "5.2.7"
   }
 }
