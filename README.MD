@@ -1,4 +1,4 @@
-# AWS DFD Visualizer (v2.8.8)
+# AWS DFD Visualizer (v2.9.0)
 
 Custom Splunk visualization rendering multi-cloud infrastructure (AWS, Azure, GCP) as interactive Data Flow Diagrams (DFDs) using React 18 and D3.js v7. Hardened for **DoD Impact Level 5 (IL5)**, **DISA CC SRG**, **NIST 800-53 Rev. 5**, and **NIST 800-207 Zero-Trust Architecture** compliance.
 
@@ -13,7 +13,7 @@ Splunk topology visualization is partitioned across two specialized applications
 | Component | App / Add-on | Primary Responsibility |
 |---|---|---|
 | **Data Engine (ETL)** | **AWS-DFD-Companion** (v1.1.6) | Ingests AWS Config, VPC Flow Logs, and multi-cloud inventory. Normalizes telemetry via CIM/TA-AWS macros into standard DFD table rows (`from`, `to`, `edge_label`, `status`). |
-| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.8.8) | Renders normalized DFD rows into Zero-Trust network diagrams with nested VPC/Subnet enclosures, security group compliance rings, and drilldown tokens. |
+| **Presentation Canvas** | **AWS-DFD-Visualizer** (v2.9.0) | Renders normalized DFD rows into Zero-Trust network diagrams with nested VPC/Subnet enclosures, security group compliance rings, and drilldown tokens. |
 
 Separating data normalization from presentation keeps the visualization engine decoupled from underlying log collection schemas.
 

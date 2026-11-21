@@ -1,8 +1,8 @@
-import { awsAdapter } from './aws';
-import { azureAdapter } from './azure';
-import { gcpAdapter } from './gcp';
-import { genericAdapter } from './generic';
-import { ALIAS_REGISTRY, AWS_ALIASES, AZURE_ALIASES, GCP_ALIASES } from './aliases';
+import { awsAdapter } from './aws.js';
+import { azureAdapter } from './azure.js';
+import { gcpAdapter } from './gcp.js';
+import { genericAdapter } from './generic.js';
+import { ALIAS_REGISTRY, AWS_ALIASES, AZURE_ALIASES, GCP_ALIASES } from './aliases.js';
 
 export const CSP_REGISTRY = {
     aws: awsAdapter,

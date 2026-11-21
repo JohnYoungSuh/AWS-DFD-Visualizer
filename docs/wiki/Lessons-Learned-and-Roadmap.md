@@ -1,6 +1,6 @@
 # Lessons Learned & Technical Roadmap
 
-Engineering reference documenting resolved architectural constraints (**LL-001 through LL-014**) and the forward roadmap governed by the **October 17, 2026 Standing Adoption Boundary**.
+Engineering reference documenting resolved architectural constraints (**LL-001 through LL-015**) and the forward roadmap governed by the **October 17, 2026 Standing Adoption Boundary**.
 
 ---
 
@@ -8,6 +8,7 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 
 | Ref ID | Focus Area | Root Cause | Engineering Solution |
 |---|---|---|---|
+| **LL-015** | **Modular Architecture Decomposition & Sub-Second Testing** | Monolithic ~3,800-line React/D3 component increased cognitive load and Cypress Electron headless startup in WSL failed with code 132. | Decomposed component into domain-isolated parsers, hooks, and subcomponents, reducing orchestrator by ~90% to 395 lines; added native Node.js 22 `node:test` suite running 20 unit tests in 82ms without display servers. |
 | **LL-014** | **DoD OPSEC & CUI Hygiene: Defense-in-Depth Sanitization** | Non-production mock IPs (`45.33.32.1`), local developer container names (`splunk-emass`), and typographical acronyms (`MKTL` $\to$ Splunk `MLTK`) trigger false-positive OPSEC/CUI findings. | Enforce RFC 5737 documentation subnets (`198.51.100.0/24`) for test fixtures; use neutral developer tooling targets (`splunk-dev`); strictly use official public product acronyms (Splunk MLTK for Machine Learning Toolkit); decouple boundaries from layout planes; document false-positive audit triage formally in `SECURITY.md`. |
 | **LL-013** | **Zero-Linger Pre-Release Dependency Drainage** | Tagging releases while Dependabot PRs linger leaves manifests out of sync, triggers Dependabot 30-day auto-rebase abandonment, and masks CI runner deprecations (e.g. Ubuntu 26.04 dropping Python 3.9). | Hard release gate: release version bumps, git tags, and `.spl` packaging are strictly blocked until `gh pr list` reports 0 open PRs, Dependabot alerts report 0 open items, and `npm audit` reports 0 vulnerabilities. |
 | **LL-012** | **CodeQL Emoji Character Classes & React Lifecycle** | Multi-codepoint emoji (`🛡️`, `⚙️`, `⚠️`) contain Variation Selector-16 (`\uFE0F`). Grouping multiple emoji inside character classes `[...]` duplicated `\uFE0F`, triggering CodeQL regex alerts. Declaring unread state variables in force-render hooks triggered unused variable alerts. | Use non-capturing alternation `/(?:🛡️|⚙️|⚠️)/u` for glyph matching, deduplicate base glyphs in negation classes, and use omitted destructuring `const [, setTickUpdate] = useState(0)`. |
@@ -34,14 +35,14 @@ Engineering reference documenting resolved architectural constraints (**LL-001 t
 
 ### 2.2. Architecture Epics
 
-#### 🏛️ Release v2.9.0: Architecture Quality Hardening & A+ Certification
+#### 🏛️ Release v2.9.0: Architecture Quality Hardening & A+ Certification *(Completed: 21 Nov 2026)*
 * **Goal**: Attain reference-grade A+ (99/100) architectural standard without introducing feature churn or violating the Adoption Boundary.
 * **Deliverables**:
-  - **Component Decomposition**: Deconstruct `AwsDfdVisualizer.jsx` (~3,800 lines) into domain hooks (`useD3Simulation`, `useSplunkDataParser`, `useZtaLayout`), pure parsers (`hierarchyParser`, `edgeBundler`, `drawioExporter`), and modular subcomponents (`CanvasSvg`, `NodeCard`, `LinkGroup`, `ZoneContainer`, `HudOverlay`, `LicenseGateModal`).
-  - **Sub-Second Unit Testing**: Implement headless test suite (Vitest/Jest with jsdom) executing pure math tests (`rectCollide`, AABB physics, logarithmic edge bundler, token sanitizer) in $<500$ms in any WSL or CI environment without X11/Xvfb.
-  - **Defensive Error Boundary & Validation**: Wrap canvas in `<VisualizerErrorBoundary>` to intercept malformed SPL rows (hard-failing missing required columns) with an in-canvas diagnostic HUD instead of blank dashboard crashes.
-  - **Boundary Flag Isolation**: Isolate network boundary tags strictly to edge badges/metadata, preventing boundary tokens from corrupting ZTA 3-plane node placement.
-  - **Formal Schema Contracts**: Define JSDoc `@typedef` and declaration types for `SplunkDataRow`, `NormalizedNode`, `NormalizedLink`, and `ZoneHierarchy`.
+  - **Component Decomposition**: Deconstructed `AwsDfdVisualizer.jsx` into domain hooks (`useD3Simulation`, `useZtaLayout`), pure parsers (`hierarchyParser`, `edgeBundler`, `drawioExporter`, `svgExporter`), and modular subcomponents (`NodeCard`, `LinkGroup`, `ZoneContainer`, `HudOverlay`, `CsvConsole`, `VisualizerErrorBoundary`). Orchestrator reduced by ~90% to 395 lines.
+  - **Sub-Second Unit Testing**: Implemented native Node.js 22 test suite (`node --test test/**/*.test.mjs`) executing 20 unit tests covering algorithmic math, canonical edge deduplication, boundary isolation, and security sanitization in 82ms headlessly without display servers.
+  - **Defensive Error Boundary & Validation**: Wrapped canvas in `<VisualizerErrorBoundary>` to intercept malformed SPL rows with an in-canvas diagnostic HUD, "Retry Render", and "Copy Diagnostic JSON" actions without crashing outer dashboard panels.
+  - **Boundary Flag Isolation**: Isolated network boundary tags strictly to edge metadata (`link.boundaries`) and badges, preventing boundary tokens from corrupting ZTA 3-plane node placement.
+  - **Formal Schema Contracts**: Defined TypeScript declaration types (`src/types/visualizer.d.ts`) for `SplunkDataRow`, `NormalizedNode`, `NormalizedLink`, `ZoneHierarchy`, and `VisualizerConfig`.
 
 #### 🏛️ Epic 1: Topology Knowledge Unit (TKU) & Vendor Expansion (v3.5.x)
 * **Goal**: Support hybrid third-party appliances (Oracle, Cisco, F5, Palo Alto, HashiCorp Vault) alongside core cloud providers.

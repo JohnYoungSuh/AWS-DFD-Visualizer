@@ -1,4 +1,4 @@
-import { AZURE_TOKEN_MAP, AZURE_CATEGORY_DEFAULT_MAP } from './azure.catalog';
+import { AZURE_TOKEN_MAP, AZURE_CATEGORY_DEFAULT_MAP } from './azure.catalog.js';
 
 export const azureAdapter = {
     id: 'azure',

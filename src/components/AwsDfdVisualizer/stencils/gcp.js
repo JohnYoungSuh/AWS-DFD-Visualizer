@@ -1,4 +1,4 @@
-import { GCP_TOKEN_MAP, GCP_CATEGORY_DEFAULT_MAP } from './gcp.catalog';
+import { GCP_TOKEN_MAP, GCP_CATEGORY_DEFAULT_MAP } from './gcp.catalog.js';
 
 export const gcpAdapter = {
     id: 'gcp',

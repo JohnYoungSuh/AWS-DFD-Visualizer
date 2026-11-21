@@ -1,4 +1,4 @@
-import { AWS_TOKEN_MAP, AWS_CATEGORY_DEFAULT_MAP } from './aws.catalog';
+import { AWS_TOKEN_MAP, AWS_CATEGORY_DEFAULT_MAP } from './aws.catalog.js';
 
 export const awsAdapter = {
     id: 'aws',
