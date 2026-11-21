@@ -95,6 +95,31 @@ No host agent, no chat agent, and no visualizer feature work until a named produ
 
 ---
 
+## 🏛️ Release v2.9.1 (Brand Repositioning & Splunkbase Discoverability Overhaul)
+
+> **Objective:** Transition user-facing product identity from single-vendor `AWS-DFD-Visualizer` to **CloudFlow Architecture Visualizer** across UI labels, manifests, and Splunkbase listing to reverse download stagnation while maintaining 100% backward-compatible App ID.  
+> **Adoption Boundary Compliance:** 100% compliant. Zero visualizer feature churn, zero host collectors. Pure product identity, discoverability, and metadata alignment.
+
+### Step 1 · Splunk Configuration & UI Label Rebrand *(Priority: 🟡 High — Zero Breaking Risk)*
+- [ ] **Synchronize User-Facing Labels to "CloudFlow Architecture Visualizer"**
+  - *Context*: Current `visualizations.conf` label reads `AWS Security Data Flow` and description references `Application Composer`, hiding Azure, GCP, and Zero Trust capabilities.
+  - *Action*:
+    - Update `default/visualizations.conf`: `label = CloudFlow Architecture & Topology` and update description to highlight Multi-Cloud (AWS, Azure, GCP), Zero Trust Architecture, and Draw.io export.
+    - Update `default/app.conf`: `[ui] label = CloudFlow Architecture Visualizer` and update `[launcher]` description.
+    - Update `splunk-app-manifest.json`: `info.title = CloudFlow Architecture Visualizer` and add relevant categorization tags.
+    - Update UI HUD (`subcomponents/HudOverlay.jsx`): Display brand banner `CloudFlow v2.9.1`.
+    - **CRITICAL**: Maintain underlying App ID `AWS-DFD-Visualizer` and RequireJS pathing `app/AWS-DFD-Visualizer/...` to prevent breaking existing user dashboards.
+  - *Acceptance*: Visualizer picker displays "CloudFlow Architecture & Topology"; existing dashboards load seamlessly without migration.
+
+### Step 2 · Splunkbase Marketplace Listing Refresh *(Priority: 🟡 High)*
+- [ ] **Splunkbase SEO & Multi-Cloud Tag Overhaul**
+  - *Action*:
+    - Update Splunkbase App Title: *"CloudFlow Architecture Visualizer (formerly AWS-DFD-Visualizer)"*.
+    - Overhaul search keywords: Add `azure`, `gcp`, `multi-cloud`, `zero-trust`, `drawio`, `topology`, `architecture-diagram`.
+    - Refresh screenshots featuring hybrid AWS + Azure + GCP canvas and Zero Trust 3-plane view.
+
+---
+
 ## 📍 Session Log
 
 ### ✅ Session: November 21, 2026 — Release v2.9.0 Architecture Quality Hardening & A+ Certification
